@@ -3,12 +3,6 @@ name: Build Public Docker Images
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g., v1.0.0)'
-        required: true
-        default: 'v1.0.0'
 
 env:
   REGISTRY: ghcr.io
@@ -63,11 +57,7 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            VERSION="${{ github.event.release.tag_name }}"
-          else
-            VERSION="${{ github.event.inputs.version }}"
-          fi
+          VERSION="${{ github.event.release.tag_name }}"
           
           # Remove 'v' prefix if present
           VERSION_NUMBER=${VERSION#v}
@@ -157,11 +147,7 @@ jobs:
           echo "## 📦 Released Images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            VERSION="${{ github.event.release.tag_name }}"
-          else
-            VERSION="${{ github.event.inputs.version }}"
-          fi
+          VERSION="${{ github.event.release.tag_name }}"
           
           REGISTRY="${{ env.REGISTRY }}"
           REPO="${{ env.BASE_IMAGE_NAME }}"
