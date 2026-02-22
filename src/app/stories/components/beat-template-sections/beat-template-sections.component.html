@@ -46,12 +46,18 @@
       </div>
     }
 
-    <ion-accordion [value]="meta.key">
+    <ion-accordion [value]="meta.key" [class.section-specific]="meta.isCommon === false">
       <ion-item slot="header" lines="full">
         <ion-label>
           <h3>{{ meta.label }}</h3>
           <p class="section-description">{{ meta.description }}</p>
         </ion-label>
+        @if (meta.isCommon === false) {
+          <ion-badge color="secondary" slot="end" class="type-specific-badge"
+            [title]="meta.sceneBeatOnly ? 'This section only exists in Scene Beat templates' : 'This section is unique to this beat type and not shared with others'">
+            {{ meta.sceneBeatOnly ? 'Scene Only' : 'Type-Specific' }}
+          </ion-badge>
+        }
         @if (meta.required) {
           <ion-badge color="warning" slot="end">Required</ion-badge>
         }

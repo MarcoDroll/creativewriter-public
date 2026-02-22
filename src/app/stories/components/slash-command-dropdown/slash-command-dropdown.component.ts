@@ -23,23 +23,16 @@ export class SlashCommandDropdownComponent implements OnInit, OnDestroy {
   
   commands: SlashCommand[] = [
     {
-      id: 'story-beat',
-      label: 'StoryBeat',
-      description: 'Beat mit vollständigem Story-Kontext',
+      id: 'beat',
+      label: 'Beat',
+      description: 'Insert an AI-generated beat',
       icon: '📝',
       action: SlashCommandAction.INSERT_BEAT
     },
     {
-      id: 'scene-beat',
-      label: 'SceneBeat',
-      description: 'Beat ohne Szenen-Zusammenfassungen',
-      icon: '📄',
-      action: SlashCommandAction.INSERT_SCENE_BEAT
-    },
-    {
       id: 'image',
       label: 'Insert image',
-      description: 'Insert an image or description',
+      description: 'Add an image',
       icon: '🖼️',
       action: SlashCommandAction.INSERT_IMAGE
     }

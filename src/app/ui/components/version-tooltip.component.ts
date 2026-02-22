@@ -74,19 +74,19 @@ import { VersionService, VersionInfo } from '../../core/services/version.service
     :host {
       display: inline-block;
     }
-    
+
     .version-popover::part(content) {
-      --background: linear-gradient(135deg, rgba(15, 15, 25, 0.98) 0%, rgba(25, 25, 40, 0.98) 100%);
-      --box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(139, 180, 248, 0.1);
-      --border-radius: 12px;
-      --border-color: rgba(139, 180, 248, 0.3);
+      --background: var(--cw-bg-glass);
+      --box-shadow: var(--cw-shadow-xl), var(--cw-shadow-primary-glow);
+      --border-radius: var(--cw-radius-lg);
+      --border-color: var(--cw-border-accent);
       --border-width: 1px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
       min-width: 280px;
       max-width: 350px;
     }
-    
+
     .version-tooltip-content {
       --background: transparent;
       --padding-start: 0;
@@ -94,99 +94,99 @@ import { VersionService, VersionInfo } from '../../core/services/version.service
       --padding-top: 0;
       --padding-bottom: 0;
     }
-    
+
     .tooltip-content {
-      padding: 16px;
+      padding: var(--cw-space-lg);
     }
-    
+
     .tooltip-header {
       text-align: center;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(139, 180, 248, 0.2);
-      background: linear-gradient(135deg, #ffffff 0%, #8bb4f8 50%, #4776e6 100%);
+      margin-bottom: var(--cw-space-md);
+      padding-bottom: var(--cw-space-sm);
+      border-bottom: 1px solid var(--cw-border-primary);
+      background: var(--cw-gradient-text-brand);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      font-size: 0.9rem;
-      font-weight: 700;
+      font-size: var(--cw-font-size-sm);
+      font-weight: var(--cw-font-weight-bold);
       letter-spacing: 0.5px;
     }
-    
+
     .tooltip-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 8px;
-      font-size: 0.8rem;
-      line-height: 1.3;
+      margin-bottom: var(--cw-space-sm);
+      font-size: var(--cw-font-size-xs);
+      line-height: var(--cw-line-height-tight);
     }
-    
+
     .tooltip-row:last-child {
       margin-bottom: 0;
     }
-    
+
     .tooltip-row.commit-message {
       flex-direction: column;
       align-items: flex-start;
-      margin-top: 4px;
+      margin-top: var(--cw-space-xs);
     }
-    
+
     .tooltip-row.commit-message .value {
-      margin-top: 4px;
+      margin-top: var(--cw-space-xs);
       font-style: italic;
       opacity: 0.9;
-      line-height: 1.4;
+      line-height: var(--cw-line-height-normal);
       word-break: break-word;
       hyphens: auto;
     }
-    
+
     .label {
-      color: rgba(139, 180, 248, 0.8);
-      font-weight: 600;
+      color: var(--cw-color-primary-light);
+      font-weight: var(--cw-font-weight-semibold);
       flex-shrink: 0;
-      margin-right: 12px;
+      margin-right: var(--cw-space-md);
       min-width: 60px;
     }
-    
+
     .value {
-      color: #e0e0e0;
+      color: var(--cw-text-secondary);
       text-align: right;
       flex: 1;
       word-break: break-word;
     }
-    
+
     .commit-hash {
       font-family: 'Courier New', monospace;
-      font-size: 0.75rem;
-      background: rgba(139, 180, 248, 0.1);
-      padding: 2px 6px;
-      border-radius: 4px;
-      border: 1px solid rgba(139, 180, 248, 0.2);
+      font-size: var(--cw-font-size-2xs);
+      background: var(--cw-bg-hover);
+      padding: var(--cw-space-2xs) var(--cw-space-sm);
+      border-radius: var(--cw-radius-xs);
+      border: 1px solid var(--cw-border-primary);
     }
-    
+
     /* Responsive styles */
     @media (max-width: 768px) {
       .version-popover::part(content) {
         min-width: 260px;
         max-width: 300px;
       }
-      
+
       .tooltip-content {
-        padding: 12px;
+        padding: var(--cw-space-md);
       }
-      
+
       .tooltip-row {
-        font-size: 0.75rem;
-        margin-bottom: 6px;
+        font-size: var(--cw-font-size-2xs);
+        margin-bottom: var(--cw-space-sm);
       }
-      
+
       .label {
         min-width: 50px;
-        margin-right: 8px;
+        margin-right: var(--cw-space-sm);
       }
     }
-    
+
     @media (max-width: 400px) {
       .version-popover::part(content) {
         min-width: 240px;

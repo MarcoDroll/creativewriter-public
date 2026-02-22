@@ -19,10 +19,10 @@ import { SelectionHighlightService } from './selection-highlight.service';
 import { ContextMenuService } from './context-menu.service';
 import { DebugUtilityService } from './debug-utility.service';
 import { EditorStateService } from './editor-state.service';
-import { ImageOperationsService } from './image-operations.service';
 import { ProseMirrorContentService } from './prosemirror-content.service';
 import { ProseMirrorPluginsService } from './prosemirror-plugins.service';
 import { BeatOperationsService } from './beat-operations.service';
+import { StoryImageService } from './story-image.service';
 
 // Re-export interfaces for backward compatibility
 export type { EditorConfig, SimpleEditorConfig } from './prosemirror-editor.interfaces';
@@ -42,15 +42,16 @@ export class ProseMirrorEditorService {
   private contextMenuService = inject(ContextMenuService);
   private debugService = inject(DebugUtilityService);
   private editorStateService = inject(EditorStateService);
-  private imageOpsService = inject(ImageOperationsService);
   private contentService = inject(ProseMirrorContentService);
   private pluginsService = inject(ProseMirrorPluginsService);
   private beatOpsService = inject(BeatOperationsService);
+  private storyImageService = inject(StoryImageService);
 
   // Editor state
   private editorView: EditorView | null = null;
   private editorSchema: Schema;
   private currentStoryContext: StoryContext = {};
+  private isEditorLocked = false;
 
   // Public subjects - merge from sub-services
   public contentUpdate$ = new Subject<string>();
@@ -90,11 +91,18 @@ export class ProseMirrorEditorService {
       this.pluginsService.createBeatAIPlugin(),
       this.pluginsService.createCodexHighlightingPlugin(config, null), // Will update with editorView after creation
       this.pluginsService.createDirectSpeechHighlightingPlugin(),
+      this.pluginsService.createThinkingHighlightingPlugin(),
       this.contextMenuService.createContextMenuPlugin(
         () => this.getHTMLContent(),
         () => this.currentStoryContext
       ),
-      this.selectionHighlightService.createFlashHighlightPlugin()
+      this.selectionHighlightService.createFlashHighlightPlugin(),
+      // Track image deletions via transactions - only fires for actual deletions, not editor destruction
+      this.pluginsService.createImageDeletionTrackingPlugin(
+        (storyId: string, imageId: string) => {
+          this.storyImageService.onImageRemovedFromContent(storyId, imageId);
+        }
+      )
     ];
 
     const state = EditorState.create({
@@ -104,6 +112,7 @@ export class ProseMirrorEditorService {
 
     this.editorView = new EditorView(element, {
       state,
+      editable: () => !this.isEditorLocked,
       nodeViews: {
         beatAI: (node, view, getPos) => new BeatAINodeView(
           node,
@@ -123,10 +132,13 @@ export class ProseMirrorEditorService {
           },
           this.currentStoryContext
         ),
+        // Image deletion is tracked via plugin (createImageDeletionTrackingPlugin)
+        // to avoid triggering on editor destruction
         image: (node, view, getPos) => new ResizableImageNodeView(
           node,
           view,
-          getPos as () => number
+          getPos as () => number,
+          this.storyImageService  // Pass service for blob URL resolution
         )
       },
       dispatchTransaction: (transaction: Transaction) => {
@@ -263,6 +275,26 @@ export class ProseMirrorEditorService {
     this.contentService.setSimpleContent(editorView, content);
   }
 
+  /**
+   * Append streaming text to the end of the document.
+   * Used for real-time AI content streaming into the editor.
+   *
+   * @param text The text chunk to append
+   */
+  appendStreamingText(text: string): void {
+    if (!this.editorView || !text) return;
+
+    const { state } = this.editorView;
+    // Find the correct insertion point: end of the last text block content
+    // ProseMirror positions account for node boundaries, so we need to insert
+    // before the closing tag of the last block (size - 1)
+    const endPos = state.doc.content.size - 1;
+
+    // Insert text at the end of the document and scroll to show it
+    const tr = state.tr.insertText(text, endPos).scrollIntoView();
+    this.editorView.dispatch(tr);
+  }
+
   // ===== Beat Operations =====
 
   insertBeatAI(position?: number, replaceSlash = false, beatType: 'story' | 'scene' = 'story'): void {
@@ -304,12 +336,91 @@ export class ProseMirrorEditorService {
 
   // ===== Image Operations =====
 
+  /**
+   * Insert an image into the editor
+   */
   insertImage(imageData: ImageInsertResult, position?: number, replaceSlash = false): void {
-    this.imageOpsService.insertImage(this.editorView, this.editorSchema, imageData, position, replaceSlash);
+    if (!this.editorView) return;
+
+    try {
+      const { state } = this.editorView;
+      const pos = position ?? state.selection.from;
+
+      // Create image node with optional imageId and storyId
+      const imageNode = this.editorSchema.nodes['image'].create({
+        src: imageData.url,
+        alt: imageData.alt,
+        title: imageData.title || null,
+        imageId: imageData.imageId || null,
+        storyId: imageData.storyId || null
+      });
+
+      let tr;
+      if (replaceSlash) {
+        // Find the actual slash position by looking backwards from cursor position
+        let slashPos = pos - 1;
+        let foundSlash = false;
+
+        // Look backwards up to 10 characters to find the slash
+        for (let i = 1; i <= 10 && slashPos >= 0; i++) {
+          const checkPos = pos - i;
+          const textAtCheck = state.doc.textBetween(checkPos, checkPos + 1);
+
+          if (textAtCheck === '/') {
+            slashPos = checkPos;
+            foundSlash = true;
+            break;
+          }
+        }
+
+        if (foundSlash) {
+          // Replace the slash with the image node
+          tr = state.tr.replaceRangeWith(slashPos, slashPos + 1, imageNode);
+        } else {
+          console.warn('No slash found, inserting at current position');
+          tr = state.tr.replaceRangeWith(pos, pos, imageNode);
+        }
+      } else {
+        // Insert at position
+        tr = state.tr.replaceRangeWith(pos, pos, imageNode);
+      }
+
+      this.editorView.dispatch(tr);
+    } catch (error) {
+      console.error('Failed to insert image:', error);
+    }
   }
 
-  updateImageId(imageSrc: string, imageId: string): void {
-    this.imageOpsService.updateImageId(this.editorView, imageSrc, imageId);
+  /**
+   * Update the image ID and optionally storyId for an existing image in the document
+   */
+  updateImageId(imageSrc: string, imageId: string, storyId?: string): void {
+    if (!this.editorView) return;
+
+    const { state, dispatch } = this.editorView;
+    const { doc, tr } = state;
+
+    // Find all image nodes with matching src
+    let updated = false;
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'image' && node.attrs['src'] === imageSrc) {
+        // Update the image node with the new imageId and storyId
+        const newAttrs: Record<string, unknown> = {
+          ...node.attrs,
+          imageId: imageId
+        };
+        if (storyId) {
+          newAttrs['storyId'] = storyId;
+        }
+        tr.setNodeMarkup(pos, null, newAttrs);
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      dispatch(tr);
+      console.log('Updated image ID in ProseMirror document:', imageId);
+    }
   }
 
   requestImageInsert(): void {
@@ -354,7 +465,22 @@ export class ProseMirrorEditorService {
     this.editorStateService.updateStoryContext(storyContext);
   }
 
+  /**
+   * Lock/unlock the editor to prevent user input during AI generation.
+   * Note: Programmatic updates via dispatch() still work when locked.
+   */
+  setEditorLocked(locked: boolean): void {
+    this.isEditorLocked = locked;
+    if (this.editorView) {
+      this.editorView.setProps({
+        editable: () => !this.isEditorLocked
+      });
+    }
+  }
+
   destroy(): void {
+    // Reset lock state for next editor instance (singleton service persists)
+    this.isEditorLocked = false;
     this.contextMenuService.hideContextMenu();
 
     // Cleanup codex subscription to prevent memory leaks and stale callbacks

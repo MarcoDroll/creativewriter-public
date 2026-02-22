@@ -50,10 +50,14 @@
           <p>{{ timeline.recent.length }} snapshots every 15 minutes</p>
         </ion-label>
       </ion-list-header>
-      <ion-item *ngFor="let snapshot of timeline.recent">
+      <ion-item *ngFor="let snapshot of timeline.recent; trackBy: trackBySnapshotId">
         <ion-label>
           <h3>{{ snapshotService.formatSnapshotTime(snapshot.createdAt) }}</h3>
           <p>{{ snapshot.metadata.wordCount | number }} words, {{ snapshot.metadata.chapterCount }} chapters</p>
+          <p *ngIf="snapshotDisplayData.get(snapshot._id)?.hasRelated" class="related-docs-info">
+            <ion-icon name="document-text-outline"></ion-icon>
+            {{ snapshotDisplayData.get(snapshot._id)?.relatedText }}
+          </p>
         </ion-label>
         <ion-button slot="end" fill="outline" size="small" (click)="restore(snapshot)">
           Restore
@@ -69,10 +73,14 @@
           <p>{{ timeline.hourly.length }} snapshots</p>
         </ion-label>
       </ion-list-header>
-      <ion-item *ngFor="let snapshot of timeline.hourly">
+      <ion-item *ngFor="let snapshot of timeline.hourly; trackBy: trackBySnapshotId">
         <ion-label>
           <h3>{{ snapshotService.formatSnapshotTime(snapshot.createdAt) }}</h3>
           <p>{{ snapshot.metadata.wordCount | number }} words, {{ snapshot.metadata.chapterCount }} chapters</p>
+          <p *ngIf="snapshotDisplayData.get(snapshot._id)?.hasRelated" class="related-docs-info">
+            <ion-icon name="document-text-outline"></ion-icon>
+            {{ snapshotDisplayData.get(snapshot._id)?.relatedText }}
+          </p>
         </ion-label>
         <ion-button slot="end" fill="outline" size="small" (click)="restore(snapshot)">
           Restore
@@ -88,10 +96,14 @@
           <p>{{ timeline.daily.length }} snapshots</p>
         </ion-label>
       </ion-list-header>
-      <ion-item *ngFor="let snapshot of timeline.daily">
+      <ion-item *ngFor="let snapshot of timeline.daily; trackBy: trackBySnapshotId">
         <ion-label>
           <h3>{{ snapshotService.formatSnapshotTime(snapshot.createdAt) }}</h3>
           <p>{{ snapshot.metadata.wordCount | number }} words, {{ snapshot.metadata.chapterCount }} chapters</p>
+          <p *ngIf="snapshotDisplayData.get(snapshot._id)?.hasRelated" class="related-docs-info">
+            <ion-icon name="document-text-outline"></ion-icon>
+            {{ snapshotDisplayData.get(snapshot._id)?.relatedText }}
+          </p>
         </ion-label>
         <ion-button slot="end" fill="outline" size="small" (click)="restore(snapshot)">
           Restore
@@ -107,10 +119,14 @@
           <p>{{ timeline.weekly.length }} snapshots</p>
         </ion-label>
       </ion-list-header>
-      <ion-item *ngFor="let snapshot of timeline.weekly">
+      <ion-item *ngFor="let snapshot of timeline.weekly; trackBy: trackBySnapshotId">
         <ion-label>
           <h3>{{ snapshotService.formatSnapshotTime(snapshot.createdAt) }}</h3>
           <p>{{ snapshot.metadata.wordCount | number }} words, {{ snapshot.metadata.chapterCount }} chapters</p>
+          <p *ngIf="snapshotDisplayData.get(snapshot._id)?.hasRelated" class="related-docs-info">
+            <ion-icon name="document-text-outline"></ion-icon>
+            {{ snapshotDisplayData.get(snapshot._id)?.relatedText }}
+          </p>
         </ion-label>
         <ion-button slot="end" fill="outline" size="small" (click)="restore(snapshot)">
           Restore
@@ -126,10 +142,14 @@
           <p>{{ timeline.monthly.length }} snapshots</p>
         </ion-label>
       </ion-list-header>
-      <ion-item *ngFor="let snapshot of timeline.monthly">
+      <ion-item *ngFor="let snapshot of timeline.monthly; trackBy: trackBySnapshotId">
         <ion-label>
           <h3>{{ snapshotService.formatSnapshotTime(snapshot.createdAt) }}</h3>
           <p>{{ snapshot.metadata.wordCount | number }} words, {{ snapshot.metadata.chapterCount }} chapters</p>
+          <p *ngIf="snapshotDisplayData.get(snapshot._id)?.hasRelated" class="related-docs-info">
+            <ion-icon name="document-text-outline"></ion-icon>
+            {{ snapshotDisplayData.get(snapshot._id)?.relatedText }}
+          </p>
         </ion-label>
         <ion-button slot="end" fill="outline" size="small" (click)="restore(snapshot)">
           Restore
@@ -145,12 +165,16 @@
           <p>{{ timeline.manual.length }} snapshots</p>
         </ion-label>
       </ion-list-header>
-      <ion-item *ngFor="let snapshot of timeline.manual">
+      <ion-item *ngFor="let snapshot of timeline.manual; trackBy: trackBySnapshotId">
         <ion-icon name="bookmark" slot="start" color="primary"></ion-icon>
         <ion-label>
           <h3>{{ snapshot.reason || 'Manual snapshot' }}</h3>
           <p>{{ snapshotService.formatSnapshotTime(snapshot.createdAt) }}</p>
           <p>{{ snapshot.metadata.wordCount | number }} words, {{ snapshot.metadata.chapterCount }} chapters</p>
+          <p *ngIf="snapshotDisplayData.get(snapshot._id)?.hasRelated" class="related-docs-info">
+            <ion-icon name="document-text-outline"></ion-icon>
+            {{ snapshotDisplayData.get(snapshot._id)?.relatedText }}
+          </p>
         </ion-label>
         <ion-button slot="end" fill="outline" size="small" (click)="restore(snapshot)">
           Restore

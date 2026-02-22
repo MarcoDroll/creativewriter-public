@@ -1,25 +1,25 @@
 // Token Info Popover Styles
 .token-info-popover {
   --backdrop-opacity: 0.6;
-  --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --box-shadow: var(--cw-shadow-xl);
   --width: 350px;
   --max-width: 90vw;
-  --border-radius: 12px;
-  
+  --border-radius: var(--cw-radius-lg);
+
   .popover-content {
-    background: linear-gradient(135deg, rgba(15, 15, 25, 0.6) 0%, rgba(10, 10, 20, 0.6) 50%, rgba(20, 20, 35, 0.6) 100%) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(139, 180, 248, 0.2) !important;
+    background: var(--cw-bg-glass) !important;
+    backdrop-filter: blur(var(--cw-blur-xl)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-xl)) !important;
+    border: 1px solid var(--cw-border-accent) !important;
     border-radius: var(--border-radius) !important;
     overflow: hidden;
   }
-  
+
   @media (max-width: 768px) {
     --width: 100%;
     --max-width: 100%;
     --border-radius: 0;
-    
+
     .popover-content {
       height: 100%;
       border-radius: 0 !important;

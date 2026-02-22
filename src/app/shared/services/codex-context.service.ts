@@ -1,5 +1,4 @@
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
 
 import { CodexRelevanceService, CodexEntry as CodexRelevanceEntry } from '../../core/services/codex-relevance.service';
 import { CodexService } from '../../stories/services/codex.service';
@@ -17,8 +16,9 @@ export class CodexContextService {
 
   async buildCodexXml(
     storyId: string,
-    contextText: string,
     promptText: string,
+    stagingNotes: string,
+    sceneText: string,
     maxTokens = 1000,
     skipRelevanceFiltering = false
   ): Promise<{
@@ -43,22 +43,13 @@ export class CodexContextService {
       entriesDropped = result.droppedCount;
       totalEntries = result.totalCount;
     } else {
-      const convertedEntries = this.convertCodexEntriesToRelevanceFormat(allCodexEntries);
-
-      let relevantEntries: CodexRelevanceEntry[] = [];
-      try {
-        relevantEntries = await firstValueFrom(
-          this.codexRelevanceService.getRelevantEntries(
-            convertedEntries,
-            contextText,
-            promptText,
-            maxTokens
-          )
-        );
-      } catch (error) {
-        console.error('Failed to calculate relevant codex entries:', error);
-        relevantEntries = [];
-      }
+      const convertedEntries = this.codexRelevanceService.convertFromStoryFormat(allCodexEntries);
+      const relevantEntries = this.codexRelevanceService.filterRelevantEntries(
+        convertedEntries,
+        promptText,
+        stagingNotes,
+        sceneText
+      );
 
       filteredCodexEntries = this.ensureNotesCategory(
         allCodexEntries,
@@ -76,58 +67,6 @@ export class CodexContextService {
       entriesDropped,
       totalEntries
     };
-  }
-
-  private convertCodexEntriesToRelevanceFormat(
-    codexEntries: { category: string; entries: CodexEntry[]; icon?: string }[]
-  ): CodexRelevanceEntry[] {
-    const converted: CodexRelevanceEntry[] = [];
-
-    for (const categoryData of codexEntries) {
-      const category = this.getCategoryTypeForRelevance(categoryData.category);
-
-      for (const entry of categoryData.entries) {
-        const aliases: string[] = [];
-        if (entry.metadata?.['aliases']) {
-          const aliasValue = entry.metadata['aliases'];
-          if (typeof aliasValue === 'string' && aliasValue) {
-            aliases.push(...aliasValue.split(',').map((a: string) => a.trim()).filter((a: string) => a));
-          }
-        }
-
-        const keywords: string[] = entry.tags ? [...entry.tags] : [];
-
-        const titleWords = entry.title.split(/\s+/)
-          .filter(word => word.length > 3)
-          .map(word => word.toLowerCase());
-        keywords.push(...titleWords);
-
-        let importance: 'major' | 'minor' | 'background' = 'minor';
-        if (entry.metadata?.['storyRole']) {
-          const role = entry.metadata['storyRole'];
-          if (role === 'Protagonist' || role === 'Antagonist') {
-            importance = 'major';
-          } else if (role === 'Background Character' || role === 'Hintergrundcharakter') {
-            importance = 'background';
-          }
-        }
-
-        converted.push({
-          id: entry.id,
-          title: entry.title,
-          category,
-          content: entry.content || '',
-          aliases,
-          keywords,
-          importance,
-          globalInclude: !!(entry.metadata?.['globalInclude']) || entry.alwaysInclude || false,
-          lastMentioned: entry.metadata?.['lastMentioned'] as number | undefined,
-          mentionCount: entry.metadata?.['mentionCount'] as number | undefined
-        });
-      }
-    }
-
-    return converted;
   }
 
   private filterCodexEntriesByRelevance(
@@ -305,15 +244,6 @@ export class CodexContextService {
     }).join('\n');
 
     return content;
-  }
-
-  private getCategoryTypeForRelevance(categoryTitle: string): 'character' | 'location' | 'object' | 'lore' | 'other' {
-    const title = categoryTitle.toLowerCase();
-    if (title.includes('character') || title.includes('charakter') || title.includes('figur')) return 'character';
-    if (title.includes('location') || title.includes('ort') || title.includes('place')) return 'location';
-    if (title.includes('object') || title.includes('gegenstand') || title.includes('item')) return 'object';
-    if (title.includes('lore') || title.includes('wissen')) return 'lore';
-    return 'other';
   }
 
   private getCategoryXmlType(category: string): string {

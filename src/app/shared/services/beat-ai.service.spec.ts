@@ -8,9 +8,8 @@ import { ClaudeApiService } from '../../core/services/claude-api.service';
 import { OpenAICompatibleApiService } from '../../core/services/openai-compatible-api.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { StoryService } from '../../stories/services/story.service';
-import { CodexService } from '../../stories/services/codex.service';
 import { PromptManagerService } from './prompt-manager.service';
-import { CodexRelevanceService } from '../../core/services/codex-relevance.service';
+import { CodexContextService } from './codex-context.service';
 import { AIProviderValidationService } from '../../core/services/ai-provider-validation.service';
 import { DatabaseService } from '../../core/services/database.service';
 
@@ -33,9 +32,9 @@ describe('BeatAIService', () => {
     const mockClaudeApi = jasmine.createSpyObj('ClaudeApiService', ['streamChat']);
     const mockOpenAICompatibleApi = jasmine.createSpyObj('OpenAICompatibleApiService', ['streamChat']);
     const mockStoryService = jasmine.createSpyObj('StoryService', ['getStory', 'updateStory']);
-    const mockCodexService = jasmine.createSpyObj('CodexService', ['getCodexEntries']);
     const mockPromptManager = jasmine.createSpyObj('PromptManagerService', ['refresh', 'getAll']);
-    const mockCodexRelevanceService = jasmine.createSpyObj('CodexRelevanceService', ['getRelevantEntries']);
+    const mockCodexContextService = jasmine.createSpyObj('CodexContextService', ['buildCodexXml']);
+    mockCodexContextService.buildCodexXml.and.returnValue(Promise.resolve({ xml: '', categories: [] }));
     const mockAIProviderValidation = jasmine.createSpyObj('AIProviderValidationService', ['validateApiKey']);
     const mockDatabaseService = jasmine.createSpyObj('DatabaseService', ['get', 'put']);
 
@@ -59,9 +58,8 @@ describe('BeatAIService', () => {
         { provide: ClaudeApiService, useValue: mockClaudeApi },
         { provide: OpenAICompatibleApiService, useValue: mockOpenAICompatibleApi },
         { provide: StoryService, useValue: mockStoryService },
-        { provide: CodexService, useValue: mockCodexService },
         { provide: PromptManagerService, useValue: mockPromptManager },
-        { provide: CodexRelevanceService, useValue: mockCodexRelevanceService },
+        { provide: CodexContextService, useValue: mockCodexContextService },
         { provide: AIProviderValidationService, useValue: mockAIProviderValidation },
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: DOCUMENT, useValue: mockDocument }

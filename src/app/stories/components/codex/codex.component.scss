@@ -83,11 +83,11 @@ ion-card-title {
 /* Ensure outline buttons are transparent in Codex views */
 ion-button[fill="outline"] {
   --background: transparent !important;
-  --background-hover: rgba(139, 180, 248, 0.08) !important;
-  --background-activated: rgba(139, 180, 248, 0.12) !important;
+  --background-hover: var(--cw-bg-hover) !important;
+  --background-activated: var(--cw-bg-active) !important;
   --color: var(--cw-color-primary-light) !important;
   --border-color: var(--cw-border-accent) !important;
-  --ripple-color: rgba(139, 180, 248, 0.2) !important;
+  --ripple-color: var(--cw-border-accent) !important;
 }
     
     ion-card:hover {
@@ -111,7 +111,7 @@ ion-button[fill="outline"] {
     }
     
     .active-category {
-      --background: linear-gradient(135deg, rgba(71, 118, 230, 0.3) 0%, rgba(143, 84, 233, 0.3) 100%) !important;
+      --background: var(--cw-gradient-primary-subtle) !important;
       --color: var(--cw-text-primary) !important;
       backdrop-filter: blur(var(--cw-blur-sm));
     }
@@ -196,7 +196,7 @@ ion-button[fill="outline"] {
     }
     
     .entry-meta ion-chip {
-      --background: rgba(71, 118, 230, 0.15) !important;
+      --background: var(--cw-bg-info-subtle) !important;
       --color: var(--cw-color-primary-light) !important;
       border: 1px solid var(--cw-border-accent) !important;
       backdrop-filter: blur(var(--cw-blur-sm));
@@ -204,12 +204,12 @@ ion-button[fill="outline"] {
       height: 20px !important;
       margin: 1px !important;
     }
-    
+
     /* Tag chips in search results and entry cards */
     .entry-meta ion-chip[color="medium"] {
-      --background: rgba(146, 146, 146, 0.15) !important;
+      --background: var(--cw-bg-hover) !important;
       --color: var(--ion-color-medium) !important;
-      border: 1px solid rgba(146, 146, 146, 0.3) !important;
+      border: 1px solid var(--cw-border-subtle) !important;
       font-size: var(--cw-font-size-2xs) !important;
       height: 20px !important;
     }
@@ -246,13 +246,13 @@ ion-button[fill="outline"] {
       --max-width: 750px;
       --height: 85vh;
       --border-radius: var(--cw-radius-xl);
-      --background: linear-gradient(135deg, rgba(20, 20, 20, 0.92) 0%, rgba(15, 15, 15, 0.92) 100%);
+      --background: var(--cw-bg-dropdown);
       backdrop-filter: blur(var(--cw-blur-xl)) saturate(120%);
       --box-shadow: var(--cw-shadow-xl);
     }
 
     .entry-modal::part(backdrop) {
-      background: rgba(0, 0, 0, 0.8);
+      background: var(--cw-bg-modal-backdrop);
       backdrop-filter: blur(var(--cw-blur-md));
     }
 
@@ -271,7 +271,7 @@ ion-button[fill="outline"] {
 
     .entry-modal ion-toolbar {
       --background: transparent !important;
-      background: linear-gradient(135deg, rgba(20, 20, 20, 0.6) 0%, rgba(15, 15, 15, 0.6) 100%) !important;
+      background: var(--cw-bg-glass) !important;
       --border-width: 0;
       --padding-start: 20px;
       --padding-end: 20px;
@@ -317,7 +317,7 @@ ion-button[fill="outline"] {
 
     /* Form Sections */
     .form-section {
-      background: linear-gradient(135deg, rgba(20, 20, 20, 0.4) 0%, rgba(15, 15, 15, 0.4) 100%);
+      background: var(--cw-bg-card);
       margin: var(--cw-space-md);
       padding: var(--cw-space-lg);
       border-radius: var(--cw-radius-lg);
@@ -328,8 +328,8 @@ ion-button[fill="outline"] {
     }
 
     .form-section:hover {
-      background: linear-gradient(135deg, rgba(25, 25, 25, 0.5) 0%, rgba(20, 20, 20, 0.5) 100%);
-      border-color: rgba(71, 118, 230, 0.25);
+      background: var(--cw-bg-elevated);
+      border-color: var(--cw-border-accent);
       box-shadow: var(--cw-shadow-lg);
     }
 
@@ -355,7 +355,7 @@ ion-button[fill="outline"] {
       height: 18px;
       background: var(--cw-gradient-brand);
       border-radius: 2px;
-      box-shadow: 0 0 6px rgba(71, 118, 230, 0.3);
+      box-shadow: var(--cw-shadow-primary-glow);
     }
 
     .section-header {
@@ -401,7 +401,7 @@ ion-button[fill="outline"] {
     .form-item ion-input,
     .form-item ion-textarea,
     .form-item ion-select {
-      --background: rgba(0, 0, 0, 0.25);
+      --background: var(--cw-bg-input);
       --padding-start: var(--cw-space-md);
       --padding-end: var(--cw-space-md);
       --padding-top: var(--cw-space-sm);
@@ -413,20 +413,20 @@ ion-button[fill="outline"] {
       color: var(--cw-text-primary);
       transition: all var(--cw-transition-slow);
     }
-    
+
     .form-item ion-input:hover,
     .form-item ion-textarea:hover,
     .form-item ion-select:hover {
-      --background: rgba(0, 0, 0, 0.35);
+      --background: var(--cw-bg-elevated);
       border-color: var(--cw-border-default);
     }
 
     .form-item ion-input:focus,
     .form-item ion-textarea:focus,
     .form-item ion-select:focus {
-      --background: rgba(0, 0, 0, 0.4);
+      --background: var(--cw-bg-surface);
       border-color: var(--cw-border-primary);
-      box-shadow: 0 0 0 2px rgba(71, 118, 230, 0.1);
+      box-shadow: var(--cw-shadow-focus);
     }
 
     .required {
@@ -457,7 +457,7 @@ ion-button[fill="outline"] {
       gap: var(--cw-space-sm);
       margin-top: var(--cw-space-md);
       padding: var(--cw-space-md) var(--cw-space-lg);
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--cw-bg-input);
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-md);
       min-height: 56px;
@@ -467,7 +467,7 @@ ion-button[fill="outline"] {
     }
 
     .tags-container:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--cw-bg-elevated);
       border-color: var(--cw-border-default);
     }
 
@@ -476,7 +476,7 @@ ion-button[fill="outline"] {
       margin-top: var(--cw-space-sm);
       margin-left: var(--cw-space-xs);
       font-size: var(--cw-font-size-sm);
-      color: rgba(255, 255, 255, 0.5);
+      color: var(--cw-text-disabled);
       font-style: normal;
       letter-spacing: 0.2px;
     }
@@ -516,7 +516,7 @@ ion-button[fill="outline"] {
     .image-preview {
       margin-top: var(--cw-space-sm);
       padding: var(--cw-space-md);
-      background: rgba(0, 0, 0, 0.25);
+      background: var(--cw-bg-input);
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-sm);
       text-align: center;
@@ -524,7 +524,7 @@ ion-button[fill="outline"] {
     }
 
     .image-preview:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--cw-bg-elevated);
       border-color: var(--cw-border-default);
     }
 
@@ -545,7 +545,7 @@ ion-button[fill="outline"] {
     }
 
     .custom-field-item {
-      background: rgba(0, 0, 0, 0.25);
+      background: var(--cw-bg-input);
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-sm);
       padding: var(--cw-space-md);
@@ -554,7 +554,7 @@ ion-button[fill="outline"] {
     }
 
     .custom-field-item:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--cw-bg-elevated);
       border-color: var(--cw-border-accent);
       box-shadow: var(--cw-shadow-md);
     }
@@ -586,17 +586,31 @@ ion-button[fill="outline"] {
     }
 
     .new-custom-field {
-      background: rgba(71, 118, 230, 0.05);
-      border: 2px dashed rgba(71, 118, 230, 0.2);
+      background: var(--cw-bg-info-subtle);
+      border: 2px dashed var(--cw-border-accent);
       border-radius: var(--cw-radius-md);
       padding: var(--cw-space-lg);
       transition: all var(--cw-transition-slow);
     }
 
     .new-custom-field:hover {
-      border-color: var(--cw-border-accent);
-      background: rgba(71, 118, 230, 0.1);
+      border-color: var(--cw-border-primary);
+      background: var(--cw-bg-primary-hover);
       box-shadow: var(--cw-shadow-sm);
+    }
+
+    .custom-field-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--cw-space-sm);
+      margin-top: var(--cw-space-md);
+
+      .helper-text {
+        font-size: var(--cw-font-size-xs);
+        color: var(--ion-color-medium);
+        font-style: italic;
+      }
     }
 
     /* Modal Actions */
@@ -618,10 +632,10 @@ ion-button[fill="outline"] {
       align-items: center;
       gap: var(--cw-space-md);
       padding: var(--cw-space-lg) 20px calc(var(--cw-space-lg) + env(safe-area-inset-bottom, 0px) + 48px);
-      background: linear-gradient(135deg, rgba(20, 20, 20, 0.98) 0%, rgba(15, 15, 15, 0.98) 100%);
+      background: var(--cw-bg-dropdown);
       border-top: 1px solid var(--cw-border-subtle);
       backdrop-filter: blur(var(--cw-blur-lg)) saturate(150%);
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--cw-shadow-xl);
       width: 100%;
       box-sizing: border-box;
     }
@@ -638,29 +652,29 @@ ion-button[fill="outline"] {
     }
 
     .modal-actions ion-button[color="danger"] {
-      --background: rgba(255, 67, 67, 0.1);
+      --background: var(--cw-bg-danger-subtle);
       --color: var(--cw-color-danger);
       --border-width: 1px;
       --border-style: solid;
-      --border-color: rgba(255, 67, 67, 0.3);
+      --border-color: var(--cw-border-danger);
     }
 
     .modal-actions ion-button[color="danger"]:hover {
-      --background: rgba(255, 67, 67, 0.2);
-      --border-color: rgba(255, 67, 67, 0.5);
+      --background: var(--cw-bg-danger-subtle);
+      --border-color: var(--cw-color-danger);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 67, 67, 0.2);
+      box-shadow: var(--cw-shadow-lg);
     }
 
     .modal-actions ion-button[color="primary"] {
       --background: var(--cw-gradient-brand);
-      --color: white;
+      --color: var(--cw-text-primary);
       box-shadow: var(--cw-shadow-primary-glow);
     }
 
     .modal-actions ion-button[color="primary"]:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(71, 118, 230, 0.4);
+      box-shadow: var(--cw-shadow-primary-glow);
     }
 
     /* Responsive adjustments */
@@ -713,12 +727,12 @@ ion-button[fill="outline"] {
     /* Scrollable textarea improvements */
     .scrollable-textarea {
       min-height: 60px;
-      max-height: 300px;
+      max-height: 50vh;  /* Viewport-relative allows proper growth on mobile */
       --padding-start: var(--cw-space-md);
       --padding-end: var(--cw-space-md);
       --padding-top: var(--cw-space-md);
       --padding-bottom: var(--cw-space-md);
-      resize: vertical;
+      /* Note: resize: vertical removed - conflicts with autogrow on Android */
       overflow-y: auto;
       scrollbar-width: thin;
       scrollbar-color: var(--cw-scrollbar-thumb) transparent;
@@ -743,15 +757,28 @@ ion-button[fill="outline"] {
 
     .content-textarea {
       min-height: 120px;
-      max-height: 400px;
+      max-height: 60vh;  /* Viewport-relative for better mobile UX */
+    }
+
+    /* Mobile textarea keyboard handling */
+    @media (max-width: 768px) {
+      .scrollable-textarea,
+      .content-textarea {
+        max-height: 40vh; /* Smaller limit on mobile to leave room for keyboard */
+      }
+
+      /* Scroll margin for focused elements */
+      .form-section:focus-within {
+        scroll-margin-bottom: 100px;
+      }
     }
 
     /* Toggle styling */
     .form-item ion-toggle {
-      --background: rgba(255, 255, 255, 0.1);
+      --background: var(--cw-bg-hover);
       --background-checked: var(--cw-gradient-brand);
-      --handle-background: #ffffff;
-      --handle-background-checked: #ffffff;
+      --handle-background: var(--cw-text-primary);
+      --handle-background-checked: var(--cw-text-primary);
       --handle-box-shadow: var(--cw-shadow-sm);
       padding-top: var(--cw-space-md);
       padding-bottom: var(--cw-space-md);
@@ -770,13 +797,13 @@ ion-button[fill="outline"] {
       --max-width: 600px;
       --height: auto;
       --border-radius: var(--cw-radius-xl);
-      --background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(15, 15, 15, 0.95) 100%);
+      --background: var(--cw-bg-dropdown);
       backdrop-filter: blur(var(--cw-blur-xl)) saturate(120%);
       --box-shadow: var(--cw-shadow-xl);
     }
 
     .category-modal::part(backdrop) {
-      background: rgba(0, 0, 0, 0.8);
+      background: var(--cw-bg-modal-backdrop);
       backdrop-filter: blur(var(--cw-blur-md));
     }
 
@@ -789,7 +816,7 @@ ion-button[fill="outline"] {
 
     .category-modal ion-toolbar {
       --background: transparent !important;
-      background: linear-gradient(135deg, rgba(20, 20, 20, 0.6) 0%, rgba(15, 15, 15, 0.6) 100%) !important;
+      background: var(--cw-bg-glass) !important;
       --border-width: 0;
       --padding-start: 20px;
       --padding-end: 20px;
@@ -814,54 +841,54 @@ ion-button[fill="outline"] {
 
     // Help card styles
     .help-card {
-      margin: 1rem;
-      background: linear-gradient(135deg, rgba(var(--ion-color-primary-rgb), 0.1) 0%, rgba(var(--ion-color-primary-rgb), 0.05) 100%);
-      border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      margin: var(--cw-space-lg);
+      background: var(--cw-gradient-primary-subtle);
+      border: 1px solid var(--cw-border-accent);
+      box-shadow: var(--cw-shadow-md);
 
       ion-card-header {
-        padding-bottom: 0.5rem;
+        padding-bottom: var(--cw-space-sm);
       }
 
       ion-card-title {
-        font-size: 1.1rem;
-        color: var(--ion-color-light);
+        font-size: var(--cw-font-size-lg);
+        color: var(--cw-text-primary);
       }
 
       ion-card-content {
-        padding-top: 0.5rem;
+        padding-top: var(--cw-space-sm);
 
         p {
-          margin: 0 0 1rem 0;
-          color: var(--ion-color-light);
+          margin: 0 0 var(--cw-space-lg) 0;
+          color: var(--cw-text-primary);
         }
 
         .help-steps {
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
-          margin: 1rem 0;
+          gap: var(--cw-space-md);
+          margin: var(--cw-space-lg) 0;
 
           .help-step {
             display: flex;
             align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
+            gap: var(--cw-space-md);
+            padding: var(--cw-space-sm);
+            background: var(--cw-bg-input);
+            border-radius: var(--cw-radius-md);
 
             ion-icon {
-              font-size: 1.5rem;
+              font-size: var(--cw-font-size-2xl);
               flex-shrink: 0;
               margin-top: 0.125rem;
             }
 
             div {
               flex: 1;
-              color: var(--ion-color-light);
+              color: var(--cw-text-primary);
 
               strong {
-                color: var(--ion-color-primary);
+                color: var(--cw-color-primary);
               }
             }
           }
@@ -870,15 +897,15 @@ ion-button[fill="outline"] {
         ion-note {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          margin-top: 1rem;
-          padding: 0.75rem;
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 8px;
-          font-size: 0.875rem;
+          gap: var(--cw-space-sm);
+          margin-top: var(--cw-space-lg);
+          padding: var(--cw-space-md);
+          background: var(--cw-bg-input);
+          border-radius: var(--cw-radius-md);
+          font-size: var(--cw-font-size-sm);
 
           ion-icon {
-            font-size: 1.25rem;
+            font-size: var(--cw-font-size-xl);
             flex-shrink: 0;
           }
         }
@@ -915,7 +942,7 @@ ion-button[fill="outline"] {
       overflow: hidden;
       flex-shrink: 0;
       border: 1px solid var(--cw-border-subtle);
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--cw-bg-input);
 
       img {
         width: 100%;
@@ -931,7 +958,7 @@ ion-button[fill="outline"] {
 
         ion-icon {
           font-size: 24px;
-          color: rgba(255, 255, 255, 0.3);
+          color: var(--cw-text-disabled);
         }
       }
     }
@@ -953,13 +980,13 @@ ion-button[fill="outline"] {
       display: inline-block;
       margin-bottom: var(--cw-space-md);
       padding: var(--cw-space-md);
-      background: rgba(0, 0, 0, 0.25);
+      background: var(--cw-bg-input);
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-md);
       transition: all var(--cw-transition-slow);
 
       &:hover {
-        background: rgba(0, 0, 0, 0.3);
+        background: var(--cw-bg-elevated);
         border-color: var(--cw-border-default);
       }
 
@@ -978,8 +1005,8 @@ ion-button[fill="outline"] {
         right: 4px;
         --padding-start: 6px;
         --padding-end: 6px;
-        --background: rgba(0, 0, 0, 0.6);
-        --background-hover: rgba(255, 67, 67, 0.3);
+        --background: var(--cw-bg-modal-backdrop);
+        --background-hover: var(--cw-bg-danger-subtle);
         --border-radius: 50%;
         height: 32px;
         width: 32px;
@@ -996,6 +1023,32 @@ ion-button[fill="outline"] {
       ion-button {
         --padding-start: var(--cw-space-md);
         --padding-end: var(--cw-space-md);
+      }
+    }
+
+    .portrait-generate-row {
+      display: flex;
+      align-items: center;
+      gap: var(--cw-space-sm);
+      flex-wrap: wrap;
+    }
+
+    .portrait-style-select {
+      --background: var(--cw-bg-input);
+      --padding-start: var(--cw-space-sm);
+      --padding-end: var(--cw-space-sm);
+      --padding-top: 4px;
+      --padding-bottom: 4px;
+      font-size: var(--cw-font-size-sm);
+      border: 1px solid var(--cw-border-subtle);
+      border-radius: var(--cw-radius-sm);
+      min-width: 140px;
+      max-width: 180px;
+      color: var(--cw-text-primary);
+      transition: border-color var(--cw-transition-normal);
+
+      &:hover {
+        border-color: var(--cw-border-default);
       }
     }
 
@@ -1033,7 +1086,7 @@ ion-button[fill="outline"] {
       cursor: pointer;
       border: 2px solid transparent;
       transition: all var(--cw-transition-normal);
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--cw-bg-input);
 
       img {
         width: 100%;
@@ -1057,7 +1110,7 @@ ion-button[fill="outline"] {
         right: -4px;
         --padding-start: 2px;
         --padding-end: 2px;
-        --background: rgba(0, 0, 0, 0.6);
+        --background: var(--cw-bg-modal-backdrop);
         --border-radius: 50%;
         height: 20px;
         width: 20px;
@@ -1078,7 +1131,7 @@ ion-button[fill="outline"] {
         position: absolute;
         bottom: 2px;
         right: 2px;
-        background: rgba(0, 0, 0, 0.6);
+        background: var(--cw-bg-modal-backdrop);
         border-radius: 50%;
         padding: 2px;
 
@@ -1095,20 +1148,20 @@ ion-button[fill="outline"] {
       align-items: center;
       justify-content: center;
       padding: var(--cw-space-xl);
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--cw-bg-input);
       border: 2px dashed var(--cw-border-subtle);
       border-radius: var(--cw-radius-md);
       margin-bottom: var(--cw-space-md);
 
       .empty-portrait-icon {
         font-size: 48px;
-        color: rgba(255, 255, 255, 0.3);
+        color: var(--cw-text-disabled);
         margin-bottom: var(--cw-space-sm);
       }
 
       p {
         margin: 0;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--cw-text-disabled);
         font-size: var(--cw-font-size-sm);
       }
     }
@@ -1165,4 +1218,61 @@ ion-button[fill="outline"] {
           width: 100%;
         }
       }
+
+      .portrait-generate-row {
+        flex-direction: column;
+        width: 100%;
+
+        .portrait-style-select {
+          min-width: unset;
+          max-width: unset;
+          width: 100%;
+        }
+
+        ion-button {
+          width: 100%;
+        }
+      }
     }
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .codex-container,
+  ion-card,
+  .entry-card,
+  .form-section,
+  .category-sidebar,
+  .active-category,
+  .search-container ion-searchbar,
+  .entry-meta ion-chip,
+  .tag-chip,
+  .modal-actions,
+  // Additional elements with heavy blur effects
+  .category-menu,
+  .entry-modal,
+  .entry-modal ion-header,
+  .entry-modal ion-toolbar,
+  .category-modal,
+  .category-modal ion-header,
+  .category-modal ion-toolbar,
+  .tags-container,
+  .image-preview,
+  .custom-field-item,
+  .new-custom-field,
+  .portrait-preview,
+  .gallery-thumbnail,
+  .portrait-empty {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  }
+
+  .entry-modal::part(backdrop),
+  .category-modal::part(backdrop) {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  }
+}

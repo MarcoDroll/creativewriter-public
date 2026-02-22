@@ -77,15 +77,17 @@ export class ContextMenuService {
       position: fixed;
       left: ${event.clientX}px;
       top: ${event.clientY}px;
-      background: #2d2d30;
-      border: 1px solid #404040;
-      border-radius: 4px;
+      background: var(--cw-bg-elevated);
+      border: 1px solid var(--cw-border-default);
+      border-radius: var(--cw-radius-md);
       padding: 4px 0;
-      z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      z-index: var(--cw-z-popover);
+      box-shadow: var(--cw-shadow-lg);
+      backdrop-filter: blur(var(--cw-blur-md));
+      -webkit-backdrop-filter: blur(var(--cw-blur-md));
       min-width: 180px;
-      font-size: 13px;
-      color: #cccccc;
+      font-size: var(--cw-font-size-sm);
+      color: var(--cw-text-secondary);
     `;
 
     // Add AI rewrite option if text is selected
@@ -195,7 +197,7 @@ export class ContextMenuService {
     `;
 
     menuItem.addEventListener('mouseenter', () => {
-      menuItem.style.backgroundColor = '#404040';
+      menuItem.style.backgroundColor = 'var(--cw-bg-hover)';
     });
 
     menuItem.addEventListener('mouseleave', () => {

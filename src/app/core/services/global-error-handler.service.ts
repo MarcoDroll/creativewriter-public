@@ -273,13 +273,39 @@ export class GlobalErrorHandlerService implements ErrorHandler {
           {
             text: 'Reload Now',
             handler: () => {
-              // Clear caches and reload
-              if ('caches' in window) {
-                caches.keys().then(names => {
-                  names.forEach(name => caches.delete(name));
-                });
-              }
-              window.location.reload();
+              // Use async IIFE to properly await cache/service worker cleanup
+              (async () => {
+                try {
+                  // Unregister any stray service workers
+                  if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(r => r.unregister()));
+                  }
+
+                  // Clear cache storage
+                  if ('caches' in window) {
+                    const names = await caches.keys();
+                    await Promise.all(names.map(name => caches.delete(name)));
+                  }
+                } catch (e) {
+                  console.warn('Cache cleanup failed:', e);
+                }
+
+                // Hard navigation with cache-busting parameter to bypass bfcache
+                // Mobile browsers (especially Safari) ignore window.location.reload()
+                // and serve stale content from bfcache
+                try {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('_refresh', Date.now().toString());
+                  window.location.href = url.toString();
+                } catch {
+                  // Fallback if URL parsing fails (extremely rare)
+                  window.location.href = window.location.pathname + '?_refresh=' + Date.now();
+                }
+              })();
+
+              // Return false to prevent alert auto-dismiss before navigation
+              return false;
             }
           }
         ]

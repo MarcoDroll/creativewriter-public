@@ -9,8 +9,11 @@ services:
       - couchdb
       - replicate-proxy
       - gemini-proxy
+      - generation-service
     networks:
       - creativewriter-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   creativewriter:
     image: ghcr.io/marcodroll/creativewriter-public:latest
@@ -38,6 +41,8 @@ services:
       - ${DATA_PATH:-./data}/log/couchdb_log:/opt/couchdb/var/log
     networks:
       - creativewriter-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   replicate-proxy:
     image: ghcr.io/marcodroll/creativewriter-public-proxy:latest
@@ -84,6 +89,20 @@ services:
       - creativewriter-network
     depends_on:
       - couchdb
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  generation-service:
+    image: ghcr.io/marcodroll/creativewriter-public-generation:latest
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - GEMINI_PROXY_URL=http://gemini-proxy:3002
+    networks:
+      - creativewriter-network
+    depends_on:
+      - gemini-proxy
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 

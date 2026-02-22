@@ -18,7 +18,6 @@ import { StoryMetadataIndexService } from '../../services/story-metadata-index.s
 import { StoryLanguage } from '../../../ui/components/language-selection-dialog/language-selection-dialog.component';
 import { NarrativePerspective, StoryTense } from '../../models/story.interface';
 import { SyncStatusComponent } from '../../../ui/components/sync-status.component';
-import { GenerationStatusComponent } from '../../../ui/components/generation-status.component';
 import { LoginComponent } from '../../../ui/components/login.component';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { AppHeaderComponent, BurgerMenuItem, HeaderAction } from '../../../ui/components/app-header.component';
@@ -47,7 +46,7 @@ export enum LoadingState {
     IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonChip, IonIcon, IonButton,
     IonContent, IonLabel, IonSpinner,
     CdkDropList, CdkDrag,
-    SyncStatusComponent, GenerationStatusComponent, LoginComponent, AppHeaderComponent
+    SyncStatusComponent, LoginComponent, AppHeaderComponent
   ],
   templateUrl: './story-list.component.html',
   styleUrls: ['./story-list.component.scss'],
@@ -76,6 +75,7 @@ export class StoryListComponent implements OnInit, OnDestroy {
   burgerMenuItems: BurgerMenuItem[] = [];
   rightActions: HeaderAction[] = [];
   reorderingEnabled = false;
+  private reorderDirty = false; // Track if order changes need saving
 
   // Unified loading state
   loadingState: LoadingState = LoadingState.INITIAL;
@@ -351,41 +351,60 @@ export class StoryListComponent implements OnInit, OnDestroy {
     await this.loadStories(false);
   }
 
-  async drop(event: CdkDragDrop<StoryMetadata[]>): Promise<void> {
+  drop(event: CdkDragDrop<StoryMetadata[]>): void {
     if (event.previousIndex !== event.currentIndex) {
       // Move item in local array
       moveItemInArray(this.stories, event.previousIndex, event.currentIndex);
 
-      try {
-        // Update the order field for each story based on new position
-        const updatedStories = this.stories.map((story, index) => ({
-          ...story,
-          order: index
-        }));
+      // Update the order field for each story based on new position
+      this.stories = this.stories.map((story, index) => ({
+        ...story,
+        order: index
+      }));
 
-        // Update metadata index with new order
-        for (const story of updatedStories) {
-          // Load full story, update order, save
-          const fullStory = await this.storyService.getStory(story.id);
-          if (fullStory) {
-            fullStory.order = story.order;
-            await this.storyService.updateStory(fullStory);
-          }
-        }
-
-        this.stories = updatedStories;
-      } catch (error) {
-        console.error('Failed to save story order:', error);
-        // Reload stories to reset to previous state if save fails
-        await this.loadStories();
-      }
+      // Mark as dirty - will be saved when exiting reorder mode
+      this.reorderDirty = true;
+      this.cdr.markForCheck();
     }
   }
   
-  toggleReordering(): void {
+  async toggleReordering(): Promise<void> {
+    const wasReordering = this.reorderingEnabled;
+    const hadChanges = this.reorderDirty;
+
+    // Toggle UI immediately (optimistic update)
     this.reorderingEnabled = !this.reorderingEnabled;
-    // Update the header actions to reflect the new state
     this.setupRightActions();
+    this.cdr.markForCheck();
+
+    // Save in background if exiting with changes
+    if (wasReordering && hadChanges) {
+      this.saveStoryOrder();  // No await - fire and forget
+    }
+  }
+
+  /**
+   * Save the current story order to the metadata index
+   * This is more efficient than updating each story document (1 document vs N)
+   */
+  private async saveStoryOrder(): Promise<void> {
+    try {
+      // Single call to update order in metadata index
+      const orderedIds = this.stories.map(s => s.id);
+      await this.metadataIndexService.updateStoryOrder(orderedIds);
+      this.reorderDirty = false;
+    } catch (error) {
+      console.error('Failed to save story order:', error);
+      // Show error toast
+      const toast = await this.toastCtrl.create({
+        message: 'Failed to save story order. Please try again.',
+        duration: 3000,
+        color: 'danger'
+      });
+      await toast.present();
+      // Reload stories to reset to previous state
+      await this.loadStories();
+    }
   }
 
   toggleFabMenu(): void {

@@ -5,22 +5,22 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: rgba(0, 0, 0, 0.7);
+      background-color: var(--cw-bg-modal-backdrop);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 10000;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(var(--cw-blur-sm));
 
       .loading-content {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 16px;
-        padding: 32px;
-        background-color: var(--ion-color-step-100);
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        gap: var(--cw-space-lg);
+        padding: var(--cw-space-2xl);
+        background-color: var(--cw-bg-elevated);
+        border-radius: var(--cw-radius-lg);
+        box-shadow: var(--cw-shadow-xl);
         max-width: 90%;
         max-height: 80%;
 
@@ -39,10 +39,10 @@
         }
 
         .debug-logs {
-          margin-top: 16px;
-          padding: 12px;
-          background-color: rgba(0, 0, 0, 0.2);
-          border-radius: 8px;
+          margin-top: var(--cw-space-lg);
+          padding: var(--cw-space-md);
+          background-color: var(--cw-bg-hover);
+          border-radius: var(--cw-radius-md);
           max-height: 300px;
           overflow-y: auto;
           width: 100%;
@@ -78,11 +78,11 @@
     }
     
     ion-header {
-      --ion-toolbar-background: rgba(45, 45, 45, 0.3);
-      --ion-toolbar-color: #f8f9fa;
-      backdrop-filter: blur(15px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+      --ion-toolbar-background: var(--cw-bg-elevated);
+      --ion-toolbar-color: var(--cw-text-primary);
+      backdrop-filter: blur(var(--cw-blur-lg));
+      border-bottom: 1px solid var(--cw-border-subtle);
+      box-shadow: var(--cw-shadow-md);
       position: sticky;
       top: 0;
       z-index: 100;
@@ -104,7 +104,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 100%;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      text-shadow: var(--cw-shadow-text);
     }
     
     ion-button {
@@ -128,7 +128,7 @@
     /* Desktop optimizations for compact header */
     @media (min-width: 768px) {
       ion-header {
-        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--cw-shadow-lg);
       }
       
       ion-toolbar {
@@ -189,9 +189,9 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--cw-bg-modal-backdrop);
       z-index: 9998;
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(var(--cw-blur-xs));
     }
     
     .burger-menu {
@@ -210,12 +210,12 @@
       background-size: cover, cover, auto;
       background-position: center, center, center;
       background-repeat: no-repeat, no-repeat, repeat;
-      border-left: 2px solid rgba(139, 180, 248, 0.3);
+      border-left: 2px solid var(--cw-border-accent);
       z-index: 9999;
       transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-      box-shadow: -8px 0 40px rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      box-shadow: var(--cw-shadow-xl);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
     }
     
     .burger-menu.open {
@@ -234,11 +234,11 @@
       justify-content: space-between;
       align-items: center;
       padding: 1.5rem 1.25rem;
-      border-bottom: 2px solid rgba(139, 180, 248, 0.2);
-      background: linear-gradient(135deg, rgba(15, 15, 25, 0.8) 0%, rgba(10, 10, 20, 0.8) 100%);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.4);
+      border-bottom: 2px solid var(--cw-border-accent);
+      background: var(--cw-bg-glass);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
+      box-shadow: var(--cw-shadow-md);
       position: relative;
     }
     
@@ -249,36 +249,36 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(139, 180, 248, 0.05) 0%, rgba(71, 118, 230, 0.05) 100%);
+      background: var(--cw-gradient-primary-subtle);
+      opacity: 0.3;
       z-index: -1;
     }
     
     .burger-menu-header h3 {
       margin: 0;
-      background: linear-gradient(135deg, #ffffff 0%, #8bb4f8 50%, #4776e6 100%);
+      background: var(--cw-gradient-text-accent);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: 1px;
-      text-shadow: 0 2px 10px rgba(139, 180, 248, 0.3);
     }
     
     .burger-menu-header ion-button {
-      --color: rgba(255, 255, 255, 0.8);
-      --background: rgba(255, 255, 255, 0.1);
-      --background-hover: rgba(255, 255, 255, 0.2);
-      --border-radius: 12px;
+      --color: var(--cw-text-secondary);
+      --background: var(--cw-bg-button-ghost);
+      --background-hover: var(--cw-bg-button-ghost-hover);
+      --border-radius: var(--cw-radius-lg);
       --padding-start: 8px;
       --padding-end: 8px;
-      transition: all 0.3s ease;
+      transition: all var(--cw-transition-slow);
     }
-    
+
     .burger-menu-header ion-button:hover {
       transform: scale(1.1) rotate(90deg);
-      --background: rgba(255, 107, 107, 0.2);
-      --color: #ff6b6b;
+      --background: var(--cw-bg-danger-subtle);
+      --color: var(--cw-color-danger);
     }
     
     .burger-menu-items {
@@ -291,21 +291,21 @@
     }
     
     .burger-menu-items ion-button {
-      --color: #ffffff;
-      --background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(139, 180, 248, 0.08) 100%);
-      --background-hover: linear-gradient(135deg, rgba(71, 118, 230, 0.25) 0%, rgba(139, 180, 248, 0.25) 100%);
-      --background-focused: linear-gradient(135deg, rgba(71, 118, 230, 0.3) 0%, rgba(139, 180, 248, 0.3) 100%);
-      --ripple-color: rgba(139, 180, 248, 0.4);
+      --color: var(--cw-text-primary);
+      --background: var(--cw-gradient-primary-subtle);
+      --background-hover: var(--cw-gradient-primary-subtle-hover);
+      --background-focused: var(--cw-gradient-primary-subtle-hover);
+      --ripple-color: var(--cw-border-accent);
       margin: 0 1.25rem 0.5rem 1.25rem;
       height: 54px;
       font-size: 1.05rem;
       font-weight: 500;
       justify-content: flex-start;
       text-align: left;
-      border: 1px solid rgba(139, 180, 248, 0.2);
-      border-radius: 16px;
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--cw-border-accent);
+      border-radius: var(--cw-radius-xl);
+      backdrop-filter: blur(var(--cw-blur-lg));
+      -webkit-backdrop-filter: blur(var(--cw-blur-lg));
       transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
       position: relative;
       overflow: hidden;
@@ -318,7 +318,7 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      background: linear-gradient(90deg, transparent, var(--cw-bg-button-ghost), transparent);
       transition: left 0.6s ease;
     }
     
@@ -327,29 +327,29 @@
     }
     
     .burger-menu-items ion-button:hover {
-      --background: linear-gradient(135deg, rgba(71, 118, 230, 0.35) 0%, rgba(139, 180, 248, 0.35) 100%);
-      border-color: rgba(139, 180, 248, 0.6);
+      --background: var(--cw-gradient-primary-subtle-hover);
+      border-color: var(--cw-border-primary);
       transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 8px 25px rgba(71, 118, 230, 0.4);
+      box-shadow: var(--cw-shadow-primary-glow);
     }
     
     .burger-menu-items ion-button ion-icon {
       margin-right: 16px;
       font-size: 1.3rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      filter: drop-shadow(var(--cw-shadow-text));
     }
-    
+
     .burger-menu-status {
-      border-top: 2px solid rgba(139, 180, 248, 0.2);
+      border-top: 2px solid var(--cw-border-accent);
       padding: 1.5rem 1.25rem;
       margin-top: auto;
-      background: linear-gradient(135deg, rgba(15, 15, 25, 0.9) 0%, rgba(10, 10, 20, 0.9) 100%);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+      background: var(--cw-bg-glass);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
+      box-shadow: var(--cw-shadow-lg);
       position: relative;
     }
-    
+
     .burger-menu-status::before {
       content: '';
       position: absolute;
@@ -357,7 +357,8 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(139, 180, 248, 0.05) 0%, rgba(71, 118, 230, 0.05) 100%);
+      background: var(--cw-gradient-primary-subtle);
+      opacity: 0.3;
       z-index: -1;
     }
     
@@ -446,11 +447,11 @@
     }
     
     .title-input-native {
-      background: rgba(30, 30, 30, 0.4);
-      backdrop-filter: blur(5px);
-      color: #f8f9fa;
-      border: 1px dotted rgba(255, 255, 255, 0.3);
-      border-radius: 4px;
+      background: var(--cw-bg-input);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      color: var(--cw-text-primary);
+      border: 1px dotted var(--cw-border-default);
+      border-radius: var(--cw-radius-xs);
       padding: 3px 8px;
       height: 24px;
       font-size: 0.85rem;
@@ -464,13 +465,13 @@
     }
     
     .title-input-native::placeholder {
-      color: #6c757d;
+      color: var(--cw-text-disabled);
       opacity: 1;
     }
     
     .title-input-native:focus {
-      border-color: var(--ion-color-light, rgba(255, 255, 255, 0.4));
-      box-shadow: 0 0 0 1px var(--ion-color-light, rgba(255, 255, 255, 0.1));
+      border-color: var(--cw-border-default);
+      box-shadow: var(--cw-shadow-focus);
     }
     
     .scene-editor {
@@ -508,11 +509,11 @@
     }
 
     .scene-title-input-native {
-      background: rgba(30, 30, 30, 0.4);
-      backdrop-filter: blur(5px);
-      color: #e0e0e0;
-      border: 1px dotted rgba(255, 255, 255, 0.3);
-      border-radius: 4px;
+      background: var(--cw-bg-input);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      color: var(--cw-text-secondary);
+      border: 1px dotted var(--cw-border-default);
+      border-radius: var(--cw-radius-xs);
       padding: 2px 6px;
       height: 18px;
       font-size: 0.75rem;
@@ -525,13 +526,13 @@
     }
     
     .scene-title-input-native::placeholder {
-      color: #6c757d;
+      color: var(--cw-text-disabled);
       opacity: 1;
     }
-    
+
     .scene-title-input-native:focus {
-      border-color: var(--ion-color-medium, rgba(255, 255, 255, 0.4));
-      box-shadow: 0 0 0 1px var(--ion-color-medium, rgba(255, 255, 255, 0.1));
+      border-color: var(--cw-border-default);
+      box-shadow: var(--cw-shadow-focus);
     }
     
     /* Scene Navigation Styles */
@@ -590,24 +591,24 @@
     }
     
     .editor-wrapper {
-      background: rgba(42, 42, 42, 0.4);
-      backdrop-filter: blur(8px);
-      border-radius: var(--ion-border-radius, 8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--cw-bg-elevated);
+      backdrop-filter: blur(var(--cw-blur-md));
+      border-radius: var(--cw-radius-md);
+      border: 1px solid var(--cw-border-default);
       margin: 0;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      transition: all 0.2s ease;
+      box-shadow: var(--cw-shadow-md);
+      transition: all var(--cw-transition-normal);
       flex: 1;
       display: flex;
       flex-direction: column;
       min-height: 0;
       position: relative;
     }
-    
+
     .editor-wrapper:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-      background: rgba(42, 42, 42, 0.5);
+      border-color: var(--cw-border-accent);
+      box-shadow: var(--cw-shadow-lg);
+      background: var(--cw-bg-glass);
     }
 
     .image-video-action-button {
@@ -619,7 +620,7 @@
       height: 34px;
       border-radius: var(--cw-radius-full);
       border: none;
-      background: rgba(0, 0, 0, 0.78);
+      background: var(--cw-bg-modal-backdrop);
       color: var(--cw-text-primary);
       box-shadow: var(--cw-shadow-lg);
       cursor: pointer;
@@ -664,8 +665,8 @@
     .content-editor :global(.prosemirror-editor) {
       outline: none !important;
       border: none !important;
-      background: rgba(30, 30, 30, 0.3);
-      backdrop-filter: blur(5px);
+      background: var(--cw-bg-input);
+      backdrop-filter: blur(var(--cw-blur-sm));
       color: var(--editor-text-color, var(--ion-text-color, var(--ion-color-step-850, #e0e0e0)));
       font-size: 1rem;
       line-height: 1.8;
@@ -683,7 +684,7 @@
     .content-editor :global(.prosemirror-editor p) {
       margin: 0 0 1.5rem 0;
       text-indent: 2rem;
-      color: var(--editor-text-color, #e0e0e0) !important;
+      color: var(--editor-text-color, var(--cw-text-secondary)) !important;
     }
     
     .content-editor :global(.prosemirror-editor p:last-child) {
@@ -692,7 +693,7 @@
     
     .content-editor :global(.prosemirror-editor[data-placeholder]:empty::before) {
       content: attr(data-placeholder);
-      color: #6c757d;
+      color: var(--cw-text-disabled);
       pointer-events: none;
       position: absolute;
     }
@@ -770,7 +771,13 @@
       font-variant-ligatures: none;
       font-feature-settings: "liga" 0;
     }
-    
+
+    /* Locked editor state during AI generation */
+    .content-editor :global(.prosemirror-editor[contenteditable="false"]) {
+      cursor: not-allowed;
+      opacity: 0.85;
+    }
+
     /* Remove any focus styles from the content editor container */
     .content-editor:focus,
     .content-editor:focus-within {
@@ -791,7 +798,7 @@
     }
     
     .content-editor :global(.ProseMirror-selectednode) {
-      outline: 2px solid #8cf;
+      outline: 2px solid var(--cw-color-primary-light);
     }
 
     /* Mobile Responsiveness */
@@ -871,9 +878,28 @@
 
     
     
-    /* Mobile keyboard handling */
+    /* Mobile keyboard handling - CSS-first approach
+     *
+     * PRIMARY: CSS env(keyboard-inset-height) for Chromium (Android Chrome 94+)
+     * These update automatically when VirtualKeyboard API is enabled - no JavaScript needed!
+     *
+     * FALLBACK: .keyboard-visible class for Safari/Firefox via Ionic Platform events
+     * Only applied when env() returns 0 (unsupported browsers)
+     */
     @media (max-width: 768px) {
-      /* When keyboard is visible, adjust viewport */
+      /* PRIMARY: CSS env() for Chromium - auto-updates when keyboard shows/hides */
+      .editor-inner {
+        padding-bottom: calc(8rem + env(keyboard-inset-height, 0px));
+      }
+
+      .content-editor :global(.prosemirror-editor) {
+        padding-bottom: env(keyboard-inset-height, 0px);
+      }
+
+      /* FALLBACK: For Safari/Firefox via .keyboard-visible class
+       * These rules only have effect when env() returns 0 (unsupported browsers)
+       * and the .keyboard-visible class is toggled by Ionic Platform events
+       */
       :host-context(.keyboard-visible) .ion-page {
         min-height: calc(100vh - var(--keyboard-height, 0px));
       }
@@ -886,12 +912,12 @@
         max-height: calc(100vh - var(--keyboard-height, 0px) - 250px);
       }
 
-      /* Ensure content can scroll above keyboard */
+      /* Ensure content can scroll above keyboard (fallback) */
       :host-context(.keyboard-visible) .editor-inner {
         padding-bottom: calc(var(--keyboard-height, 0px) + 2rem);
       }
 
-      /* Adjust ProseMirror editor for keyboard */
+      /* Adjust ProseMirror editor for keyboard (fallback) */
       :host-context(.keyboard-visible) .content-editor :global(.prosemirror-editor) {
         padding-bottom: var(--keyboard-height, 0px);
       }
@@ -899,13 +925,13 @@
 
     /* Title styling to match AppHeaderComponent */
     .app-title {
-      background: linear-gradient(135deg, #f8f9fa 0%, #8bb4f8 50%, #4776e6 100%);
+      background: var(--cw-gradient-text-accent);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       font-weight: 700;
       letter-spacing: 0.3px;
-      text-shadow: 0 2px 10px rgba(139, 180, 248, 0.3);
+      text-shadow: var(--cw-shadow-primary-glow);
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -925,25 +951,25 @@
     .cover-thumbnail {
       width: 32px;
       height: 32px;
-      border-radius: 6px;
+      border-radius: var(--cw-radius-sm);
       overflow: hidden;
-      border: 2px solid rgba(255, 255, 255, 0.3);
+      border: 2px solid var(--cw-border-default);
       flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--cw-shadow-md);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--cw-transition-normal);
     }
 
     .cover-thumbnail:hover,
     .cover-thumbnail:focus {
-      border-color: rgba(139, 180, 248, 0.6);
-      box-shadow: 0 2px 12px rgba(139, 180, 248, 0.4);
+      border-color: var(--cw-border-accent);
+      box-shadow: var(--cw-shadow-primary-glow);
       transform: scale(1.05);
       outline: none;
     }
 
     .cover-thumbnail:focus-visible {
-      outline: 2px solid rgba(139, 180, 248, 0.8);
+      outline: 2px solid var(--cw-border-primary);
       outline-offset: 2px;
     }
 
@@ -964,13 +990,13 @@
       width: auto;
       height: auto;
       object-fit: contain;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      border-radius: var(--cw-radius-md);
+      box-shadow: var(--cw-shadow-xl);
     }
 
     /* Cover Image Popover Styles */
     .cover-image-popover::part(backdrop) {
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--cw-bg-modal-backdrop);
     }
 
     .cover-image-popover::part(content) {
@@ -1049,27 +1075,27 @@
     img.has-video {
       position: relative;
       cursor: pointer !important;
-      transition: all 0.2s ease;
+      transition: all var(--cw-transition-normal);
       border: 2px solid transparent;
     }
 
     img.has-video:hover {
-      border-color: #007bff;
-      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+      border-color: var(--cw-color-info-dark);
+      box-shadow: var(--cw-shadow-primary-glow);
       transform: scale(1.02);
     }
 
     img.has-video::after {
       content: '🎬';
       position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 14px;
-      backdrop-filter: blur(4px);
+      top: var(--cw-space-sm);
+      right: var(--cw-space-sm);
+      background: var(--cw-bg-modal-backdrop);
+      color: var(--cw-text-primary);
+      padding: var(--cw-space-xs) var(--cw-space-sm);
+      border-radius: var(--cw-radius-lg);
+      font-size: var(--cw-font-size-sm);
+      backdrop-filter: blur(var(--cw-blur-sm));
       pointer-events: none;
       z-index: 1;
     }
@@ -1084,7 +1110,7 @@
 
       ion-fab-button {
         --background: var(--ion-color-primary);
-        --box-shadow: 0 4px 16px rgba(13, 110, 253, 0.4);
+        --box-shadow: var(--cw-shadow-primary-glow);
         width: 56px;
         height: 56px;
 
@@ -1096,6 +1122,12 @@
 
     /* Mobile keyboard handling for FAB */
     @media (max-width: 768px) {
+      /* PRIMARY: CSS env() for Chromium - FAB moves with keyboard automatically */
+      .beat-input-fab {
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px) + 48px + env(keyboard-inset-height, 0px));
+      }
+
+      /* FALLBACK: For Safari/Firefox via .keyboard-visible class */
       :host-context(.keyboard-visible) .beat-input-fab {
         bottom: calc(var(--keyboard-height, 0px) + 16px + env(safe-area-inset-bottom, 0px) + 48px);
       }
@@ -1109,3 +1141,34 @@
         }
       }
     }
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .editor-container,
+  .prose-editor,
+  .toolbar-container,
+  .slash-dropdown,
+  .word-count-chip,
+  .beat-panel,
+  ion-chip,
+  .fab-menu,
+  img.has-video::after,
+  // Additional elements with heavy blur effects
+  ion-header,
+  .burger-menu-overlay,
+  .burger-menu,
+  .burger-menu-header,
+  .burger-menu-items ion-button,
+  .burger-menu-status,
+  .editor-wrapper,
+  .title-input-native,
+  .scene-title-input-native,
+  .content-editor :global(.prosemirror-editor) {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  }
+}

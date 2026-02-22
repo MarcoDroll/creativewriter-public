@@ -71,6 +71,9 @@
               <ion-segment-button value="scene">
                 <ion-label>Scene Beat</ion-label>
               </ion-segment-button>
+              <ion-segment-button value="envision">
+                <ion-label>Envision Beat</ion-label>
+              </ion-segment-button>
               <ion-segment-button value="sceneFromOutline">
                 <ion-label>Scene from Outline</ion-label>
               </ion-segment-button>
@@ -85,6 +88,9 @@
             </span>
             <span *ngIf="activeBeatType === 'scene'">
               Scene beats expand moments with detail, focusing on immersion rather than plot.
+            </span>
+            <span *ngIf="activeBeatType === 'envision'">
+              Envision beats fill the word count creatively using the prompt as a direction.
             </span>
             <span *ngIf="activeBeatType === 'sceneFromOutline'">
               Generate a complete scene from an outline description (up to 5000 words).
@@ -102,6 +108,11 @@
                 <h3>Language & System Message</h3>
                 <p>AI personality and communication style</p>
               </ion-label>
+              <ion-badge slot="end" color="tertiary" class="shared-badge"
+                title="This setting is shared across all beat types (Story, Scene, Envision, and Scene from Outline)">
+                <ion-icon name="git-branch-outline"></ion-icon>
+                All Types
+              </ion-badge>
               <ion-badge slot="end" color="primary">
                 {{ (settings.language || 'en').toUpperCase() }}
               </ion-badge>
@@ -160,6 +171,10 @@
                 <h3>Generation Template — {{ getTemplateTypeName() }}</h3>
                 <p>Configure prompts for {{ getTemplateTypeName().toLowerCase() }} generation</p>
               </ion-label>
+              <ion-badge slot="end" color="secondary" class="per-type-badge"
+                title="Each beat type has its own template. Changes here only affect {{ getTemplateTypeName() }} generation.">
+                {{ getTemplateTypeName() }} Only
+              </ion-badge>
             </ion-item>
             <div slot="content" class="accordion-content">
               <!-- Section Editor Component -->
@@ -167,9 +182,11 @@
                 [beatType]="activeBeatType"
                 [sections]="beatTemplateSections"
                 [sceneSections]="sceneBeatTemplateSections"
+                [envisionSections]="envisionBeatTemplateSections"
                 [sceneFromOutlineSections]="sceneFromOutlineTemplateSections"
                 (sectionsChange)="onBeatSectionsChange($event)"
                 (sceneSectionsChange)="onSceneBeatSectionsChange($event)"
+                (envisionSectionsChange)="onEnvisionBeatSectionsChange($event)"
                 (sceneFromOutlineSectionsChange)="onSceneFromOutlineSectionsChange($event)">
               </app-beat-template-sections>
             </div>
@@ -183,6 +200,11 @@
                 <h3>Generation Rules</h3>
                 <p>Custom rules for AI output</p>
               </ion-label>
+              <ion-badge slot="end" color="tertiary" class="shared-badge"
+                title="These rules are shared across all beat types (Story, Scene, Envision, and Scene from Outline)">
+                <ion-icon name="git-branch-outline"></ion-icon>
+                All Types
+              </ion-badge>
               <ion-badge slot="end" [color]="(settings.beatRules || '').length > 0 ? 'primary' : 'medium'">
                 {{ (settings.beatRules || '').length || 'None' }}
               </ion-badge>
@@ -384,7 +406,7 @@
           </ion-card-header>
           <ion-card-content>
             <ion-text color="medium">
-              <p>Export this story and its Codex as a JSON file. The export can be imported into another Creative Writer database.</p>
+              <p>Export this story and its Codex as a .cwx archive file. All embedded images and videos will be included. The export can be imported into another Creative Writer instance.</p>
             </ion-text>
 
             <div class="export-info">
@@ -427,20 +449,20 @@
           </ion-card-header>
           <ion-card-content>
             <ion-text color="medium">
-              <p>Import a story from a JSON export file. A new story will be created with all imported data.</p>
+              <p>Import a story from a .cwx archive file. A new story will be created with all imported data, including embedded images and videos.</p>
             </ion-text>
 
             <!-- File Input -->
             <div class="file-input-wrapper" *ngIf="!importPreview">
               <input
                 type="file"
-                accept=".json"
+                accept=".cwx,.json"
                 (change)="onImportFileSelected($event)"
                 id="importFileInput"
                 class="hidden-file-input">
               <label for="importFileInput" class="file-input-label">
                 <ion-icon name="cloud-upload-outline"></ion-icon>
-                <span>Choose JSON file or drag here</span>
+                <span>Choose .cwx file or drag here</span>
               </label>
             </div>
 
@@ -478,6 +500,26 @@
                         <div class="preview-stat">
                           <strong>{{ getImportCodexEntryCount() }}</strong>
                           <span>Codex Entries</span>
+                        </div>
+                      </ion-col>
+                    </ion-row>
+                    <ion-row *ngIf="getImportImageCount() > 0 || getImportVideoCount() > 0">
+                      <ion-col size="4">
+                        <div class="preview-stat">
+                          <strong>{{ getImportImageCount() }}</strong>
+                          <span>Images</span>
+                        </div>
+                      </ion-col>
+                      <ion-col size="4">
+                        <div class="preview-stat">
+                          <strong>{{ getImportVideoCount() }}</strong>
+                          <span>Videos</span>
+                        </div>
+                      </ion-col>
+                      <ion-col size="4" *ngIf="getImportMediaSizeFormatted()">
+                        <div class="preview-stat">
+                          <strong>{{ getImportMediaSizeFormatted() }}</strong>
+                          <span>Media Size</span>
                         </div>
                       </ion-col>
                     </ion-row>

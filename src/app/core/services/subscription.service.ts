@@ -288,6 +288,56 @@ export class SubscriptionService {
   }
 
   /**
+   * Create a direct portal session for authenticated users
+   * Requires valid auth token - skips Stripe's login_page for better UX
+   *
+   * Benefits:
+   * - Users see "Back to Creative Writer" instead of confusing "Abmelden" (logout)
+   * - Faster portal access without OTP re-verification
+   *
+   * Falls back to null if token is invalid (caller should use login_page flow)
+   */
+  async createDirectPortalSession(): Promise<string | null> {
+    const token = this.getAuthToken();
+    if (!token) {
+      return null;
+    }
+
+    const returnUrl = window.location.origin + '/settings?tab=premium';
+
+    try {
+      const response = await fetch(
+        `${this.API_URL}/portal/session?returnUrl=${encodeURIComponent(returnUrl)}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        // Token invalid or subscription expired - clear token but keep email
+        if (response.status === 401 || response.status === 403) {
+          console.warn('[SubscriptionService] Auth token rejected, clearing token');
+          const settings = this.settingsService.getSettings();
+          this.settingsService.updateSettings({
+            premium: {
+              ...settings.premium,
+              authToken: undefined,
+              authTokenCreatedAt: undefined
+            }
+          });
+        }
+        return null;
+      }
+
+      const data: PortalResponse = await response.json();
+      return data.url;
+    } catch (error) {
+      console.warn('[SubscriptionService] Direct portal session failed:', error);
+      return null;
+    }
+  }
+
+  /**
    * Claim portal verification after returning from Stripe
    *
    * Called after user returns from Stripe portal. Checks if they completed

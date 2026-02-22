@@ -14,7 +14,8 @@ import {
   SceneBeatTemplateSections,
   SceneFromOutlineTemplateSections,
   DEFAULT_BEAT_TEMPLATE_SECTIONS,
-  DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS
+  DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS,
+  DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS
 } from '../../stories/models/story.interface';
 
 /**
@@ -456,4 +457,15 @@ export function mergeSceneBeatSections(
     }
   }
   return result;
+}
+
+/**
+ * Merge envision beat template sections, preferring non-empty values over defaults.
+ * Empty strings in stored sections are replaced with default values.
+ * Envision beats use the same interface as Story Beats (BeatTemplateSections).
+ */
+export function mergeEnvisionBeatSections(
+  stored: Partial<BeatTemplateSections> | undefined
+): BeatTemplateSections {
+  return mergeBeatSections(DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS, stored);
 }

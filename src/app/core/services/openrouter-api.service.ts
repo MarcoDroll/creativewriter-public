@@ -9,7 +9,8 @@ import {
   usesEffortReasoning,
   REASONING_DEFAULTS,
   calculateReasoningBudget
-} from '../models/reasoning.config';
+} from '../models/model-variants.config';
+import { OpenRouterProviderPrefs, buildOpenRouterProviderPrefs } from '../models/settings.interface';
 
 export interface OpenRouterRequest {
   model: string;
@@ -26,6 +27,8 @@ export interface OpenRouterRequest {
     effort?: 'high' | 'medium' | 'low';
     max_tokens?: number;
   };
+  // Provider preferences for privacy and routing
+  provider?: OpenRouterProviderPrefs;
 }
 
 export interface OpenRouterResponse {
@@ -112,6 +115,8 @@ export class OpenRouterApiService {
       'X-Title': 'Creative Writer'
     });
 
+    const providerPrefs = buildOpenRouterProviderPrefs(settings.openRouter);
+
     const request: OpenRouterRequest = {
       model: model,
       messages: options.messages && options.messages.length > 0
@@ -120,7 +125,8 @@ export class OpenRouterApiService {
       max_tokens: this.calculateRequestMaxTokens(maxTokens, reasoningConfig),
       temperature: options.temperature !== undefined ? options.temperature : settings.openRouter.temperature,
       top_p: options.topP !== undefined ? options.topP : settings.openRouter.topP,
-      ...(reasoningConfig && { reasoning: reasoningConfig })
+      ...(reasoningConfig && { reasoning: reasoningConfig }),
+      ...(providerPrefs && { provider: providerPrefs })
     };
 
     // Create abort subject for this request
@@ -247,6 +253,8 @@ export class OpenRouterApiService {
       prompt: promptForLogging
     });
 
+    const providerPrefs = buildOpenRouterProviderPrefs(settings.openRouter);
+
     const request: OpenRouterRequest = {
       model: model,
       messages: options.messages && options.messages.length > 0
@@ -256,7 +264,8 @@ export class OpenRouterApiService {
       temperature: options.temperature !== undefined ? options.temperature : settings.openRouter.temperature,
       top_p: options.topP !== undefined ? options.topP : settings.openRouter.topP,
       stream: true,
-      ...(reasoningConfig && { reasoning: reasoningConfig })
+      ...(reasoningConfig && { reasoning: reasoningConfig }),
+      ...(providerPrefs && { provider: providerPrefs })
     };
 
     // Create abort subject for this request
@@ -266,7 +275,6 @@ export class OpenRouterApiService {
 
     // Store request metadata for abort handling
     this.requestMetadata.set(requestId, { logId, startTime });
-
 
     return new Observable<string>(observer => {
       let accumulatedContent = '';

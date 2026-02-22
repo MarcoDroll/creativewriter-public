@@ -108,5 +108,8 @@ export interface ModelOption {
   // Reasoning support fields
   supportsReasoning?: boolean;   // True if this model supports reasoning mode
   isReasoningVariant?: boolean;  // True if this is the reasoning variant entry
-  baseModelId?: string;          // For reasoning variants, points to the base model ID
+  baseModelId?: string;          // For variants, points to the base model ID
+  // Beta (self-moderated) variant fields
+  isBetaVariant?: boolean;       // True if this is the beta (self-moderated) variant
+  isModerated?: boolean;         // True if OpenRouter applies moderation (from API response)
 }

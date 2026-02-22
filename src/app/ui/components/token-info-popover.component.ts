@@ -138,22 +138,22 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
   styles: [`
     :host {
       --backdrop-opacity: 0.6;
-      --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      --box-shadow: var(--cw-shadow-xl);
       --width: 350px;
       --max-width: 90vw;
     }
 
     ion-content {
       --background: transparent;
-      --color: #f8f9fa;
+      --color: var(--cw-text-primary);
     }
 
     ion-header {
       padding: 1rem 1.25rem 0.75rem 1.25rem;
-      border-bottom: 1px solid rgba(139, 180, 248, 0.15);
-      background: linear-gradient(135deg, rgba(15, 15, 25, 0.4) 0%, rgba(10, 10, 20, 0.4) 100%);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
+      border-bottom: 1px solid var(--cw-border-accent);
+      background: var(--cw-bg-glass);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
       position: relative;
     }
 
@@ -164,24 +164,24 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(139, 180, 248, 0.05) 0%, rgba(71, 118, 230, 0.05) 100%);
+      background: var(--cw-gradient-primary-subtle);
       z-index: -1;
     }
 
     ion-toolbar {
       --background: transparent;
-      --color: #f8f9fa;
+      --color: var(--cw-text-primary);
       --border-width: 0;
       --padding-start: 0;
       --padding-end: 0;
     }
 
     ion-title {
-      --color: rgba(255, 255, 255, 0.95);
-      font-size: 1rem;
-      font-weight: 600;
+      --color: var(--cw-text-primary);
+      font-size: var(--cw-font-size-md);
+      font-weight: var(--cw-font-weight-semibold);
       letter-spacing: 0.3px;
-      background: linear-gradient(135deg, #ffffff 0%, #8bb4f8 50%, #4776e6 100%);
+      background: var(--cw-gradient-text-accent);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -193,15 +193,15 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
     }
 
     ion-item {
-      --background: rgba(255, 255, 255, 0.02);
-      --background-hover: rgba(139, 180, 248, 0.1);
-      --background-activated: rgba(139, 180, 248, 0.15);
-      --color: rgba(255, 255, 255, 0.95);
-      --ripple-color: rgba(139, 180, 248, 0.3);
+      --background: var(--cw-bg-hover);
+      --background-hover: var(--cw-bg-primary-hover);
+      --background-activated: var(--cw-bg-primary-hover);
+      --color: var(--cw-text-primary);
+      --ripple-color: var(--cw-border-accent);
       margin: 0 0.75rem 0.5rem 0.75rem;
-      --border-radius: 8px;
-      border: 1px solid rgba(139, 180, 248, 0.15);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --border-radius: var(--cw-radius-md);
+      border: 1px solid var(--cw-border-accent);
+      transition: all var(--cw-transition-spring);
       position: relative;
       overflow: hidden;
     }
@@ -213,16 +213,16 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(139, 180, 248, 0.1), transparent);
+      background: linear-gradient(90deg, transparent, var(--cw-bg-primary-hover), transparent);
       transition: left 0.5s ease;
       z-index: 1;
     }
 
     ion-item:hover {
-      --background: rgba(139, 180, 248, 0.1);
-      border-color: rgba(139, 180, 248, 0.3);
+      --background: var(--cw-bg-primary-hover);
+      border-color: var(--cw-border-accent);
       transform: translateX(4px) scale(1.02);
-      box-shadow: 0 4px 12px rgba(139, 180, 248, 0.2);
+      box-shadow: var(--cw-shadow-primary-glow);
     }
 
     ion-item:hover::before {
@@ -230,22 +230,22 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
     }
 
     ion-item h2, ion-item h3 {
-      color: #8bb4f8;
+      color: var(--cw-color-primary-light);
       margin: 0 0 4px 0;
       position: relative;
       z-index: 2;
-      font-weight: 600;
+      font-weight: var(--cw-font-weight-semibold);
     }
 
     ion-item p {
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--cw-text-secondary);
       margin: 0;
       position: relative;
       z-index: 2;
     }
 
     ion-note {
-      --color: rgba(255, 255, 255, 0.6);
+      --color: var(--cw-text-muted);
       position: relative;
       z-index: 2;
     }
@@ -253,11 +253,11 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
     ion-icon {
       position: relative;
       z-index: 2;
-      color: #f8f9fa;
+      color: var(--cw-text-primary);
     }
 
     ion-button {
-      --color: #f8f9fa;
+      --color: var(--cw-text-primary);
       position: relative;
       z-index: 2;
     }
@@ -271,21 +271,21 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
     .usage-text {
       display: flex;
       justify-content: space-between;
-      margin-top: 8px;
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.7);
+      margin-top: var(--cw-space-sm);
+      font-size: var(--cw-font-size-xs);
+      color: var(--cw-text-muted);
     }
 
     ion-progress-bar {
       height: 8px;
-      border-radius: 4px;
-      --background: rgba(255, 255, 255, 0.1);
-      margin: 8px 0;
+      border-radius: var(--cw-radius-xs);
+      --background: var(--cw-bg-hover);
+      margin: var(--cw-space-sm) 0;
     }
 
     .info-text {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.6);
+      font-size: var(--cw-font-size-xs);
+      color: var(--cw-text-muted);
       margin: 0;
     }
 
@@ -295,12 +295,12 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
     }
 
     .model-card {
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: 8px;
-      padding: 12px;
+      background: var(--cw-bg-hover);
+      border-radius: var(--cw-radius-md);
+      padding: var(--cw-space-md);
       text-align: center;
-      border: 1px solid rgba(139, 180, 248, 0.15);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid var(--cw-border-accent);
+      transition: all var(--cw-transition-spring);
       position: relative;
       overflow: hidden;
     }
@@ -312,7 +312,7 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(139, 180, 248, 0.1), transparent);
+      background: linear-gradient(90deg, transparent, var(--cw-bg-primary-hover), transparent);
       transition: left 0.5s ease;
       z-index: 1;
     }
@@ -322,48 +322,48 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
     }
 
     .model-card:hover {
-      border-color: rgba(139, 180, 248, 0.3);
+      border-color: var(--cw-border-accent);
       transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 4px 12px rgba(139, 180, 248, 0.2);
+      box-shadow: var(--cw-shadow-primary-glow);
     }
 
     .model-card.current {
-      border-color: rgba(139, 180, 248, 0.4);
-      background: rgba(139, 180, 248, 0.1);
-      box-shadow: 0 4px 12px rgba(139, 180, 248, 0.15);
+      border-color: var(--cw-border-primary);
+      background: var(--cw-bg-primary-hover);
+      box-shadow: var(--cw-shadow-primary-glow);
     }
 
     .model-card h4 {
-      font-size: 12px;
+      font-size: var(--cw-font-size-xs);
       margin: 0 0 4px 0;
-      font-weight: 600;
-      color: #8bb4f8;
+      font-weight: var(--cw-font-weight-semibold);
+      color: var(--cw-color-primary-light);
       position: relative;
       z-index: 2;
     }
 
     .model-card p {
       margin: 2px 0;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.8);
+      font-size: var(--cw-font-size-2xs);
+      color: var(--cw-text-secondary);
       position: relative;
       z-index: 2;
     }
 
     .model-card .tokens {
-      color: rgba(255, 255, 255, 0.95);
-      font-weight: 500;
+      color: var(--cw-text-primary);
+      font-weight: var(--cw-font-weight-medium);
     }
 
     .model-card .percentage {
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--cw-text-muted);
     }
 
     ion-badge {
-      font-size: 10px;
-      padding: 4px 8px;
-      --background: linear-gradient(135deg, #4776e6 0%, #8bb4f8 100%);
-      --color: #ffffff;
+      font-size: var(--cw-font-size-2xs);
+      padding: var(--cw-space-xs) var(--cw-space-sm);
+      --background: var(--cw-gradient-primary);
+      --color: white;
       position: relative;
       z-index: 2;
     }
@@ -377,21 +377,21 @@ import { TokenCounterService, SupportedModel, TokenCountResult } from '../../sha
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: var(--cw-space-md);
     }
 
     .loading-content p {
       margin: 0;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 14px;
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-sm);
     }
 
     .spinner {
       width: 24px;
       height: 24px;
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-top: 2px solid #8bb4f8;
-      border-radius: 50%;
+      border: 2px solid var(--cw-bg-hover);
+      border-top: 2px solid var(--cw-color-primary-light);
+      border-radius: var(--cw-radius-full);
       animation: spin 1s linear infinite;
     }
 

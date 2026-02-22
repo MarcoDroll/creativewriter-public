@@ -11,8 +11,6 @@ export interface CodexEntry {
   title: string;
   content: string;
   tags?: string[];
-  imageUrl?: string;
-  portraitBase64?: string;
   portraitGallery?: PortraitGalleryItem[];
   activePortraitId?: string;
   metadata?: Record<string, unknown>;

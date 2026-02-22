@@ -8,6 +8,9 @@ const config = require('./config');
 const { createSnapshotsForAllDatabases } = require('./snapshot-creator');
 const { pruneExpiredSnapshotsForAllDatabases, getAllSnapshotStats } = require('./retention-manager');
 
+// Mutex to prevent overlapping tier operations
+const runningTiers = new Set();
+
 /**
  * Initialize and start all scheduled tasks
  */
@@ -29,11 +32,18 @@ function initializeScheduler() {
 
   // Granular snapshots (every 15 minutes)
   cron.schedule(config.SCHEDULE_GRANULAR, async () => {
+    if (runningTiers.has('granular')) {
+      logger.warn('[CRON] Granular already running, skipping');
+      return;
+    }
+    runningTiers.add('granular');
     logger.info('[CRON] Triggered granular snapshot creation');
     try {
       await createSnapshotsForAllDatabases('granular');
     } catch (error) {
       logger.error('[CRON] Granular snapshot creation failed:', error);
+    } finally {
+      runningTiers.delete('granular');
     }
   }, {
     timezone: config.TZ
@@ -41,11 +51,18 @@ function initializeScheduler() {
 
   // Hourly snapshots
   cron.schedule(config.SCHEDULE_HOURLY, async () => {
+    if (runningTiers.has('hourly')) {
+      logger.warn('[CRON] Hourly already running, skipping');
+      return;
+    }
+    runningTiers.add('hourly');
     logger.info('[CRON] Triggered hourly snapshot creation');
     try {
       await createSnapshotsForAllDatabases('hourly');
     } catch (error) {
       logger.error('[CRON] Hourly snapshot creation failed:', error);
+    } finally {
+      runningTiers.delete('hourly');
     }
   }, {
     timezone: config.TZ
@@ -53,11 +70,18 @@ function initializeScheduler() {
 
   // Daily snapshots
   cron.schedule(config.SCHEDULE_DAILY, async () => {
+    if (runningTiers.has('daily')) {
+      logger.warn('[CRON] Daily already running, skipping');
+      return;
+    }
+    runningTiers.add('daily');
     logger.info('[CRON] Triggered daily snapshot creation');
     try {
       await createSnapshotsForAllDatabases('daily');
     } catch (error) {
       logger.error('[CRON] Daily snapshot creation failed:', error);
+    } finally {
+      runningTiers.delete('daily');
     }
   }, {
     timezone: config.TZ
@@ -65,11 +89,18 @@ function initializeScheduler() {
 
   // Weekly snapshots
   cron.schedule(config.SCHEDULE_WEEKLY, async () => {
+    if (runningTiers.has('weekly')) {
+      logger.warn('[CRON] Weekly already running, skipping');
+      return;
+    }
+    runningTiers.add('weekly');
     logger.info('[CRON] Triggered weekly snapshot creation');
     try {
       await createSnapshotsForAllDatabases('weekly');
     } catch (error) {
       logger.error('[CRON] Weekly snapshot creation failed:', error);
+    } finally {
+      runningTiers.delete('weekly');
     }
   }, {
     timezone: config.TZ
@@ -77,11 +108,18 @@ function initializeScheduler() {
 
   // Monthly snapshots
   cron.schedule(config.SCHEDULE_MONTHLY, async () => {
+    if (runningTiers.has('monthly')) {
+      logger.warn('[CRON] Monthly already running, skipping');
+      return;
+    }
+    runningTiers.add('monthly');
     logger.info('[CRON] Triggered monthly snapshot creation');
     try {
       await createSnapshotsForAllDatabases('monthly');
     } catch (error) {
       logger.error('[CRON] Monthly snapshot creation failed:', error);
+    } finally {
+      runningTiers.delete('monthly');
     }
   }, {
     timezone: config.TZ
@@ -89,11 +127,18 @@ function initializeScheduler() {
 
   // Cleanup/retention management
   cron.schedule(config.SCHEDULE_CLEANUP, async () => {
+    if (runningTiers.has('cleanup')) {
+      logger.warn('[CRON] Cleanup already running, skipping');
+      return;
+    }
+    runningTiers.add('cleanup');
     logger.info('[CRON] Triggered snapshot cleanup');
     try {
       await pruneExpiredSnapshotsForAllDatabases();
     } catch (error) {
       logger.error('[CRON] Snapshot cleanup failed:', error);
+    } finally {
+      runningTiers.delete('cleanup');
     }
   }, {
     timezone: config.TZ

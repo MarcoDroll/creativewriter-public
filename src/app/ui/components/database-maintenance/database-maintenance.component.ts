@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import {
   AlertController, ToastController,
   IonAccordion, IonAccordionGroup, IonItem, IonLabel, IonIcon, IonBadge,
-  IonButton, IonSpinner, IonProgressBar, IonList, IonCheckbox, IonThumbnail,
+  IonButton, IonSpinner, IonProgressBar, IonList,
   IonChip, IonText, IonNote
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -11,15 +11,14 @@ import {
   downloadOutline, cloudUploadOutline, informationCircleOutline,
   checkmarkCircleOutline, warningOutline, documentTextOutline, timeOutline,
   trashOutline, albumsOutline, buildOutline, syncOutline, refreshOutline,
-  cloudOutline, cloudOfflineOutline, scanOutline, checkboxOutline,
-  squareOutline, imageOutline, statsChartOutline, copyOutline,
-  searchOutline, closeCircleOutline, nuclearOutline, flaskOutline
+  cloudOutline, cloudOfflineOutline, scanOutline,
+  statsChartOutline, nuclearOutline, flaskOutline, imagesOutline
 } from 'ionicons/icons';
 import { DatabaseBackupService, ExportProgress, ImportProgress } from '../../../shared/services/database-backup.service';
 import { BeatHistoryService } from '../../../shared/services/beat-history.service';
 import { DatabaseService } from '../../../core/services/database.service';
 import { StoryMetadataIndexService } from '../../../stories/services/story-metadata-index.service';
-import { DbMaintenanceService, OrphanedImage, RemoteScanProgress, DatabaseStats, DuplicateImage, IntegrityIssue } from '../../../shared/services/db-maintenance.service';
+import { DbMaintenanceService, RemoteScanProgress, DatabaseStats, IntegrityIssue } from '../../../shared/services/db-maintenance.service';
 import { TestStoryGeneratorService } from '../../../shared/services/test-story-generator.service';
 
 @Component({
@@ -28,7 +27,7 @@ import { TestStoryGeneratorService } from '../../../shared/services/test-story-g
   imports: [
     CommonModule,
     IonAccordion, IonAccordionGroup, IonItem, IonLabel, IonIcon, IonBadge,
-    IonButton, IonSpinner, IonProgressBar, IonList, IonCheckbox, IonThumbnail,
+    IonButton, IonSpinner, IonProgressBar, IonList,
     IonChip, IonText, IonNote
   ],
   templateUrl: './database-maintenance.component.html',
@@ -61,33 +60,15 @@ export class DatabaseMaintenanceComponent {
   beatHistoryStats: { totalHistories: number; totalVersions: number; totalSize: number } | null = null;
   isDeletingBeatHistories = false;
 
-  // Database Cleanup state
-  isCleaningDatabases = false;
-  cleanupResult: { cleaned: number; kept: number; errors: string[] } | null = null;
-
   // Metadata Index state
-  isSyncingMetadataIndex = false;
+  isCheckingMetadataIndex = false;
   isRebuildingMetadataIndex = false;
   metadataIndexResult: { success: boolean; title: string; message: string; storiesCount?: number } | null = null;
-
-  // Orphaned Images state
-  orphanedImages: OrphanedImage[] = [];
-  selectedOrphanedImages = new Set<string>();
-  isScanningOrphanedImages = false;
-  isDeletingOrphanedImages = false;
-  orphanedImageScanProgress: RemoteScanProgress | null = null;
 
   // Database Statistics state
   databaseStats: DatabaseStats | null = null;
   isLoadingStats = false;
   statsScanProgress: RemoteScanProgress | null = null;
-
-  // Duplicate Images state
-  duplicateImages: DuplicateImage[] = [];
-  selectedDuplicates = new Set<string>();
-  isScanningDuplicates = false;
-  isDeletingDuplicates = false;
-  duplicateScanProgress: RemoteScanProgress | null = null;
 
   // Story Integrity state
   integrityIssues: IntegrityIssue[] = [];
@@ -104,14 +85,24 @@ export class DatabaseMaintenanceComponent {
   // Developer Tools state
   isCreatingTestStory = false;
 
+  // Legacy Media Cleanup state
+  // TODO: Remove legacy media cleanup feature after 2026-03-01 - migration cleanup no longer needed
+  isCleaningLegacyMedia = false;
+  legacyCleanupResult: {
+    imagesDeleted: number;
+    videosDeleted: number;
+    associationsDeleted: number;
+    totalDeleted: number;
+    errors: string[];
+  } | null = null;
+
   constructor() {
     addIcons({
       downloadOutline, cloudUploadOutline, informationCircleOutline,
       checkmarkCircleOutline, warningOutline, documentTextOutline, timeOutline,
       trashOutline, albumsOutline, buildOutline, syncOutline, refreshOutline,
-      cloudOutline, cloudOfflineOutline, scanOutline, checkboxOutline,
-      squareOutline, imageOutline, statsChartOutline, copyOutline,
-      searchOutline, closeCircleOutline, nuclearOutline, flaskOutline
+      cloudOutline, cloudOfflineOutline, scanOutline,
+      statsChartOutline, nuclearOutline, flaskOutline, imagesOutline
     });
 
     this.loadRemoteDatabaseInfo();
@@ -322,31 +313,9 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
     }
   }
 
-  // ===== Database Cleanup methods =====
-  async cleanupDatabases(): Promise<void> {
-    this.isCleaningDatabases = true;
-    this.cleanupResult = null;
-
-    try {
-      const result = await this.databaseService.cleanupOldDatabases();
-      this.cleanupResult = result;
-      if (result.errors.length > 0) {
-        this.showToast(`Cleanup completed with ${result.errors.length} error(s). Removed ${result.cleaned} old indexes.`, 'warning');
-      } else {
-        this.showToast(`Successfully cleaned up ${result.cleaned} old database index${result.cleaned !== 1 ? 'es' : ''}!`, 'success');
-      }
-    } catch (error: unknown) {
-      console.error('Failed to cleanup databases:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to cleanup databases. Please try again.';
-      this.showToast(errorMessage, 'danger');
-    } finally {
-      this.isCleaningDatabases = false;
-    }
-  }
-
   // ===== Metadata Index methods =====
-  async syncMetadataIndex(): Promise<void> {
-    this.isSyncingMetadataIndex = true;
+  async checkMetadataIndex(): Promise<void> {
+    this.isCheckingMetadataIndex = true;
     this.metadataIndexResult = null;
 
     try {
@@ -356,17 +325,17 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
         const storiesCount = (indexDoc as { stories?: unknown[] }).stories?.length || 0;
         this.metadataIndexResult = {
           success: true,
-          title: 'Sync Successful',
-          message: 'Metadata index synced from remote server',
+          title: 'Index Found',
+          message: 'Metadata index exists in local database',
           storiesCount
         };
-        this.showToast(`Metadata index synced successfully with ${storiesCount} stor${storiesCount !== 1 ? 'ies' : 'y'}!`, 'success');
+        this.showToast(`Metadata index found with ${storiesCount} stor${storiesCount !== 1 ? 'ies' : 'y'}!`, 'success');
       } catch (error) {
         if ((error as { status?: number }).status === 404) {
           this.metadataIndexResult = {
             success: false,
             title: 'Index Not Found',
-            message: 'Metadata index not found. It may still be syncing from remote, or the remote index may not exist yet.'
+            message: 'Metadata index not found locally. It may still be syncing from remote, or try rebuilding it.'
           };
           this.showToast('Metadata index not found. Try rebuilding or wait for sync to complete.', 'warning');
         } else {
@@ -374,12 +343,12 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
         }
       }
     } catch (error: unknown) {
-      console.error('[DatabaseMaintenance] Failed to sync metadata index:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sync metadata index';
-      this.metadataIndexResult = { success: false, title: 'Sync Failed', message: errorMessage };
-      this.showToast('Failed to sync metadata index. Please try again.', 'danger');
+      console.error('[DatabaseMaintenance] Failed to check metadata index:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check metadata index';
+      this.metadataIndexResult = { success: false, title: 'Check Failed', message: errorMessage };
+      this.showToast('Failed to check metadata index. Please try again.', 'danger');
     } finally {
-      this.isSyncingMetadataIndex = false;
+      this.isCheckingMetadataIndex = false;
     }
   }
 
@@ -407,88 +376,6 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
     }
   }
 
-  // ===== Orphaned Images methods =====
-  async scanOrphanedImages(): Promise<void> {
-    if (!this.isRemoteAvailable) {
-      this.showToast('Remote database not connected', 'warning');
-      return;
-    }
-
-    this.isScanningOrphanedImages = true;
-    this.orphanedImages = [];
-    this.selectedOrphanedImages.clear();
-    this.orphanedImageScanProgress = null;
-
-    try {
-      this.orphanedImages = await this.dbMaintenanceService.findOrphanedImagesFromRemote(
-        (progress) => { this.orphanedImageScanProgress = progress; }
-      );
-      const totalSize = this.orphanedImages.reduce((sum, img) => sum + img.size, 0);
-      this.showToast(
-        `Found ${this.orphanedImages.length} orphaned image${this.orphanedImages.length !== 1 ? 's' : ''} (${this.formatFileSize(totalSize)})`,
-        'success'
-      );
-    } catch (error: unknown) {
-      console.error('Failed to scan orphaned images:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to scan orphaned images';
-      this.showToast(errorMessage, 'danger');
-    } finally {
-      this.isScanningOrphanedImages = false;
-      this.orphanedImageScanProgress = null;
-    }
-  }
-
-  toggleOrphanedImageSelection(imageId: string): void {
-    if (this.selectedOrphanedImages.has(imageId)) {
-      this.selectedOrphanedImages.delete(imageId);
-    } else {
-      this.selectedOrphanedImages.add(imageId);
-    }
-  }
-
-  selectAllOrphanedImages(): void {
-    this.orphanedImages.forEach(img => this.selectedOrphanedImages.add(img.id));
-  }
-
-  deselectAllOrphanedImages(): void {
-    this.selectedOrphanedImages.clear();
-  }
-
-  async showDeleteOrphanedImagesConfirmation(): Promise<void> {
-    const count = this.selectedOrphanedImages.size;
-    const selectedImages = this.orphanedImages.filter(img => this.selectedOrphanedImages.has(img.id));
-    const totalSize = selectedImages.reduce((sum, img) => sum + img.size, 0);
-
-    const alert = await this.alertController.create({
-      header: 'Delete Orphaned Images',
-      message: `Are you sure you want to delete ${count} orphaned image${count !== 1 ? 's' : ''}? This will free up ${this.formatFileSize(totalSize)}. This action cannot be undone.`,
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        { text: 'Delete', role: 'destructive', handler: () => this.deleteSelectedOrphanedImages() }
-      ]
-    });
-    await alert.present();
-  }
-
-  async deleteSelectedOrphanedImages(): Promise<void> {
-    const selectedIds = Array.from(this.selectedOrphanedImages);
-    if (selectedIds.length === 0) return;
-
-    this.isDeletingOrphanedImages = true;
-    try {
-      const deletedCount = await this.dbMaintenanceService.deleteOrphanedImagesFromRemote(selectedIds);
-      this.showToast(`Successfully deleted ${deletedCount} image${deletedCount !== 1 ? 's' : ''}`, 'success');
-      this.orphanedImages = this.orphanedImages.filter(img => !this.selectedOrphanedImages.has(img.id));
-      this.selectedOrphanedImages.clear();
-    } catch (error: unknown) {
-      console.error('Failed to delete orphaned images:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete images';
-      this.showToast(errorMessage, 'danger');
-    } finally {
-      this.isDeletingOrphanedImages = false;
-    }
-  }
-
   // ===== Database Statistics methods =====
   async loadDatabaseStats(): Promise<void> {
     if (!this.isRemoteAvailable) {
@@ -512,92 +399,6 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
     } finally {
       this.isLoadingStats = false;
       this.statsScanProgress = null;
-    }
-  }
-
-  // ===== Duplicate Images methods =====
-  async scanDuplicateImages(): Promise<void> {
-    if (!this.isRemoteAvailable) {
-      this.showToast('Remote database not connected', 'warning');
-      return;
-    }
-
-    this.isScanningDuplicates = true;
-    this.duplicateImages = [];
-    this.selectedDuplicates.clear();
-    this.duplicateScanProgress = null;
-
-    try {
-      this.duplicateImages = await this.dbMaintenanceService.findDuplicateImagesFromRemote(
-        (progress) => { this.duplicateScanProgress = progress; }
-      );
-      const totalDuplicates = this.duplicateImages.reduce((sum, dup) => sum + dup.duplicateIds.length, 0);
-      this.showToast(
-        `Found ${this.duplicateImages.length} duplicate group${this.duplicateImages.length !== 1 ? 's' : ''} (${totalDuplicates} duplicates)`,
-        'success'
-      );
-    } catch (error: unknown) {
-      console.error('Failed to scan duplicate images:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to scan duplicate images';
-      this.showToast(errorMessage, 'danger');
-    } finally {
-      this.isScanningDuplicates = false;
-      this.duplicateScanProgress = null;
-    }
-  }
-
-  toggleDuplicateSelection(originalId: string): void {
-    if (this.selectedDuplicates.has(originalId)) {
-      this.selectedDuplicates.delete(originalId);
-    } else {
-      this.selectedDuplicates.add(originalId);
-    }
-  }
-
-  selectAllDuplicates(): void {
-    this.duplicateImages.forEach(dup => this.selectedDuplicates.add(dup.originalId));
-  }
-
-  deselectAllDuplicates(): void {
-    this.selectedDuplicates.clear();
-  }
-
-  getTotalDuplicateCount(): number {
-    return this.duplicateImages
-      .filter(dup => this.selectedDuplicates.has(dup.originalId))
-      .reduce((sum, dup) => sum + dup.duplicateIds.length, 0);
-  }
-
-  async showDeleteDuplicatesConfirmation(): Promise<void> {
-    const totalToDelete = this.getTotalDuplicateCount();
-    if (totalToDelete === 0) return;
-
-    const alert = await this.alertController.create({
-      header: 'Delete Duplicate Images',
-      message: `Are you sure you want to delete ${totalToDelete} duplicate image${totalToDelete !== 1 ? 's' : ''}? The original images will be kept. This action cannot be undone.`,
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        { text: 'Delete Duplicates', role: 'destructive', handler: () => this.deleteSelectedDuplicates() }
-      ]
-    });
-    await alert.present();
-  }
-
-  async deleteSelectedDuplicates(): Promise<void> {
-    const selectedDuplicates = this.duplicateImages.filter(dup => this.selectedDuplicates.has(dup.originalId));
-    if (selectedDuplicates.length === 0) return;
-
-    this.isDeletingDuplicates = true;
-    try {
-      const deletedCount = await this.dbMaintenanceService.deleteDuplicateImagesFromRemote(selectedDuplicates);
-      this.showToast(`Successfully deleted ${deletedCount} duplicate image${deletedCount !== 1 ? 's' : ''}`, 'success');
-      await this.scanDuplicateImages();
-    } catch (error: unknown) {
-      console.error('Failed to delete duplicate images:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete duplicates';
-      this.showToast(errorMessage, 'danger');
-    } finally {
-      this.isDeletingDuplicates = false;
     }
   }
 
@@ -678,14 +479,6 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
   }
 
   // ===== TrackBy functions for ngFor performance =====
-  trackByOrphanedImage(_index: number, image: OrphanedImage): string {
-    return image.id;
-  }
-
-  trackByDuplicateImage(_index: number, dup: DuplicateImage): string {
-    return dup.originalId;
-  }
-
   trackByIntegrityIssue(_index: number, issue: IntegrityIssue): string {
     return issue.storyId;
   }
@@ -702,6 +495,60 @@ This action CANNOT be undone! All previous versions will be lost forever.`,
       this.showToast(errorMessage, 'danger');
     } finally {
       this.isCreatingTestStory = false;
+    }
+  }
+
+  // ===== Legacy Media Cleanup methods =====
+  // TODO: Remove legacy media cleanup methods after 2026-03-01 - migration cleanup no longer needed
+  async showLegacyMediaCleanupConfirmation(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'CLEANUP LEGACY MEDIA',
+      message: `This will permanently delete all legacy image and video data from the old storage format:
+
+• Old global images (image_*)
+• Old global videos (video_*)
+• Old image-video associations
+
+This is a one-time cleanup after migrating to per-story image storage.
+
+New per-story images will NOT be affected.
+
+This action CANNOT be undone!`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Delete Legacy Data', role: 'destructive', handler: () => this.cleanupLegacyMedia() }
+      ]
+    });
+    await alert.present();
+  }
+
+  async cleanupLegacyMedia(): Promise<void> {
+    this.isCleaningLegacyMedia = true;
+    this.legacyCleanupResult = null;
+
+    try {
+      const result = await this.dbMaintenanceService.cleanupLegacyMediaData();
+      this.legacyCleanupResult = result;
+
+      if (result.totalDeleted === 0) {
+        this.showToast('No legacy media documents found - database is already clean!', 'success');
+      } else if (result.errors.length > 0) {
+        this.showToast(
+          `Cleanup completed with ${result.errors.length} error(s). Deleted ${result.totalDeleted} documents.`,
+          'warning'
+        );
+      } else {
+        this.showToast(
+          `Successfully deleted ${result.imagesDeleted} images, ${result.videosDeleted} videos, ${result.associationsDeleted} associations`,
+          'success'
+        );
+      }
+    } catch (error: unknown) {
+      console.error('Failed to cleanup legacy media:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to cleanup legacy media data';
+      this.showToast(errorMessage, 'danger');
+    } finally {
+      this.isCleaningLegacyMedia = false;
     }
   }
 }

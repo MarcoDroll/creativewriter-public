@@ -10,6 +10,15 @@ import { AuthService } from '../../core/services/auth.service';
 import { DatabaseService } from '../../core/services/database.service';
 import { Story, Chapter, StorySettings } from '../models/story.interface';
 
+export interface RelatedDocuments {
+  codex: Record<string, unknown> | null;
+  characterChats: Record<string, unknown>[];
+  sceneChats: Record<string, unknown>[];
+  storyResearch: Record<string, unknown>[];
+  storyImages: Record<string, unknown>[];
+  storyVideos: Record<string, unknown>[];
+}
+
 export interface StorySnapshot {
   _id: string;
   _rev?: string;
@@ -30,11 +39,26 @@ export interface StorySnapshot {
     updatedAt: Date | string;
   };
 
+  // Related documents captured by external snapshot service
+  relatedDocuments?: RelatedDocuments;
+
   metadata: {
     wordCount: number;
     chapterCount: number;
     sceneCount: number;
+    // Extended metadata for related documents
+    hasCodex?: boolean;
+    characterChatCount?: number;
+    sceneChatCount?: number;
+    researchCount?: number;
+    imageCount?: number;
+    videoCount?: number;
   };
+}
+
+export interface RestoreOptions {
+  createBackup?: boolean;
+  includeRelatedDocuments?: boolean;
 }
 
 export interface SnapshotTimeline {
@@ -175,8 +199,10 @@ export class SnapshotService {
   async restoreFromSnapshot(
     storyId: string,
     snapshotId: string,
-    options: { createBackup?: boolean } = {}
+    options: RestoreOptions = {}
   ): Promise<Story> {
+    const { createBackup = false, includeRelatedDocuments = false } = options;
+
     try {
       // Get local PouchDB (for story updates)
       const db = await this.databaseService.getDatabase();
@@ -184,11 +210,16 @@ export class SnapshotService {
       // Fetch snapshot from CouchDB via HTTP
       const snapshot = await this.getSnapshot(snapshotId);
 
+      // Validate snapshot belongs to this story
+      if (snapshot.storyId !== storyId) {
+        throw new Error(`Snapshot ${snapshotId} does not belong to story ${storyId}`);
+      }
+
       // Get current story from PouchDB
       const currentStory = await db.get(storyId) as Story;
 
       // Create backup snapshot if requested
-      if (options.createBackup) {
+      if (createBackup) {
         await this.createManualSnapshot(currentStory, `Backup before restore to ${snapshotId}`);
       }
 
@@ -202,10 +233,24 @@ export class SnapshotService {
       };
 
       // Update in PouchDB (will sync to CouchDB)
-      await db.put(restoredStory);
+      const putResult = await db.put(restoredStory);
+      // Update _rev so returned story can be used for further updates
+      const finalStory = { ...restoredStory, _rev: putResult.rev };
 
       console.log('[SnapshotService] Story restored successfully from snapshot:', snapshotId);
-      return restoredStory;
+
+      // Restore related documents if requested and available
+      if (includeRelatedDocuments && snapshot.relatedDocuments) {
+        try {
+          const relatedResult = await this.restoreRelatedDocuments(db, storyId, snapshot.relatedDocuments);
+          console.log('[SnapshotService] Related documents restoration:', relatedResult);
+        } catch (relatedError) {
+          // Log but don't fail - story is already restored
+          console.error('[SnapshotService] Related documents restoration failed:', relatedError);
+        }
+      }
+
+      return finalStory;
     } catch (error) {
       console.error('[SnapshotService] Failed to restore from snapshot:', error);
       throw error;
@@ -213,57 +258,67 @@ export class SnapshotService {
   }
 
   /**
-   * Create manual snapshot (written directly to CouchDB via HTTP)
+   * Create manual snapshot via the external snapshot service.
+   * The service captures all related documents (codex, chats, research, media).
+   *
+   * @returns The snapshot ID
+   * @throws Error if the snapshot service is unavailable or fails
    */
-  async createManualSnapshot(story: Story, reason: string): Promise<void> {
-    const couchUrl = this.getCouchDBUrl();
-    const authHeader = this.getAuthHeader();
+  async createManualSnapshot(story: Story, reason: string): Promise<string> {
+    const db = this.databaseService.getDatabaseSync();
+    const dbName = db?.name || 'creative-writer-stories-anonymous';
 
-    const snapshot: Omit<StorySnapshot, '_rev'> = {
-      _id: `snapshot-${story._id}-${Date.now()}-manual`,
-      type: 'story-snapshot',
-      storyId: story._id!,
-      userId: this.extractUserId(),
-      createdAt: new Date().toISOString(),
-      retentionTier: 'manual',  // Manual snapshots never expire
-      snapshotType: 'manual',
-      triggeredBy: 'user',
-      reason: reason,
-
-      snapshot: {
-        title: story.title,
-        chapters: story.chapters,
-        settings: story.settings,
-        updatedAt: story.updatedAt
-      },
-
-      metadata: {
-        wordCount: this.calculateWordCount(story),
-        chapterCount: story.chapters.length,
-        sceneCount: this.countScenes(story)
-      }
-    };
+    // Set up abort controller with 30 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      // Write directly to CouchDB
-      const response = await fetch(couchUrl, {
+      const response = await fetch(this.getSnapshotServiceUrl(), {
         method: 'POST',
         headers: {
-          'Authorization': authHeader,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(snapshot)
+        body: JSON.stringify({
+          dbName,
+          storyId: story._id,
+          reason
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error(`Failed to create snapshot: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Snapshot service error: ${response.statusText}`);
       }
 
-      console.log('[SnapshotService] Manual snapshot created successfully');
-    } catch (error) {
-      console.error('[SnapshotService] Failed to create manual snapshot:', error);
-      throw error;
+      const result = await response.json();
+      console.log('[SnapshotService] Manual snapshot created:', result.snapshotId);
+      console.log('[SnapshotService] Related documents included:', result.relatedDocuments);
+      return result.snapshotId;
+    } catch (err) {
+      clearTimeout(timeoutId);
+
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Snapshot service timed out. Please try again.');
+      }
+
+      console.error('[SnapshotService] Failed to create manual snapshot:', err);
+      throw err;
     }
+  }
+
+  /**
+   * Get snapshot service API URL
+   */
+  private getSnapshotServiceUrl(): string {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const port = window.location.port;
+
+    const baseUrl = port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`;
+    return `${baseUrl}/api/snapshot`;
   }
 
   /**
@@ -375,5 +430,146 @@ export class SnapshotService {
     if (diffMins < 10080) return `${Math.floor(diffMins / 1440)} day${Math.floor(diffMins / 1440) > 1 ? 's' : ''} ago`;
 
     return date.toLocaleString();
+  }
+
+  /**
+   * Restore related documents from a snapshot using batched processing
+   * Returns statistics about the restoration
+   *
+   * Uses batching to prevent memory issues on mobile devices when
+   * restoring large media files (images up to 5MB, videos up to 50MB each)
+   */
+  private async restoreRelatedDocuments(
+    db: PouchDB.Database,
+    storyId: string,
+    relatedDocs: RelatedDocuments
+  ): Promise<{ successful: number; failed: number; total: number }> {
+    const BATCH_SIZE = 5; // Small batches for memory efficiency on mobile
+    let successful = 0;
+    let failed = 0;
+    let total = 0;
+
+    // Helper to process a batch of documents
+    const processBatch = async (docs: Record<string, unknown>[]) => {
+      if (docs.length === 0) return;
+
+      const results = await db.bulkDocs(docs);
+      const batchSuccessful = results.filter((r: PouchDB.Core.Response | PouchDB.Core.Error) =>
+        'ok' in r && r.ok
+      ).length;
+      successful += batchSuccessful;
+      failed += results.length - batchSuccessful;
+      total += docs.length;
+
+      // Yield to main thread between batches to prevent UI freezing
+      await new Promise(resolve => setTimeout(resolve, 0));
+    };
+
+    // Helper to process an array of documents in batches
+    const processDocArray = async (
+      docs: Record<string, unknown>[] | undefined,
+      getDocId: (doc: Record<string, unknown>) => string | null
+    ) => {
+      if (!docs || !Array.isArray(docs)) return;
+
+      let batch: Record<string, unknown>[] = [];
+
+      for (const doc of docs) {
+        if (!doc) continue;
+        const docId = getDocId(doc);
+        if (!docId) continue;
+
+        const prepared = await this.prepareDocForRestore(db, doc, docId);
+        if (prepared) {
+          batch.push(prepared);
+        }
+
+        // Process batch when it reaches BATCH_SIZE
+        if (batch.length >= BATCH_SIZE) {
+          await processBatch(batch);
+          batch = [];
+        }
+      }
+
+      // Process remaining documents in the last batch
+      if (batch.length > 0) {
+        await processBatch(batch);
+      }
+    };
+
+    // 1. Codex (single document, replace if exists)
+    if (relatedDocs.codex) {
+      const codexDoc = await this.prepareDocForRestore(
+        db,
+        relatedDocs.codex,
+        `codex_${storyId}`
+      );
+      if (codexDoc) {
+        await processBatch([codexDoc]);
+      }
+    }
+
+    // 2. Process all array-based documents in batches
+    // Extract _id from document for standard related docs
+    const getIdFromDoc = (doc: Record<string, unknown>) =>
+      typeof doc['_id'] === 'string' ? doc['_id'] : null;
+
+    await processDocArray(relatedDocs.sceneChats, getIdFromDoc);
+    await processDocArray(relatedDocs.characterChats, getIdFromDoc);
+    await processDocArray(relatedDocs.storyResearch, getIdFromDoc);
+    await processDocArray(relatedDocs.storyImages, getIdFromDoc);
+    await processDocArray(relatedDocs.storyVideos, getIdFromDoc);
+
+    console.log(`[SnapshotService] Restored ${successful} related documents (${failed} failed)`);
+
+    return { successful, failed, total };
+  }
+
+  /**
+   * Prepare a document for restore by getting current _rev if it exists
+   * Returns null if the document cannot be prepared
+   */
+  private async prepareDocForRestore(
+    db: PouchDB.Database,
+    doc: Record<string, unknown>,
+    docId: string
+  ): Promise<Record<string, unknown> | null> {
+    if (!doc || !docId) return null;
+
+    try {
+      // Check if document exists to get current _rev
+      const existing = await db.get(docId) as PouchDB.Core.IdMeta & PouchDB.Core.GetMeta;
+      // Document exists - update with current _rev to avoid conflict
+      return { ...doc, _id: docId, _rev: existing._rev };
+    } catch (err: unknown) {
+      // Check for 404 status in a type-safe way
+      if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
+        // Document doesn't exist - create new (remove any stale _rev from snapshot)
+        const { _rev: _unusedRev, ...docWithoutRev } = doc;
+        void _unusedRev; // Explicitly mark as intentionally unused
+        return { ...docWithoutRev, _id: docId };
+      }
+      console.warn(`[SnapshotService] Error checking document ${docId}:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Get related document counts from snapshot metadata
+   * Useful for UI display before restore
+   */
+  getRelatedDocumentCounts(snapshot: StorySnapshot): {
+    hasCodex: boolean;
+    totalChats: number;
+    researchCount: number;
+    mediaCount: number;
+  } {
+    const meta = snapshot.metadata;
+    return {
+      hasCodex: meta.hasCodex ?? false,
+      totalChats: (meta.characterChatCount ?? 0) + (meta.sceneChatCount ?? 0),
+      researchCount: meta.researchCount ?? 0,
+      mediaCount: (meta.imageCount ?? 0) + (meta.videoCount ?? 0)
+    };
   }
 }

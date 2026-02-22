@@ -44,6 +44,7 @@ export interface BeatTemplateSectionMeta {
   rows: number;
   required: boolean;
   sceneBeatOnly?: boolean;        // Only shown for scene beat template
+  isCommon?: boolean;             // false for type-specific sections (focusAreas, bridgingInstructions, sceneOutline)
 }
 
 export interface Scene {
@@ -82,6 +83,7 @@ export interface StorySettings {
   templateMode?: TemplateMode; // 'sections' for section-based editing, 'advanced' for raw XML
   beatTemplateSections?: BeatTemplateSections; // Story beat template sections
   sceneBeatTemplateSections?: SceneBeatTemplateSections; // Scene beat template sections
+  envisionBeatTemplateSections?: BeatTemplateSections; // Envision beat template sections
   sceneFromOutlineTemplateSections?: SceneFromOutlineTemplateSections; // Scene from outline template sections
 }
 
@@ -94,7 +96,12 @@ export interface Story {
   settings?: StorySettings;
   codexId?: string;
   coverImage?: string; // Base64 encoded image data or URL
-  order?: number; // For custom sorting
+  /**
+   * @deprecated Story order is now stored only in the metadata index (StoryMetadataIndex).
+   * Use StoryMetadataIndexService.updateStoryOrder() instead. This field is ignored during
+   * metadata extraction. Existing values on old stories are harmless but not used.
+   */
+  order?: number;
   schemaVersion?: number; // Schema version for migration tracking
   createdAt: Date;
   updatedAt: Date;
@@ -227,6 +234,31 @@ Match the exact tone and narrative voice`,
   generatePrompt: 'Generate the beat now:'
 };
 
+// Default sections for Envision Beat template
+// NOTE: Section content is plain text only - no XML or Markdown formatting.
+// The template builder (sectionsToTemplate) applies formatting when building the prompt.
+// Envision beats use the same interface as Story Beats (BeatTemplateSections).
+export const DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS: BeatTemplateSections = {
+  userMessagePreamble: 'You are continuing a story. Here is the context:',
+  objective: `Use the beat prompt as a creative direction and envision rich, detailed content.
+Your goal is to fill the targeted word count with compelling narrative that flows from this direction.
+Do not limit yourself to the literal prompt - expand and develop the content creatively while staying true to the story's characters and world.`,
+  narrativeParameters: `{pointOfView}
+{wordCount} words - fill this word count target with quality, detailed content
+{tense}`,
+  stagingNotes: 'Consider these staging notes for physical and contextual consistency:',
+  beatRequirements: '{prompt}',
+  styleGuidance: `Match the exact tone and narrative voice of the current scene
+Maintain the established balance of dialogue, action, and introspection
+Create vivid, immersive prose that naturally fills the word count
+Develop scenes, moments, and character interactions fully`,
+  constraints: `Do NOT have characters act inconsistently with their established personalities
+Do NOT introduce elements that contradict established story facts
+Maintain narrative coherence with the existing story`,
+  outputFormat: 'Pure narrative prose. No meta-commentary, scene markers, chapter headings, or author notes.',
+  generatePrompt: 'Generate the beat now:'
+};
+
 // Metadata for Story Beat section editor UI
 export const BEAT_TEMPLATE_SECTION_META: BeatTemplateSectionMeta[] = [
   {
@@ -344,7 +376,8 @@ export const SCENE_BEAT_TEMPLATE_SECTION_META: BeatTemplateSectionMeta[] = [
     placeholders: [],
     rows: 8,
     required: false,
-    sceneBeatOnly: true
+    sceneBeatOnly: true,
+    isCommon: false
   },
   {
     key: 'beatRequirements',
@@ -361,7 +394,8 @@ export const SCENE_BEAT_TEMPLATE_SECTION_META: BeatTemplateSectionMeta[] = [
     placeholders: [],
     rows: 5,
     required: false,
-    sceneBeatOnly: true
+    sceneBeatOnly: true,
+    isCommon: false
   },
   {
     key: 'styleGuidance',
@@ -448,7 +482,8 @@ export const SCENE_FROM_OUTLINE_TEMPLATE_SECTION_META: BeatTemplateSectionMeta[]
     description: 'Placeholder for the user-provided scene outline',
     placeholders: ['{sceneOutline}'],
     rows: 3,
-    required: true
+    required: true,
+    isCommon: false
   },
   {
     key: 'styleGuidance',

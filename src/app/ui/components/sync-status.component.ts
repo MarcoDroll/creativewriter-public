@@ -1,17 +1,19 @@
 import { Component, OnInit, OnDestroy, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { IonicModule, ToastController } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { warningOutline, flashOutline, syncOutline, cloudOfflineOutline, cloudDoneOutline, cloudUploadOutline, cloudDownloadOutline } from 'ionicons/icons';
 import { Subject, takeUntil } from 'rxjs';
-import { ToastController } from '@ionic/angular';
 import { DatabaseService, SyncStatus } from '../../core/services/database.service';
 
 
 @Component({
   selector: 'app-sync-status',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IonicModule],
   template: `
     <div class="sync-status" [ngClass]="syncStatusClass">
-      <span class="sync-icon">{{ syncIcon }}</span>
+      <ion-icon [name]="syncIcon" class="sync-icon"></ion-icon>
       <div class="sync-content">
         <span class="sync-text">{{ syncText }}</span>
         <div class="sync-progress-bar" *ngIf="showProgressBar">
@@ -20,10 +22,10 @@ import { DatabaseService, SyncStatus } from '../../core/services/database.servic
       </div>
       <div class="sync-actions" *ngIf="showActions">
         <button (click)="forcePush()" [disabled]="!canSync" title="Push local changes">
-          ↗️ Push
+          <ion-icon name="cloud-upload-outline"></ion-icon> Push
         </button>
         <button (click)="forcePull()" [disabled]="!canSync" title="Pull remote changes">
-          ↙️ Pull
+          <ion-icon name="cloud-download-outline"></ion-icon> Pull
         </button>
       </div>
     </div>
@@ -32,33 +34,33 @@ import { DatabaseService, SyncStatus } from '../../core/services/database.servic
     .sync-status {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 4px;
-      font-size: 0.875rem;
-      transition: all 0.2s ease;
+      gap: var(--cw-space-sm);
+      padding: var(--cw-space-sm);
+      border-radius: var(--cw-radius-xs);
+      font-size: var(--cw-font-size-sm);
+      transition: all var(--cw-transition-normal);
       max-width: 100%;
       overflow: hidden;
       z-index: 1;
       position: relative;
     }
-    
+
     .sync-status.online {
-      background-color: rgba(40, 167, 69, 0.2);
-      color: #40c463;
-      border: 1px solid rgba(40, 167, 69, 0.4);
+      background-color: var(--cw-bg-success-subtle);
+      color: var(--cw-color-success-light);
+      border: 1px solid var(--cw-border-success);
     }
-    
+
     .sync-status.offline {
-      background-color: rgba(220, 53, 69, 0.2);
-      color: #ff6b7a;
-      border: 1px solid rgba(220, 53, 69, 0.4);
+      background-color: var(--cw-bg-danger-subtle);
+      color: var(--cw-color-danger-light);
+      border: 1px solid var(--cw-border-danger);
     }
-    
+
     .sync-status.connecting {
-      background-color: rgba(13, 110, 253, 0.2);
-      color: #0d6efd;
-      border: 1px solid rgba(13, 110, 253, 0.4);
+      background-color: var(--cw-bg-info-subtle);
+      color: var(--cw-color-info-dark);
+      border: 1px solid var(--cw-border-info);
       animation: pulse 2s ease-in-out infinite;
     }
 
@@ -68,19 +70,19 @@ import { DatabaseService, SyncStatus } from '../../core/services/database.servic
     }
 
     .sync-status.syncing {
-      background-color: rgba(255, 193, 7, 0.2);
-      color: #ffc107;
-      border: 1px solid rgba(255, 193, 7, 0.4);
+      background-color: var(--cw-bg-warning-subtle);
+      color: var(--cw-color-warning);
+      border: 1px solid var(--cw-border-warning);
     }
 
     .sync-status.error {
-      background-color: rgba(220, 53, 69, 0.2);
-      color: #ff6b7a;
-      border: 1px solid rgba(220, 53, 69, 0.4);
+      background-color: var(--cw-bg-danger-subtle);
+      color: var(--cw-color-danger-light);
+      border: 1px solid var(--cw-border-danger);
     }
-    
+
     .sync-icon {
-      font-size: 1rem;
+      font-size: var(--cw-font-size-md);
       flex-shrink: 0;
     }
 
@@ -89,82 +91,117 @@ import { DatabaseService, SyncStatus } from '../../core/services/database.servic
       flex-direction: column;
       flex: 1;
       min-width: 0;
-      gap: 0.25rem;
+      gap: var(--cw-space-xs);
     }
 
     .sync-text {
       word-break: break-word;
       overflow-wrap: break-word;
       hyphens: auto;
-      line-height: 1.2;
+      line-height: var(--cw-line-height-tight);
     }
 
     .sync-progress-bar {
       width: 100%;
       height: 4px;
-      background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 2px;
+      background-color: var(--cw-bg-hover);
+      border-radius: var(--cw-radius-xs);
       overflow: hidden;
     }
 
     .sync-progress-fill {
       height: 100%;
       background-color: currentColor;
-      transition: width 0.3s ease;
-      border-radius: 2px;
+      transition: width var(--cw-transition-slow);
+      border-radius: var(--cw-radius-xs);
     }
-    
+
     .sync-actions {
       display: flex;
-      gap: 0.25rem;
+      gap: var(--cw-space-xs);
       margin-left: auto;
     }
-    
+
     .sync-actions button {
-      padding: 0.25rem 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: var(--cw-space-2xs);
+      padding: var(--cw-space-xs) var(--cw-space-sm);
       border: 1px solid currentColor;
       background: transparent;
       color: inherit;
-      border-radius: 3px;
+      border-radius: var(--cw-radius-xs);
       cursor: pointer;
-      font-size: 0.75rem;
+      font-size: var(--cw-font-size-xs);
+      transition: all var(--cw-transition-normal);
     }
-    
+
+    .sync-actions button ion-icon {
+      font-size: var(--cw-font-size-sm);
+    }
+
     .sync-actions button:hover:not(:disabled) {
       background: currentColor;
-      color: white;
+      color: var(--cw-text-primary);
     }
-    
+
     .sync-actions button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
-    
+
     /* Responsive styles */
     @media (max-width: 768px) {
       .sync-status {
         padding: 0.4rem;
-        font-size: 0.8rem;
+        font-size: var(--cw-font-size-xs);
         gap: 0.4rem;
       }
-      
+
       .sync-actions {
-        gap: 0.2rem;
+        gap: var(--cw-space-2xs);
       }
-      
+
       .sync-actions button {
-        padding: 0.2rem 0.4rem;
-        font-size: 0.7rem;
+        padding: var(--cw-space-2xs) var(--cw-space-xs);
+        font-size: var(--cw-font-size-2xs);
       }
     }
-    
-    /* Prevent overflow in compact areas */
-    .compact-sync-status .sync-status {
-      max-width: 200px;
+
+    /* Compact mode - matches header badge styling */
+    :host-context(.compact-sync-status) .sync-status {
+      height: 28px;
+      padding: var(--cw-space-xs) var(--cw-space-sm);
+      gap: var(--cw-space-xs);
+      font-size: var(--cw-font-size-xs);
+      font-weight: var(--cw-font-weight-medium);
+      border-radius: var(--cw-radius-sm);
+      max-width: 140px;
+      box-sizing: border-box;
     }
-    
+
+    :host-context(.compact-sync-status) .sync-icon {
+      font-size: var(--cw-font-size-sm);
+    }
+
+    :host-context(.compact-sync-status) .sync-content {
+      flex-direction: row;
+      gap: 0;
+    }
+
+    :host-context(.compact-sync-status) .sync-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+    }
+
+    :host-context(.compact-sync-status) .sync-progress-bar {
+      display: none;
+    }
+
     /* Full status in burger menu */
-    .full-sync-status .sync-status {
+    :host-context(.full-sync-status) .sync-status {
       max-width: 100%;
       width: 100%;
     }
@@ -184,6 +221,10 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
 
   private readonly databaseService = inject(DatabaseService);
   private readonly toastController = inject(ToastController);
+
+  constructor() {
+    addIcons({ warningOutline, flashOutline, syncOutline, cloudOfflineOutline, cloudDoneOutline, cloudUploadOutline, cloudDownloadOutline });
+  }
 
   ngOnInit() {
     this.databaseService.syncStatus$
@@ -217,11 +258,11 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
   }
 
   get syncIcon(): string {
-    if (this.syncStatus.error) return '⚠️';
-    if (this.syncStatus.isConnecting) return '🔌';
-    if (this.syncStatus.isSync) return '🔄';
-    if (!this.syncStatus.isOnline) return '🔌';
-    return '☁️';
+    if (this.syncStatus.error) return 'warning-outline';
+    if (this.syncStatus.isConnecting) return 'flash-outline';
+    if (this.syncStatus.isSync) return 'sync-outline';
+    if (!this.syncStatus.isOnline) return 'cloud-offline-outline';
+    return 'cloud-done-outline';
   }
 
   get syncText(): string {

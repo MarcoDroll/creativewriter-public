@@ -11,6 +11,19 @@
   gap: 16px;
 }
 
+// ============================================
+// Base Glass Card Styling for All Cards
+// ============================================
+
+ion-card {
+  background: var(--cw-gradient-glass);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
+  border: 1px solid var(--cw-border-subtle);
+  border-radius: var(--cw-radius-lg);
+  box-shadow: var(--cw-shadow-md);
+}
+
 .task-card ion-card-content {
   display: flex;
   flex-direction: column;
@@ -20,9 +33,9 @@
 .cost-warning {
   display: flex;
   gap: 12px;
-  background: rgba(255, 196, 0, 0.08);
-  border: 1px solid rgba(255, 196, 0, 0.25);
-  border-radius: 12px;
+  background: var(--cw-bg-warning-subtle);
+  border: 1px solid var(--cw-border-warning);
+  border-radius: var(--cw-radius-lg);
   padding: 12px 16px;
   align-items: flex-start;
   font-size: 14px;
@@ -69,14 +82,14 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--cw-text-muted);
 }
 
 .task-input {
-  --background: rgba(255, 255, 255, 0.04);
+  --background: var(--cw-bg-input);
   --padding-start: 12px;
   --padding-end: 12px;
-  border-radius: 12px;
+  border-radius: var(--cw-radius-lg);
 }
 
 .progress-card .progress-row {
@@ -95,7 +108,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--cw-text-secondary);
 }
 
 .metadata-card ion-item {
@@ -112,30 +125,46 @@
 .metadata-card .item-label {
   font-size: 12px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--cw-text-disabled);
   letter-spacing: 0.05em;
   margin-bottom: 4px;
 }
 
 .progress-list-card ion-item {
-  --background: rgba(255, 255, 255, 0.02);
-  border-radius: 10px;
+  --background: var(--cw-bg-card);
+  border-radius: var(--cw-radius-md);
   margin-bottom: 8px;
 }
 
-.finding-response {
-  margin-top: 6px;
-  white-space: pre-line;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+// ============================================
+// Glass Morphism Cards
+// ============================================
+
+.glass-card {
+  background: var(--cw-bg-glass);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
+  border: 1px solid var(--cw-border-subtle);
+  border-radius: var(--cw-radius-lg);
+  box-shadow: var(--cw-shadow-md);
 }
 
-.findings-card ion-item {
-  align-items: flex-start;
-}
+// ============================================
+// Summary Card - Prominent Glass Styling
+// ============================================
 
-.findings-card ion-icon {
-  margin-top: 4px;
+.summary-card {
+  border-left: 3px solid var(--cw-color-primary, var(--ion-color-primary));
+
+  ion-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ion-icon {
+      color: var(--cw-color-primary-light, var(--ion-color-primary-tint));
+    }
+  }
 }
 
 .summary-text {
@@ -144,14 +173,107 @@
   font-size: 15px;
 }
 
-.error-card {
-  border-left: 4px solid var(--ion-color-danger);
-  background: rgba(220, 53, 69, 0.08);
+// ============================================
+// Findings Accordion - Glass Morphism Pattern
+// ============================================
+
+.findings-accordion {
+  background: transparent;
+
+  ion-accordion {
+    background: var(--cw-gradient-glass);
+    border: 1px solid var(--cw-border-subtle);
+    border-radius: var(--cw-radius-lg);
+    margin-bottom: var(--cw-space-md);
+    overflow: hidden;
+    transition:
+      border-color var(--cw-transition-slow),
+      box-shadow var(--cw-transition-slow),
+      transform var(--cw-transition-slow);
+    will-change: transform;
+
+    &:hover {
+      border-color: var(--cw-border-accent);
+      transform: translateY(-1px);
+      box-shadow: var(--cw-shadow-md);
+    }
+
+    ion-item[slot="header"] {
+      --background: transparent;
+      --color: var(--cw-text-primary);
+      --padding-start: var(--cw-space-lg);
+      --padding-end: var(--cw-space-lg);
+
+      ion-icon[slot="start"] {
+        color: var(--cw-color-primary-light, var(--ion-color-primary-tint));
+        font-size: 1.2rem;
+        margin-right: var(--cw-space-md);
+      }
+
+      h3 {
+        font-weight: var(--cw-font-weight-semibold, 600);
+        margin: 0;
+        color: var(--cw-text-primary);
+      }
+    }
+
+    .accordion-content {
+      padding: var(--cw-space-lg);
+      // Subtle darkening to differentiate expanded content from header
+      background: var(--cw-bg-card);
+    }
+  }
 }
 
-.error-card p {
-  margin: 0;
+// ============================================
+// Finding Response Text
+// ============================================
+
+.finding-response {
   white-space: pre-line;
+  font-size: 14px;
+  color: var(--cw-text-secondary, rgba(255, 255, 255, 0.85));
+  line-height: 1.6;
+}
+
+// ============================================
+// State Cards - Accent Borders with Glass
+// ============================================
+
+.error-card {
+  border-left: 4px solid var(--ion-color-danger);
+  background: var(--cw-bg-danger-subtle);
+
+  p {
+    margin: 0;
+    white-space: pre-line;
+  }
+}
+
+.recovery-card {
+  border-left: 4px solid var(--ion-color-warning);
+  background: var(--cw-bg-warning-subtle);
+
+  ion-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ion-icon {
+      color: var(--ion-color-warning);
+    }
+  }
+
+  p {
+    margin: 0 0 16px 0;
+    color: var(--cw-text-secondary);
+  }
+}
+
+.recovery-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 768px) {
@@ -161,5 +283,21 @@
 
   .cost-warning {
     flex-direction: column;
+  }
+
+  .findings-accordion ion-accordion .accordion-content {
+    padding: var(--cw-space-md);
+  }
+}
+
+// Accessibility: respect reduced motion preference
+@media (prefers-reduced-motion: reduce) {
+  .findings-accordion ion-accordion {
+    transition: none;
+    will-change: auto;
+
+    &:hover {
+      transform: none;
+    }
   }
 }

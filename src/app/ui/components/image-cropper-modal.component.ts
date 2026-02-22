@@ -136,7 +136,7 @@ import { ImageCropperComponent, ImageCroppedEvent, ImageTransform, LoadedImage }
   `,
   styles: [`
     .cropper-content {
-      --background: #1a1a1a;
+      --background: var(--cw-bg-base);
     }
 
     .cropper-wrapper {
@@ -144,14 +144,14 @@ import { ImageCropperComponent, ImageCroppedEvent, ImageTransform, LoadedImage }
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000;
+      background: var(--cw-bg-backdrop);
       position: relative;
     }
 
     :host ::ng-deep image-cropper {
       max-height: 100%;
       max-width: 100%;
-      --cropper-overlay-color: rgba(0, 0, 0, 0.8);
+      --cropper-overlay-color: var(--cw-bg-modal-backdrop);
     }
 
     .aspect-ratio-buttons {
@@ -160,16 +160,16 @@ import { ImageCropperComponent, ImageCroppedEvent, ImageTransform, LoadedImage }
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.8);
-      padding: 8px;
-      border-radius: 8px;
-      backdrop-filter: blur(10px);
+      gap: var(--cw-space-sm);
+      background: var(--cw-bg-modal-backdrop);
+      padding: var(--cw-space-sm);
+      border-radius: var(--cw-radius-md);
+      backdrop-filter: blur(var(--cw-blur-md));
     }
 
     ion-footer {
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
+      background: var(--cw-bg-glass);
+      backdrop-filter: blur(var(--cw-blur-md));
     }
 
     ion-footer ion-toolbar {
@@ -181,10 +181,10 @@ import { ImageCropperComponent, ImageCroppedEvent, ImageTransform, LoadedImage }
       position: absolute;
       top: 20px;
       right: 20px;
-      background: rgba(0, 0, 0, 0.8);
-      padding: 12px;
-      border-radius: 8px;
-      backdrop-filter: blur(10px);
+      background: var(--cw-bg-modal-backdrop);
+      padding: var(--cw-space-md);
+      border-radius: var(--cw-radius-md);
+      backdrop-filter: blur(var(--cw-blur-md));
       min-width: 200px;
     }
 
@@ -198,26 +198,26 @@ import { ImageCropperComponent, ImageCroppedEvent, ImageTransform, LoadedImage }
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
+      font-size: var(--cw-font-size-xs);
     }
 
     .size-label {
-      color: rgba(255, 255, 255, 0.7);
-      font-weight: 500;
+      color: var(--cw-text-muted);
+      font-weight: var(--cw-font-weight-medium);
     }
 
     .size-value {
-      color: rgba(255, 255, 255, 0.9);
-      font-weight: 600;
+      color: var(--cw-text-primary);
+      font-weight: var(--cw-font-weight-semibold);
       text-align: right;
     }
 
     .compression-good {
-      color: #28a745 !important;
+      color: var(--cw-color-success) !important;
     }
 
     .compression-moderate {
-      color: #ffc107 !important;
+      color: var(--cw-color-warning) !important;
     }
   `]
 })

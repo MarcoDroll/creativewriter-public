@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { ModalController } from '@ionic/angular/standalone';
 import { firstValueFrom } from 'rxjs';
 import { SubscriptionService } from '../../core/services/subscription.service';
+import { PremiumAccessService } from '../../core/services/premium-access.service';
 import {
   PremiumModuleService,
   BeatRewriteServiceInterface,
@@ -17,6 +18,7 @@ import { PremiumUpsellDialogComponent } from '../../ui/components/premium-upsell
 })
 export class PremiumRewriteService {
   private subscriptionService = inject(SubscriptionService);
+  private premiumAccessService = inject(PremiumAccessService);
   private premiumModuleService = inject(PremiumModuleService);
   private settingsService = inject(SettingsService);
   private openRouterService = inject(OpenRouterApiService);
@@ -52,16 +54,44 @@ export class PremiumRewriteService {
   }
 
   /**
-   * Check premium status and show upsell if not premium
+   * Show dialog explaining that email verification is needed
+   * For users who are premium but haven't completed portal verification
+   */
+  async showVerificationNeededDialog(): Promise<void> {
+    const modal = await this.modalController.create({
+      component: PremiumUpsellDialogComponent,
+      componentProps: {
+        featureName: 'Email Verification Required',
+        description: 'You have an active premium subscription, but need to verify your email to use premium features. Please complete the verification process in Settings.',
+        benefits: [
+          'Your subscription is active',
+          'One-time email verification via Stripe',
+          'Secure access to all premium features',
+          'Go to Settings → Premium to verify'
+        ]
+      },
+      cssClass: 'premium-upsell-modal'
+    });
+    await modal.present();
+  }
+
+  /**
+   * Check premium status and show upsell if not premium or verification dialog if auth token is missing
    * @returns true if user has access, false otherwise
    */
   async checkAndGateAccess(): Promise<boolean> {
-    // Actively check subscription (don't rely only on cached isPremium getter)
-    const isPremium = await this.subscriptionService.checkSubscription();
-    if (isPremium) {
+    const result = await this.premiumAccessService.checkAccess();
+
+    if (result.hasAccess) {
       return true;
     }
-    await this.showUpsellDialog();
+
+    // Handle UI based on reason
+    if (result.reason === 'verification_needed') {
+      await this.showVerificationNeededDialog();
+    } else {
+      await this.showUpsellDialog();
+    }
     return false;
   }
 

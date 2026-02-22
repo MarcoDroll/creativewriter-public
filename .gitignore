@@ -62,3 +62,6 @@ data/couchdb-data/shards/80000000-ffffffff/_global_changes.1762243547.couch
 data/couchdb-data/shards/80000000-ffffffff/_replicator.1762243545.couch
 data/couchdb-data/shards/80000000-ffffffff/_users.1762243544.couch
 data/log/snapshot-service/snapshots.log
+
+# Claude Code temp files
+tmpclaude-*

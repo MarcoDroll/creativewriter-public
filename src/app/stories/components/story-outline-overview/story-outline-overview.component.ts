@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject, computed, signal, ViewChild } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject, computed, signal, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -35,9 +35,10 @@ import { SettingsService } from '../../../core/services/settings.service';
   styleUrls: ['./story-outline-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
+export class StoryOutlineOverviewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild(IonContent) content!: IonContent;
   @ViewChild('searchbar') querySearchbar?: IonSearchbar;
+  @ViewChild(IonAccordionGroup) accordionGroup?: IonAccordionGroup;
 
   // Cleanup tracking for memory leak prevention
   private activeTimeouts: ReturnType<typeof setTimeout>[] = [];
@@ -69,18 +70,7 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
 
   // UI state
   loading = signal<boolean>(true);
-  expanded = signal<Set<string>>(new Set());
-  private _lastExpandedArray: string[] = [];
-  expandedArray = computed<string[]>(() => {
-    const newArray = Array.from(this.expanded());
-    // Only return new array if content actually changed (prevents unnecessary accordion updates)
-    if (this._lastExpandedArray.length === newArray.length &&
-        this._lastExpandedArray.every((id, idx) => id === newArray[idx])) {
-      return this._lastExpandedArray;
-    }
-    this._lastExpandedArray = newArray;
-    return newArray;
-  });
+  private pendingAccordionExpand: string[] | null = null;
 
   // Derived view model
   filteredChapters = computed<Chapter[]>(() => {
@@ -140,16 +130,12 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
     this.wordCountCache.clear();
   }
 
-  /**
-   * Defers resetting isUpdatingStory to after Angular's change detection completes.
-   * Uses double requestAnimationFrame to ensure the accordion has stabilized.
-   */
-  private deferResetUpdatingState(): void {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.isUpdatingStory = false;
-      });
-    });
+  ngAfterViewInit(): void {
+    // Set initial accordion state after view is ready
+    if (this.pendingAccordionExpand && this.accordionGroup) {
+      this.accordionGroup.value = this.pendingAccordionExpand;
+      this.pendingAccordionExpand = null;
+    }
   }
 
   getSceneWordCount(sceneId: string): number {
@@ -190,23 +176,26 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
         return;
       }
       this.story.set(s);
-      // If we have a chapterId, only expand that chapter. Otherwise expand all chapters
-      if (chapterId) {
-        this.expanded.set(new Set([chapterId]));
-        // Schedule scroll to scene after view is ready and accordion expanded
-        if (sceneId) {
-          const timeout = setTimeout(() => this.scrollToScene(sceneId), 600);
-          this.activeTimeouts.push(timeout);
-        }
+      // Set initial accordion expanded state
+      // If we have a chapterId, only expand that chapter. Otherwise expand first 10 chapters
+      const maxDefaultExpanded = 10;
+      const chaptersToExpand = chapterId
+        ? [chapterId]
+        : (s.chapters.length <= maxDefaultExpanded
+            ? s.chapters.map(c => c.id)
+            : s.chapters.slice(0, maxDefaultExpanded).map(c => c.id));
+
+      // Set via ViewChild if available, otherwise store for ngAfterViewInit
+      if (this.accordionGroup) {
+        this.accordionGroup.value = chaptersToExpand;
       } else {
-        // Expand chapters by default for quick overview
-        // For performance, limit to first 10 chapters if story is large
-        const maxDefaultExpanded = 10;
-        const chaptersToExpand = s.chapters.length <= maxDefaultExpanded
-          ? s.chapters
-          : s.chapters.slice(0, maxDefaultExpanded);
-        const expanded = new Set<string>(chaptersToExpand.map(c => c.id));
-        this.expanded.set(expanded);
+        this.pendingAccordionExpand = chaptersToExpand;
+      }
+
+      // Schedule scroll to scene after view is ready and accordion expanded
+      if (chapterId && sceneId) {
+        const timeout = setTimeout(() => this.scrollToScene(sceneId), 600);
+        this.activeTimeouts.push(timeout);
       }
     } catch (error) {
       console.error('Failed to load story:', error);
@@ -243,17 +232,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
     ], { queryParams: { chapterId, sceneId }});
   }
 
-  onAccordionChange(ev: CustomEvent<{ value: string[] | string | null | undefined }>) {
-    // Ignore accordion changes during story updates to preserve expanded state
-    if (this.isUpdatingStory) return;
-
-    const raw = ev?.detail?.value;
-    let values: string[] = [];
-    if (Array.isArray(raw)) values = raw;
-    else if (typeof raw === 'string') values = [raw];
-    this.expanded.set(new Set(values));
-  }
-
   async copyAllSummaries(): Promise<void> {
     const s = this.story();
     if (!s) return;
@@ -280,7 +258,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
   // Saving state
   private savingScenes = new Set<string>();
   private savingChapters = new Set<string>();
-  private isUpdatingStory = false;
 
   // AI generation state (delegated to service)
   isGeneratingSummary(sceneId: string): boolean { return this.sceneAIService.isGeneratingSummary(sceneId); }
@@ -294,7 +271,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
     if (!s) return;
 
     this.savingScenes.add(event.sceneId);
-    this.isUpdatingStory = true;
 
     try {
       const update = event.field === 'title'
@@ -315,10 +291,8 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
         };
       });
       this.story.set({ ...s, chapters: updatedChapters, updatedAt: new Date() });
-      this.deferResetUpdatingState();
     } catch (e) {
       console.error(`Failed to save scene ${event.field}`, e);
-      this.isUpdatingStory = false;
       this.showToast(`Failed to save scene ${event.field}. Please try again.`, 'danger');
     } finally {
       this.savingScenes.delete(event.sceneId);
@@ -372,7 +346,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
     }
 
     if (result.text) {
-      this.isUpdatingStory = true;
       const updatedChapters = s.chapters.map(ch => ch.id === chapterId ? {
         ...ch,
         scenes: ch.scenes.map(sc => sc.id === sceneId ? { ...sc, summary: result.text, summaryGeneratedAt: new Date(), updatedAt: new Date() } : sc),
@@ -381,7 +354,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
       this.story.set({ ...s, chapters: updatedChapters, updatedAt: new Date() });
       await this.storyService.updateScene(s.id, chapterId, sceneId, { summary: result.text, summaryGeneratedAt: new Date() });
       this.promptManager.refresh();
-      this.deferResetUpdatingState();
     }
   }
 
@@ -406,7 +378,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
 
     if (result.text) {
       const newTitle = result.text;
-      this.isUpdatingStory = true;
       const updatedChapters = s.chapters.map(ch => ch.id === chapterId ? {
         ...ch,
         scenes: ch.scenes.map(sc => sc.id === sceneId ? { ...sc, title: newTitle, updatedAt: new Date() } : sc),
@@ -415,7 +386,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
       this.story.set({ ...s, chapters: updatedChapters, updatedAt: new Date() });
       await this.storyService.updateScene(s.id, chapterId, sceneId, { title: newTitle });
       this.promptManager.refresh();
-      this.deferResetUpdatingState();
     }
   }
 
@@ -425,7 +395,6 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
     if (!s) return;
 
     this.savingChapters.add(event.chapterId);
-    this.isUpdatingStory = true;
 
     try {
       await this.storyService.updateChapter(s.id, event.chapterId, { title: event.title });
@@ -433,10 +402,8 @@ export class StoryOutlineOverviewComponent implements OnInit, OnDestroy {
         ch.id === event.chapterId ? { ...ch, title: event.title, updatedAt: new Date() } : ch
       );
       this.story.set({ ...s, chapters: updatedChapters, updatedAt: new Date() });
-      this.deferResetUpdatingState();
     } catch (e) {
       console.error('Failed to save chapter title', e);
-      this.isUpdatingStory = false;
       this.showToast('Failed to save chapter title. Please try again.', 'danger');
     } finally {
       this.savingChapters.delete(event.chapterId);

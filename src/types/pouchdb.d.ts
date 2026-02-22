@@ -7,6 +7,7 @@ declare namespace PouchDB {
 
   interface AllDocsOptions {
     include_docs?: boolean;
+    keys?: string[];
     startkey?: string;
     endkey?: string;
     limit?: number;

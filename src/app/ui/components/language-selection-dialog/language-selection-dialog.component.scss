@@ -1,9 +1,9 @@
 ion-header {
-  --background: rgba(30, 30, 30, 0.95);
+  --background: var(--cw-bg-elevated);
 }
 
 ion-content {
-  --background: rgba(20, 20, 20, 0.95);
+  --background: var(--cw-bg-base);
   height: auto;
   contain: content;
 }
@@ -15,48 +15,53 @@ ion-list {
 }
 
 .dialog-padding {
-  --padding-start: 24px;
-  --padding-end: 24px;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
+  --padding-start: var(--cw-space-xl);
+  --padding-end: var(--cw-space-xl);
+  --padding-top: var(--cw-space-sm);
+  --padding-bottom: var(--cw-space-sm);
 }
 
 .description {
-  margin: 8px 0 12px 0;
-  color: var(--ion-color-medium);
-  font-size: 0.9rem;
+  margin: var(--cw-space-sm) 0 var(--cw-space-md) 0;
+  color: var(--cw-text-muted);
+  font-size: var(--cw-font-size-sm);
 }
+
 .button-container {
-  margin-top: 12px;
+  margin-top: var(--cw-space-md);
 }
 
 ion-item {
-  --background: rgba(40, 40, 40, 0.6);
-  --padding-start: 16px;
-  --padding-top: 4px;
-  --padding-bottom: 4px;
-  --inner-padding-top: 2px;
-  --inner-padding-bottom: 2px;
+  --background: var(--cw-bg-elevated);
+  --padding-start: var(--cw-space-lg);
+  --padding-top: var(--cw-space-xs);
+  --padding-bottom: var(--cw-space-xs);
+  --inner-padding-top: var(--cw-space-2xs);
+  --inner-padding-bottom: var(--cw-space-2xs);
   --min-height: 40px !important;
   height: 40px;
   max-height: 40px;
-  margin-bottom: 6px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: var(--cw-space-sm);
+  border-radius: var(--cw-radius-md);
+  border: 1px solid var(--cw-border-subtle);
+  transition: all var(--cw-transition-normal);
 }
 
 ion-item:hover {
-  --background: rgba(50, 50, 50, 0.7);
+  --background: var(--cw-bg-hover);
+  border-color: var(--cw-border-default);
 }
+
 ion-label h2 {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: var(--cw-font-weight-semibold);
+  font-size: var(--cw-font-size-sm);
   margin: 0;
   line-height: 1.1;
 }
+
 ion-label p {
-  font-size: 0.7rem;
-  color: var(--ion-color-medium);
+  font-size: var(--cw-font-size-2xs);
+  color: var(--cw-text-muted);
   margin: 0;
   line-height: 1.0;
 }

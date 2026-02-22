@@ -342,7 +342,9 @@ export class DatabaseService {
     const indexes = [
       // Indexes for non-story documents (codex, video, etc.)
       { fields: ['type'] },
-      { fields: ['storyId'] }
+      { fields: ['storyId'] },
+      // Compound index for story media (images, videos) queries by type+storyId
+      { fields: ['type', 'storyId'] }
     ];
 
     // Store reference to current db to prevent race conditions
@@ -505,21 +507,31 @@ export class DatabaseService {
 
   /**
    * Force replication of a specific document from remote
-   * This is useful when opening a story to ensure it's immediately pulled from remote
+   * This is useful when opening a story to ensure it's immediately pulled from remote.
    *
    * IMPORTANT: This method serializes with main sync to prevent concurrent operations.
    * It stops the main sync, performs the replication, then restarts sync.
    *
    * @param docId The document ID to replicate
-   * @returns Promise that resolves when replication completes
+   * @returns true if document was replicated or already in sync locally, false if not found
    */
-  async forceReplicateDocument(docId: string): Promise<void> {
+  async forceReplicateDocument(docId: string): Promise<boolean> {
     if (!this.remoteDb || !this.db) {
       console.warn('[DatabaseService] Cannot force replicate: database not initialized');
-      return;
+      return false;
     }
 
     console.info(`[DatabaseService] Force replicating document: ${docId}`);
+
+    // Determine if this is a story document for logging
+    const isStory = !docId.includes('_') || docId.startsWith('story-');
+    const storyIds = isStory ? [docId] : undefined;
+
+    // Log sync start
+    const logId = this.syncLogger.logSync('download', `Syncing ${isStory ? 'story' : 'document'}`, docId, {
+      storyIds,
+      status: 'info'
+    });
 
     // SERIALIZE: Stop main sync to prevent concurrent operations
     const wasRunning = !!this.syncHandler;
@@ -536,22 +548,181 @@ export class DatabaseService {
         timeout: 10000,
         return_docs: false
       };
-      await this.db.replicate.from(
+      const result = await this.db.replicate.from(
         this.remoteDb,
         replicateOptions as PouchDB.Replication.ReplicateOptions
       );
-      console.info(`[DatabaseService] ✓ Successfully replicated document: ${docId}`);
+
+      // Check if any documents were actually synced
+      // PouchDB replication succeeds even if document doesn't exist - it just syncs nothing
+      const docsWritten = (result as { docs_written?: number }).docs_written ?? 0;
+      if (docsWritten === 0) {
+        // docs_written === 0 is ambiguous: document may not exist on remote,
+        // or it may already be up-to-date locally. Check local existence
+        // using allDocs (metadata-only) to avoid loading full doc into memory.
+        const localCheck = await this.db.allDocs({ keys: [docId] });
+        const existsLocally = localCheck.rows.length > 0 && !('error' in localCheck.rows[0]);
+        if (existsLocally) {
+          console.info(`[DatabaseService] Document ${docId} already in sync (0 new docs written)`);
+          this.syncLogger.updateLog(logId, {
+            status: 'success',
+            action: `${isStory ? 'Story' : 'Document'} already in sync`
+          });
+          return true;
+        } else {
+          console.warn(`[DatabaseService] Document ${docId} not found on remote or locally`);
+          this.syncLogger.updateLog(logId, {
+            type: 'info',
+            status: 'warning',
+            action: `${isStory ? 'Story' : 'Document'} not found on remote`
+          });
+          return false;
+        }
+      }
+
+      console.info(`[DatabaseService] ✓ Successfully replicated document: ${docId} (${docsWritten} docs)`);
+
+      // VERIFY: Ensure document is readable after replication
+      // IndexedDB writes can be async; verify with retry to ensure consistency
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await this.db.get(docId);
+          console.info(`[DatabaseService] ✓ Document ${docId} verified readable (attempt ${attempt})`);
+          break;
+        } catch (verifyError) {
+          if (attempt === 3) {
+            console.error(`[DatabaseService] ✗ Document ${docId} not readable after replication!`, verifyError);
+            // Don't fail the operation - the document was written, it just may take time to be readable
+            // The caller should handle this scenario with their own retry logic
+          } else {
+            // Wait with exponential backoff before retry
+            await new Promise(r => setTimeout(r, 100 * attempt));
+          }
+        }
+      }
+
+      // Update log with success
+      this.syncLogger.updateLog(logId, {
+        status: 'success',
+        action: `Synced ${isStory ? 'story' : 'document'}`
+      });
+      return true;
     } catch (error) {
       console.error(`[DatabaseService] Failed to replicate document ${docId}:`, error);
+      // Update log with error
+      this.syncLogger.updateLog(logId, {
+        type: 'error',
+        status: 'error',
+        action: `Failed to sync ${isStory ? 'story' : 'document'}`,
+        details: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     } finally {
       // SERIALIZE: Restart main sync after replication completes
       if (wasRunning && this.remoteDb && !this.syncPaused) {
+        // Small delay to ensure IndexedDB persistence is complete before sync restart
+        // This prevents the restarted sync from interfering with the just-written document
+        await new Promise(resolve => setTimeout(resolve, 100));
         console.info('[DatabaseService] Resuming main sync after force replication');
         try {
           this.startSync();
         } catch (error) {
           console.error('[DatabaseService] Failed to resume sync after force replication:', error);
+        }
+      }
+    }
+  }
+
+  /**
+   * Force replication of all images for a specific story from remote.
+   * Uses allDocs with startkey/endkey to find image document IDs, then replicates them.
+   *
+   * @param storyId The story ID to replicate images for
+   * @returns Promise that resolves when replication completes
+   */
+  async forceReplicateStoryImages(storyId: string): Promise<void> {
+    if (!this.remoteDb || !this.db) {
+      console.warn('[DatabaseService] Cannot force replicate images: database not initialized');
+      return;
+    }
+
+    const prefix = `story-image_${storyId}_`;
+    console.info(`[DatabaseService] Force replicating images for story: ${storyId}`);
+
+    // Log sync start
+    const logId = this.syncLogger.logSync('download', 'Syncing story images', storyId, {
+      storyIds: [storyId],
+      status: 'info'
+    });
+
+    // SERIALIZE: Stop main sync to prevent concurrent operations
+    const wasRunning = !!this.syncHandler;
+    if (wasRunning) {
+      console.info('[DatabaseService] Pausing main sync for image replication');
+      await this.stopSync();
+    }
+
+    try {
+      // Query remote for image document IDs using allDocs with prefix range
+      const remoteResult = await this.remoteDb.allDocs({
+        startkey: prefix,
+        endkey: prefix + '\uffff',
+        include_docs: false  // Just get IDs, not full docs
+      });
+
+      const imageDocIds = remoteResult.rows.map(row => row.id);
+
+      if (imageDocIds.length === 0) {
+        console.info(`[DatabaseService] No images found for story ${storyId}`);
+        // Update log - no images to sync
+        this.syncLogger.updateLog(logId, {
+          status: 'success',
+          action: 'No images to sync'
+        });
+        return;
+      }
+
+      console.info(`[DatabaseService] Found ${imageDocIds.length} images to replicate`);
+
+      // Replicate all image documents in one operation
+      const replicateOptions = {
+        doc_ids: imageDocIds,
+        timeout: 30000,  // Longer timeout for images with attachments
+        return_docs: false
+      };
+
+      await this.db.replicate.from(
+        this.remoteDb,
+        replicateOptions as PouchDB.Replication.ReplicateOptions
+      );
+
+      console.info(`[DatabaseService] ✓ Successfully replicated ${imageDocIds.length} images`);
+
+      // Update log with success
+      this.syncLogger.updateLog(logId, {
+        status: 'success',
+        action: `Synced ${imageDocIds.length} image${imageDocIds.length === 1 ? '' : 's'}`,
+        itemCount: imageDocIds.length
+      });
+    } catch (error) {
+      console.error(`[DatabaseService] Failed to replicate images for story ${storyId}:`, error);
+      // Update log with error
+      this.syncLogger.updateLog(logId, {
+        type: 'error',
+        status: 'error',
+        action: 'Failed to sync images',
+        details: error instanceof Error ? error.message : String(error)
+      });
+      // Don't throw - images failing to sync shouldn't block story loading
+      // They'll sync via live sync eventually
+    } finally {
+      // Restart sync if it was running
+      if (wasRunning && !this.syncPaused && !this.memoryPressurePaused) {
+        console.info('[DatabaseService] Resuming main sync after image replication');
+        try {
+          this.startSync();
+        } catch (error) {
+          console.error('[DatabaseService] Failed to resume sync after image replication:', error);
         }
       }
     }

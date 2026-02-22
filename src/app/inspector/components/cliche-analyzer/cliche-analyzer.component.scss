@@ -18,8 +18,8 @@ ion-content {
 ion-card {
   margin: 1rem;
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.4) 0%, rgba(30, 30, 30, 0.4) 100%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
   border: 1px solid rgba(139, 180, 248, 0.2);
   border-radius: 12px;
 }

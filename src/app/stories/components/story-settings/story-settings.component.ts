@@ -18,19 +18,19 @@ import {
   imageOutline, starOutline, createOutline, syncOutline,
   chatbubblesOutline, cloudDownloadOutline, downloadOutline, cloudUploadOutline,
   documentOutline, alertCircleOutline, chevronForward, chevronDown, listOutline,
-  eyeOutline
+  eyeOutline, gitBranchOutline
 } from 'ionicons/icons';
 import { StoryService } from '../../services/story.service';
 import {
   Story, StorySettings, DEFAULT_STORY_SETTINGS, NarrativePerspective, StoryTense,
   BeatTemplateSections, SceneBeatTemplateSections, SceneFromOutlineTemplateSections,
-  DEFAULT_BEAT_TEMPLATE_SECTIONS, DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS, DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS,
+  DEFAULT_BEAT_TEMPLATE_SECTIONS, DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS, DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS, DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS,
   StoryLanguage
 } from '../../models/story.interface';
 import { ModelOption } from '../../../core/models/model.interface';
 import { ModelService } from '../../../core/services/model.service';
 import { getSystemMessage, getBeatGenerationTemplate, getDefaultBeatRules } from '../../../shared/resources/system-messages';
-import { migrateSettingsToSections, sectionsToTemplate, sceneBeatSectionsToTemplate, sceneFromOutlineSectionsToTemplate, mergeBeatSections, mergeSceneBeatSections, mergeSceneFromOutlineSections } from '../../../shared/utils/template-migration';
+import { migrateSettingsToSections, sectionsToTemplate, sceneBeatSectionsToTemplate, sceneFromOutlineSectionsToTemplate, mergeBeatSections, mergeSceneBeatSections, mergeSceneFromOutlineSections, mergeEnvisionBeatSections } from '../../../shared/utils/template-migration';
 import { BeatTemplateSectionsComponent } from '../beat-template-sections/beat-template-sections.component';
 import { BeatAIPreviewModalComponent } from '../beat-ai-preview-modal/beat-ai-preview-modal.component';
 import { SettingsTabsComponent, TabItem } from '../../../ui/components/settings-tabs.component';
@@ -107,12 +107,14 @@ export class StorySettingsComponent implements OnInit {
   isImporting = false;
   importPreview: StoryExportData | null = null;
   importError: string | null = null;
-  private importFileContent: string | null = null;
+  private importFile: File | null = null;
+  private isArchiveImport = false;
 
   // Beat Template section editing state
-  activeBeatType: 'story' | 'scene' | 'sceneFromOutline' = 'story';
+  activeBeatType: 'story' | 'scene' | 'envision' | 'sceneFromOutline' = 'story';
   beatTemplateSections: BeatTemplateSections = { ...DEFAULT_BEAT_TEMPLATE_SECTIONS };
   sceneBeatTemplateSections: SceneBeatTemplateSections = { ...DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS };
+  envisionBeatTemplateSections: BeatTemplateSections = { ...DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS };
   sceneFromOutlineTemplateSections: SceneFromOutlineTemplateSections = { ...DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS };
 
   // Template preview state
@@ -151,7 +153,7 @@ export class StorySettingsComponent implements OnInit {
       imageOutline, starOutline, createOutline, syncOutline,
       chatbubblesOutline, cloudDownloadOutline, downloadOutline, cloudUploadOutline,
       documentOutline, alertCircleOutline, chevronForward, chevronDown, listOutline,
-      eyeOutline
+      eyeOutline, gitBranchOutline
     });
   }
 
@@ -205,6 +207,15 @@ export class StorySettingsComponent implements OnInit {
       );
     } else {
       this.sceneBeatTemplateSections = { ...DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS };
+    }
+
+    // Initialize envision beat template sections - use smart merge that prefers non-empty values
+    if (this.settings.envisionBeatTemplateSections) {
+      this.envisionBeatTemplateSections = mergeEnvisionBeatSections(
+        this.settings.envisionBeatTemplateSections
+      );
+    } else {
+      this.envisionBeatTemplateSections = { ...DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS };
     }
 
     // Initialize scene from outline template sections - use smart merge that prefers non-empty values
@@ -267,6 +278,7 @@ export class StorySettingsComponent implements OnInit {
       // Also reset section templates to defaults when refreshing
       this.beatTemplateSections = { ...DEFAULT_BEAT_TEMPLATE_SECTIONS };
       this.sceneBeatTemplateSections = { ...DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS };
+      this.envisionBeatTemplateSections = { ...DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS };
       this.sceneFromOutlineTemplateSections = { ...DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS };
       this.syncSectionsToSettings();
 
@@ -282,9 +294,9 @@ export class StorySettingsComponent implements OnInit {
   }
 
   /**
-   * Handle template type tab change (story, scene, or sceneFromOutline)
+   * Handle template type tab change (story, scene, envision, or sceneFromOutline)
    */
-  onBeatTypeChange(beatType: 'story' | 'scene' | 'sceneFromOutline'): void {
+  onBeatTypeChange(beatType: 'story' | 'scene' | 'envision' | 'sceneFromOutline'): void {
     this.activeBeatType = beatType;
   }
 
@@ -295,6 +307,7 @@ export class StorySettingsComponent implements OnInit {
     const names: Record<string, string> = {
       'story': 'Story Beat',
       'scene': 'Scene Beat',
+      'envision': 'Envision Beat',
       'sceneFromOutline': 'Scene from Outline'
     };
     return names[this.activeBeatType] || 'Story Beat';
@@ -319,6 +332,15 @@ export class StorySettingsComponent implements OnInit {
   }
 
   /**
+   * Handle envision beat sections change from child component
+   */
+  onEnvisionBeatSectionsChange(sections: BeatTemplateSections): void {
+    this.envisionBeatTemplateSections = sections;
+    this.syncSectionsToSettings();
+    this.onSettingsChange();
+  }
+
+  /**
    * Handle scene from outline sections change from child component
    */
   onSceneFromOutlineSectionsChange(sections: SceneFromOutlineTemplateSections): void {
@@ -333,6 +355,7 @@ export class StorySettingsComponent implements OnInit {
   private syncSectionsToSettings(): void {
     this.settings.beatTemplateSections = { ...this.beatTemplateSections };
     this.settings.sceneBeatTemplateSections = { ...this.sceneBeatTemplateSections };
+    this.settings.envisionBeatTemplateSections = { ...this.envisionBeatTemplateSections };
     this.settings.sceneFromOutlineTemplateSections = { ...this.sceneFromOutlineTemplateSections };
     this.settings.templateMode = 'sections';
   }
@@ -472,8 +495,8 @@ export class StorySettingsComponent implements OnInit {
 
     this.isExporting = true;
     try {
-      const jsonData = await this.exportImportService.exportStory(this.story.id);
-      this.exportImportService.downloadExport(jsonData, this.story.title || 'story');
+      const blob = await this.exportImportService.exportStory(this.story.id);
+      this.exportImportService.downloadExport(blob, this.story.title || 'story');
     } catch (error) {
       console.error('Export failed:', error);
       this.dialogService.showError({ header: 'Export Failed', message: 'Export failed. Please try again.' });
@@ -489,6 +512,8 @@ export class StorySettingsComponent implements OnInit {
     const file = input.files[0];
     this.importError = null;
     this.importPreview = null;
+    this.importFile = null;
+    this.isArchiveImport = false;
 
     // Check file size
     const maxSize = this.exportImportService.getMaxImportFileSize();
@@ -499,21 +524,31 @@ export class StorySettingsComponent implements OnInit {
     }
 
     try {
-      const jsonData = await file.text();
+      // Check if this is an archive (.cwx) or legacy JSON file
+      if (this.exportImportService.isArchiveFile(file)) {
+        // Parse archive for preview
+        this.importPreview = await this.exportImportService.parseArchiveForPreview(file);
+        this.importFile = file;
+        this.isArchiveImport = true;
+      } else {
+        // Legacy JSON import
+        const jsonData = await file.text();
 
-      // Validate the import data
-      const validation = this.exportImportService.validateImportData(jsonData);
-      if (!validation.valid) {
-        this.importError = `Invalid file: ${validation.errors.join(', ')}`;
-        return;
+        // Validate the import data
+        const validation = this.exportImportService.validateImportData(jsonData);
+        if (!validation.valid) {
+          this.importError = `Invalid file: ${validation.errors.join(', ')}`;
+          return;
+        }
+
+        // Parse for preview
+        this.importPreview = this.exportImportService.parseImportData(jsonData);
+        this.importFile = file;
+        this.isArchiveImport = false;
       }
-
-      // Parse for preview
-      this.importPreview = this.exportImportService.parseImportData(jsonData);
-      this.importFileContent = jsonData;
     } catch (error) {
       console.error('Error reading import file:', error);
-      this.importError = 'Failed to read file. Please ensure it is a valid JSON file.';
+      this.importError = `Failed to read file: ${(error as Error).message}`;
     }
 
     // Reset the input so the same file can be selected again
@@ -521,19 +556,39 @@ export class StorySettingsComponent implements OnInit {
   }
 
   async confirmImport(): Promise<void> {
-    if (!this.importFileContent) return;
+    if (!this.importFile) return;
 
     this.isImporting = true;
     this.importError = null;
 
     try {
-      const result = await this.exportImportService.importStory(this.importFileContent);
+      let result;
+
+      if (this.isArchiveImport) {
+        // Import from archive
+        result = await this.exportImportService.importStoryFromArchive(this.importFile);
+      } else {
+        // Legacy JSON import
+        const jsonData = await this.importFile.text();
+        result = await this.exportImportService.importStory(jsonData);
+      }
 
       // Show success message
       const titleChanged = result.finalTitle !== this.importPreview?.story.title;
-      const message = titleChanged
+      let message = titleChanged
         ? `Story imported successfully as "${result.finalTitle}"!`
         : 'Story imported successfully!';
+
+      // Add media import info if applicable
+      if (this.isArchiveImport && this.importPreview?.metadata?.mediaStats) {
+        const stats = this.importPreview.metadata.mediaStats;
+        if (stats.imageCount > 0 || stats.videoCount > 0) {
+          const parts: string[] = [];
+          if (stats.imageCount > 0) parts.push(`${stats.imageCount} image${stats.imageCount !== 1 ? 's' : ''}`);
+          if (stats.videoCount > 0) parts.push(`${stats.videoCount} video${stats.videoCount !== 1 ? 's' : ''}`);
+          message += ` (${parts.join(', ')} included)`;
+        }
+      }
 
       this.dialogService.showSuccess({ header: 'Import Complete', message });
 
@@ -552,8 +607,9 @@ export class StorySettingsComponent implements OnInit {
 
   cancelImport(): void {
     this.importPreview = null;
-    this.importFileContent = null;
+    this.importFile = null;
     this.importError = null;
+    this.isArchiveImport = false;
   }
 
   getImportChapterCount(): number {
@@ -574,6 +630,23 @@ export class StorySettingsComponent implements OnInit {
       (total, category) => total + (category.entries?.length || 0),
       0
     );
+  }
+
+  getImportImageCount(): number {
+    return this.importPreview?.metadata?.mediaStats?.imageCount || 0;
+  }
+
+  getImportVideoCount(): number {
+    return this.importPreview?.metadata?.mediaStats?.videoCount || 0;
+  }
+
+  getImportMediaSizeFormatted(): string {
+    const bytes = this.importPreview?.metadata?.mediaStats?.totalMediaSize || 0;
+    if (bytes === 0) return '';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
   getStorySceneCount(): number {
@@ -605,6 +678,10 @@ export class StorySettingsComponent implements OnInit {
       ? this.sceneBeatTemplateSections
       : { ...DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS };
 
+    const envisionSections = this.envisionBeatTemplateSections?.objective?.trim()
+      ? this.envisionBeatTemplateSections
+      : { ...DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS };
+
     const sceneFromOutlineSections = this.sceneFromOutlineTemplateSections?.objective?.trim()
       ? this.sceneFromOutlineTemplateSections
       : { ...DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS };
@@ -634,6 +711,8 @@ export class StorySettingsComponent implements OnInit {
         this.settings.systemMessage,
         '[Text after beat would appear here - content that follows the beat position, used for bridging context...]'
       );
+    } else if (this.activeBeatType === 'envision') {
+      template = sectionsToTemplate(envisionSections, this.settings.systemMessage);
     } else {
       template = sectionsToTemplate(beatSections, this.settings.systemMessage);
     }

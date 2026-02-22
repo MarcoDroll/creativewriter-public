@@ -43,13 +43,14 @@ export class ModelSelectorComponent implements OnInit {
   quickPickModels: ModelOption[] = [];
 
   ngOnInit(): void {
-    this.modelService.loadAllModels().subscribe(({ openRouter, gemini, ollama, claude, replicate }) => {
+    this.modelService.loadAllModels().subscribe(({ openRouter, gemini, ollama, claude, replicate, openAICompatible }) => {
       const enriched = [
         ...openRouter.map(m => ({ ...m, id: `openrouter:${m.id}` })),
         ...gemini.map(m => ({ ...m, id: `gemini:${m.id}` })),
         ...ollama.map(m => ({ ...m, id: `ollama:${m.id}` })),
         ...claude.map(m => ({ ...m, id: `claude:${m.id}` })),
         ...replicate.map(m => ({ ...m, id: `replicate:${m.id}` })),
+        ...openAICompatible.map(m => ({ ...m, id: `openaiCompatible:${m.id}` })),
       ];
       this.availableModels = enriched;
 

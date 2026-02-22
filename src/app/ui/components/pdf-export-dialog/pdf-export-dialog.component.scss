@@ -8,12 +8,12 @@
 
   ion-header {
     flex-shrink: 0;
-    --background: rgba(30, 30, 30, 0.95);
+    --background: var(--cw-bg-elevated);
   }
 
   ion-content {
     flex: 1 1 auto;
-    --background: rgba(20, 20, 20, 0.95);
+    --background: var(--cw-bg-base);
     --overflow: auto;
     overflow-y: auto;
     min-height: 0;
@@ -27,49 +27,51 @@ ion-list {
 }
 
 .dialog-padding {
-  --padding-start: 24px;
-  --padding-end: 24px;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
+  --padding-start: var(--cw-space-xl);
+  --padding-end: var(--cw-space-xl);
+  --padding-top: var(--cw-space-sm);
+  --padding-bottom: var(--cw-space-sm);
 }
 
 .description {
-  margin: 8px 0 12px 0;
-  color: var(--ion-color-medium);
-  font-size: 0.9rem;
+  margin: var(--cw-space-sm) 0 var(--cw-space-md) 0;
+  color: var(--cw-text-muted);
+  font-size: var(--cw-font-size-sm);
 }
 
 .button-container {
-  margin-top: 12px;
+  margin-top: var(--cw-space-md);
 }
 
 ion-item {
-  --background: rgba(40, 40, 40, 0.6);
-  --padding-start: 16px;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
-  --inner-padding-top: 4px;
-  --inner-padding-bottom: 4px;
+  --background: var(--cw-bg-elevated);
+  --padding-start: var(--cw-space-lg);
+  --padding-top: var(--cw-space-sm);
+  --padding-bottom: var(--cw-space-sm);
+  --inner-padding-top: var(--cw-space-xs);
+  --inner-padding-bottom: var(--cw-space-xs);
   --min-height: 50px;
-  margin-bottom: 6px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: var(--cw-space-sm);
+  border-radius: var(--cw-radius-md);
+  border: 1px solid var(--cw-border-subtle);
+  transition: all var(--cw-transition-normal);
 }
 
 ion-item:hover {
-  --background: rgba(50, 50, 50, 0.7);
+  --background: var(--cw-bg-hover);
+  border-color: var(--cw-border-default);
 }
 
 ion-label h2 {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: var(--cw-font-weight-semibold);
+  font-size: var(--cw-font-size-sm);
   margin: 0;
   line-height: 1.2;
 }
 
 ion-label p {
-  font-size: 0.75rem;
-  color: var(--ion-color-medium);
+  font-size: var(--cw-font-size-xs);
+  color: var(--cw-text-muted);
   margin: 2px 0 0 0;
   line-height: 1.1;
 }
@@ -80,10 +82,10 @@ ion-label {
 }
 
 ion-select {
-  --padding-start: 8px;
+  --padding-start: var(--cw-space-sm);
   min-width: 100px;
 }
 
 ion-checkbox {
-  margin-right: 12px;
+  margin-right: var(--cw-space-md);
 }

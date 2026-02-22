@@ -18,6 +18,7 @@ import { ModelService } from '../../core/services/model.service';
 import { AIProviderValidationService } from '../../core/services/ai-provider-validation.service';
 import { ModelSelectorComponent } from '../../shared/components/model-selector/model-selector.component';
 import { ModelOption } from '../../core/models/model.interface';
+import { buildOpenRouterProviderPrefs } from '../../core/models/settings.interface';
 import { Story, Scene, Chapter, StorySettings, DEFAULT_STORY_SETTINGS } from '../../stories/models/story.interface';
 import { ProviderIconComponent } from '../../shared/components/provider-icon/provider-icon.component';
 import { Observable, of, from } from 'rxjs';
@@ -273,37 +274,37 @@ interface SceneContext {
     :host { display: block; }
     ion-content { --padding-bottom: calc(var(--ion-safe-area-bottom, 0) + 96px); }
     .context-section {
-      margin-bottom: 1.5rem;
-      padding: 1rem;
-      background: rgba(71, 118, 230, 0.05);
-      border: 1px solid rgba(71, 118, 230, 0.2);
-      border-radius: 12px;
+      margin-bottom: var(--cw-space-xl);
+      padding: var(--cw-space-lg);
+      background: var(--cw-bg-info-subtle);
+      border: 1px solid var(--cw-border-primary);
+      border-radius: var(--cw-radius-lg);
     }
 
     .context-section ion-label h3 {
-      margin: 0 0 0.5rem 0;
-      color: var(--ion-color-primary);
-      font-weight: 600;
+      margin: 0 0 var(--cw-space-sm) 0;
+      color: var(--cw-color-primary);
+      font-weight: var(--cw-font-weight-semibold);
     }
 
     .context-section ion-label p {
-      margin: 0 0 1rem 0;
-      color: var(--ion-color-medium);
-      font-size: 0.9rem;
+      margin: 0 0 var(--cw-space-lg) 0;
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-sm);
     }
 
     .context-controls {
       display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
+      gap: var(--cw-space-sm);
+      margin-bottom: var(--cw-space-lg);
       flex-wrap: wrap;
     }
 
     .context-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
+      gap: var(--cw-space-sm);
+      margin-top: var(--cw-space-sm);
     }
 
     .context-chips ion-chip {
@@ -313,60 +314,60 @@ interface SceneContext {
 
     .original-text-item,
     .rewritten-text-item {
-      --background: rgba(0, 0, 0, 0.05);
-      --border-radius: 8px;
-      margin: 1rem 0;
+      --background: var(--cw-bg-hover);
+      --border-radius: var(--cw-radius-md);
+      margin: var(--cw-space-lg) 0;
     }
 
     .original-text,
     .rewritten-text {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: var(--cw-bg-hover);
+      padding: var(--cw-space-md);
+      border-radius: var(--cw-radius-sm);
+      border: 1px solid var(--cw-border-default);
       white-space: pre-wrap;
-      line-height: 1.5;
+      line-height: var(--cw-line-height-normal);
       max-height: 200px;
       overflow-y: auto;
       font-family: inherit;
     }
 
     .rewritten-text {
-      background: rgba(71, 118, 230, 0.1);
-      border-color: rgba(71, 118, 230, 0.3);
+      background: var(--cw-bg-info-subtle);
+      border-color: var(--cw-border-accent);
     }
 
     .quick-prompts {
-      margin: 1rem 0;
+      margin: var(--cw-space-lg) 0;
     }
 
     .quick-prompts ion-label {
       display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-      color: var(--ion-color-medium);
+      margin-bottom: var(--cw-space-sm);
+      font-weight: var(--cw-font-weight-semibold);
+      color: var(--cw-text-muted);
     }
 
     .favorite-models {
-      margin: 1rem 0;
+      margin: var(--cw-space-lg) 0;
     }
 
     .favorite-label {
       display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-      color: var(--ion-color-medium);
+      margin-bottom: var(--cw-space-sm);
+      font-weight: var(--cw-font-weight-semibold);
+      color: var(--cw-text-muted);
     }
 
     .favorite-chip-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
     }
 
     .favorite-chip {
       cursor: pointer;
-      transition: transform 0.2s ease;
+      transition: transform var(--cw-transition-fast);
     }
 
     .favorite-chip:hover {
@@ -374,24 +375,24 @@ interface SceneContext {
     }
 
     .favorite-provider-icon {
-      margin-right: 0.25rem;
+      margin-right: var(--cw-space-xs);
       display: flex;
       align-items: center;
     }
 
     .favorite-chip-label {
-      font-weight: 500;
+      font-weight: var(--cw-font-weight-medium);
     }
 
     .prompt-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
     }
 
     .prompt-chips ion-chip {
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--cw-transition-fast);
     }
 
     .prompt-chips ion-chip:hover {
@@ -400,23 +401,23 @@ interface SceneContext {
 
     .loading-section {
       text-align: center;
-      padding: 2rem;
+      padding: var(--cw-space-2xl);
     }
 
     .loading-section ion-spinner {
-      margin-bottom: 1rem;
+      margin-bottom: var(--cw-space-lg);
     }
 
     .action-buttons {
-      margin-top: 2rem;
-      gap: 1rem;
+      margin-top: var(--cw-space-2xl);
+      gap: var(--cw-space-lg);
     }
 
     .button-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin: 1rem 0;
+      gap: var(--cw-space-lg);
+      margin: var(--cw-space-lg) 0;
     }
 
     .rewritten-section {
@@ -424,11 +425,11 @@ interface SceneContext {
     }
 
     .action-footer {
-      padding: 12px;
-      padding-bottom: calc(12px + var(--ion-safe-area-bottom, 0));
-      background: var(--ion-background-color, #111);
-      box-shadow: 0 -6px 16px rgba(0,0,0,0.3);
-      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: var(--cw-space-md);
+      padding-bottom: calc(var(--cw-space-md) + var(--ion-safe-area-bottom, 0));
+      background: var(--cw-bg-base);
+      box-shadow: var(--cw-shadow-lg);
+      border-top: 1px solid var(--cw-border-subtle);
     }
 
     @keyframes fadeIn {
@@ -440,13 +441,13 @@ interface SceneContext {
     @media (prefers-color-scheme: dark) {
       .original-text,
       .rewritten-text {
-        background: rgba(255, 255, 255, 0.05);
-        border-color: rgba(255, 255, 255, 0.1);
+        background: var(--cw-bg-hover);
+        border-color: var(--cw-border-subtle);
       }
 
       .rewritten-text {
-        background: rgba(71, 118, 230, 0.15);
-        border-color: rgba(71, 118, 230, 0.4);
+        background: var(--cw-bg-info-subtle);
+        border-color: var(--cw-border-primary);
       }
     }
   `]
@@ -1034,7 +1035,9 @@ ${surroundingSection}Rewrite ONLY the text within <text-to-rewrite> tags.`;
     const settings = this.settingsService.getSettings();
     const apiKey = settings.openRouter.apiKey;
     const model = options.model || settings.openRouter.model || 'anthropic/claude-3-haiku';
-    
+
+    const providerPrefs = buildOpenRouterProviderPrefs(settings.openRouter);
+
     const requestBody = {
       model: model,
       messages: [{
@@ -1043,7 +1046,8 @@ ${surroundingSection}Rewrite ONLY the text within <text-to-rewrite> tags.`;
       }],
       stream: true,
       max_tokens: Math.ceil(options.wordCount * 2.5),
-      temperature: 0.7
+      temperature: 0.7,
+      ...(providerPrefs && { provider: providerPrefs })
     };
     
     return from(fetch('https://openrouter.ai/api/v1/chat/completions', {

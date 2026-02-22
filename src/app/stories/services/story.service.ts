@@ -440,7 +440,7 @@ export class StoryService {
     // Performance optimization: Skip migration if already at current schema version
     if (story.schemaVersion === CURRENT_SCHEMA_VERSION) {
       // Story is already migrated, just ensure Date objects are proper
-      return {
+      const result = {
         ...story,
         id: story.id || 'story-' + Date.now(),
         title: story.title || 'Untitled Story',
@@ -448,6 +448,16 @@ export class StoryService {
         createdAt: story.createdAt ? new Date(story.createdAt) : new Date(),
         updatedAt: story.updatedAt ? new Date(story.updatedAt) : new Date()
       } as Story;
+
+      // Ensure lastModifiedBy timestamp is a Date object
+      if (result.lastModifiedBy?.timestamp) {
+        result.lastModifiedBy = {
+          ...result.lastModifiedBy,
+          timestamp: new Date(result.lastModifiedBy.timestamp)
+        };
+      }
+
+      return result;
     }
 
     const migrated: Story = {
@@ -552,6 +562,14 @@ export class StoryService {
           content: this.migrateBeatIds(scene.content)
         }))
       }));
+    }
+
+    // Ensure lastModifiedBy timestamp is a Date object
+    if (migrated.lastModifiedBy?.timestamp) {
+      migrated.lastModifiedBy = {
+        ...migrated.lastModifiedBy,
+        timestamp: new Date(migrated.lastModifiedBy.timestamp)
+      };
     }
 
     // Set schema version to mark this story as migrated

@@ -3,24 +3,26 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import {
-  IonIcon, PopoverController, ModalController, AlertController, IonModal, IonChip, IonLabel, IonSearchbar, IonCheckbox, IonItemDivider,
+  IonIcon, PopoverController, ModalController, AlertController, ActionSheetController, IonModal, IonChip, IonLabel, IonSearchbar, IonCheckbox, IonItemDivider,
   IonButton, IonButtons, IonToolbar, IonTitle, IonHeader, IonContent, IonList, IonItem
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { logoGoogle, globeOutline, libraryOutline, hardwareChip, chatbubbleOutline, gitNetworkOutline, cloudUploadOutline, refreshOutline, trashOutline, analyticsOutline, colorWandOutline, addOutline, closeOutline, readerOutline, copyOutline, sparklesOutline, eyeOutline, chevronDown, chevronUp, chevronBackOutline, chevronForwardOutline, closeCircleOutline, starOutline, timeOutline, createOutline, stopOutline, informationCircleOutline, syncOutline } from 'ionicons/icons';
+import { logoGoogle, globeOutline, libraryOutline, hardwareChip, chatbubbleOutline, gitNetworkOutline, cloudUploadOutline, refreshOutline, trashOutline, analyticsOutline, colorWandOutline, addOutline, closeOutline, readerOutline, copyOutline, sparklesOutline, eyeOutline, chevronDown, chevronUp, chevronBackOutline, chevronForwardOutline, closeCircleOutline, starOutline, timeOutline, createOutline, stopOutline, informationCircleOutline, syncOutline, colorPaletteOutline } from 'ionicons/icons';
 import { BeatAIModalService } from '../../../shared/services/beat-ai-modal.service';
 import { BeatVersionHistoryModalComponent } from '../beat-version-history-modal/beat-version-history-modal.component';
 import { TokenInfoPopoverComponent } from '../../../ui/components/token-info-popover.component';
 import { TokenCounterService, SupportedModel } from '../../../shared/services/token-counter.service';
 import { BeatAI, BeatAIPromptEvent } from '../../models/beat-ai.interface';
-import { Subscription } from 'rxjs';
+import { Subscription, take } from 'rxjs';
 import { ModelOption } from '../../../core/models/model.interface';
 import { ModelService } from '../../../core/services/model.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { BeatAIService } from '../../../shared/services/beat-ai.service';
+import { PendingJobsService } from '../../../core/services/pending-jobs.service';
 import { ProseMirrorEditorService, SimpleEditorConfig } from '../../../shared/services/prosemirror-editor.service';
 import { EditorView } from 'prosemirror-view';
 import { StoryService } from '../../services/story.service';
+import { CodexService } from '../../services/codex.service';
 import { Story, Scene, Chapter, StorySettings, DEFAULT_STORY_SETTINGS } from '../../models/story.interface';
 import { ProviderIconComponent } from '../../../shared/components/provider-icon/provider-icon.component';
 import { getProviderIcon as getIcon, getProviderTooltip as getTooltip } from '../../../core/provider-icons';
@@ -61,12 +63,15 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
   private popoverController = inject(PopoverController);
   private modalController = inject(ModalController);
   private alertController = inject(AlertController);
+  private actionSheetController = inject(ActionSheetController);
   private tokenCounter = inject(TokenCounterService);
   private modalService = inject(BeatAIModalService);
   private cdr = inject(ChangeDetectorRef);
   private premiumRewriteService = inject(PremiumRewriteService);
   private dialogService = inject(DialogService);
   private sceneAIGenerationService = inject(SceneAIGenerationService);
+  private codexService = inject(CodexService);
+  private pendingJobsService = inject(PendingJobsService);
 
   // Use getter/setter for beatData to sync currentPrompt when it changes
   // This fixes the scene-switch bug where the NodeView directly sets beatData
@@ -74,9 +79,15 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @Input()
   set beatData(value: BeatAI) {
+    const oldId = this._beatData?.id;
     const oldPrompt = this._beatData?.prompt;
     const oldStagingNotes = this._beatData?.stagingNotes;
     this._beatData = value;
+
+    // Invalidate content cache when beat changes (different beat or content could have changed)
+    if (value?.id !== oldId) {
+      this._cachedHasContent = null;
+    }
 
     // Sync currentPrompt when beatData changes (fixes scene-switch prompt bug)
     // This handles both initial set and updates from NodeView.update()
@@ -98,6 +109,29 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get beatData(): BeatAI {
     return this._beatData;
+  }
+
+  // Cached content check to avoid redundant document traversals (performance optimization)
+  private _cachedHasContent: boolean | null = null;
+
+  /**
+   * Check if there is actual content after this beat in the editor.
+   * This is the source of truth - works regardless of how content was added
+   * (AI generation, version restore, paste, typing).
+   *
+   * Result is cached until invalidated by content-changing operations.
+   */
+  get hasContentAfterBeat(): boolean {
+    if (!this._beatData?.id) return false;
+    if (this._cachedHasContent !== null) return this._cachedHasContent;
+    const text = this.proseMirrorService.getTextAfterBeat(this._beatData.id);
+    this._cachedHasContent = !!text?.trim();
+    return this._cachedHasContent;
+  }
+
+  /** Invalidate the cached content check - call when content might have changed */
+  invalidateContentCache(): void {
+    this._cachedHasContent = null;
   }
   @Input() storyId?: string;
   @Input() chapterId?: string;
@@ -122,9 +156,11 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
   availableModels: ModelOption[] = [];
   favoriteModels: ModelOption[] = [];
   private saveTimeout?: ReturnType<typeof setTimeout>;
+  private scrollCheckTimeout?: ReturnType<typeof setTimeout>;
   beatTypeOptions = [
     { value: 'story', label: 'Story Beat', description: 'Continue the narrative forward' },
-    { value: 'scene', label: 'Scene Beat', description: 'Expand this moment with depth and detail' }
+    { value: 'scene', label: 'Scene Beat', description: 'Expand this moment with depth and detail' },
+    { value: 'envision', label: 'Envision Beat', description: 'Fill word count creatively from prompt direction' }
   ];
   wordCountOptions = [
     { value: 20, label: '~20 words' },
@@ -164,7 +200,7 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
   
   constructor() {
     // Register icons
-    addIcons({ logoGoogle, globeOutline, libraryOutline, hardwareChip, chatbubbleOutline, gitNetworkOutline, cloudUploadOutline, refreshOutline, trashOutline, analyticsOutline, colorWandOutline, addOutline, closeOutline, readerOutline, copyOutline, sparklesOutline, eyeOutline, chevronDown, chevronUp, chevronBackOutline, chevronForwardOutline, closeCircleOutline, starOutline, timeOutline, createOutline, stopOutline, informationCircleOutline, syncOutline });
+    addIcons({ logoGoogle, globeOutline, libraryOutline, hardwareChip, chatbubbleOutline, gitNetworkOutline, cloudUploadOutline, refreshOutline, trashOutline, analyticsOutline, colorWandOutline, addOutline, closeOutline, readerOutline, copyOutline, sparklesOutline, eyeOutline, chevronDown, chevronUp, chevronBackOutline, chevronForwardOutline, closeCircleOutline, starOutline, timeOutline, createOutline, stopOutline, informationCircleOutline, syncOutline, colorPaletteOutline });
   }
   
   ngOnInit(): void {
@@ -237,15 +273,30 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
           if (generationEvent.isComplete) {
             // Generation completed
             this.beatData.isGenerating = false;
+            this.invalidateContentCache(); // Content has changed, refresh cached state
             this.contentUpdate.emit(this.beatData);
             // Only trigger change detection on completion - streaming text is handled
             // directly by ProseMirror, not Angular templates
+            this.cdr.markForCheck();
+          } else if (!this.beatData.isGenerating) {
+            // Non-complete event received, ensure isGenerating is true
+            // This handles resumed server-side generations after page refresh
+            this.beatData.isGenerating = true;
             this.cdr.markForCheck();
           }
         }
       })
     );
-    
+
+    // Check if there's an active server-side generation for this beat (handles page refresh)
+    this.pendingJobsService.getJobsForBeat(this.beatData.id).pipe(take(1)).subscribe(jobs => {
+      const activeJob = jobs.find(j => j.status === 'pending' || j.status === 'processing');
+      if (activeJob && !this.beatData.isGenerating) {
+        console.log('[BeatAI] Detected active server job for beat on init:', this.beatData.id);
+        this.beatData.isGenerating = true;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -257,6 +308,9 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
+    }
+    if (this.scrollCheckTimeout) {
+      clearTimeout(this.scrollCheckTimeout);
     }
     if (this.editorView) {
       this.proseMirrorService.destroySimpleEditor(this.editorView);
@@ -284,6 +338,7 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
       placeholder: 'Describe the beat that the AI should generate...',
       onUpdate: (content: string) => {
         this.currentPrompt = content;
+        this.cdr.markForCheck(); // Trigger change detection for OnPush strategy
         this.onPromptChange();
       },
       storyContext: {
@@ -442,7 +497,7 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
     const textAfterBeat = this.getTextAfterBeatIfSceneBeat();
 
     // Determine the action and get existing text if needed
-    let action: 'generate' | 'regenerate' | 'rewrite';
+    let action: 'generate' | 'regenerate' | 'rewrite' | 'polish';
     let existingText: string | undefined;
     let rewriteInstruction: string | undefined;
 
@@ -453,6 +508,12 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
       existingText = this.proseMirrorService.getTextAfterBeat(this.beatData.id)
                      || this.beatData.rewriteContext.originalText;
       // Pass the rewrite instruction separately
+      rewriteInstruction = this.beatData.rewriteContext.instruction;
+    } else if (this.beatData.lastAction === 'polish' && this.beatData.rewriteContext) {
+      // This was a polish - regenerate as a polish
+      action = 'polish';
+      existingText = this.proseMirrorService.getTextAfterBeat(this.beatData.id)
+                     || this.beatData.rewriteContext.originalText;
       rewriteInstruction = this.beatData.rewriteContext.instruction;
     } else {
       // Regular regeneration - use original prompt
@@ -492,48 +553,47 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Execute rewrite - either from original or current content
-   * Called after modal dismisses with action
+   * Execute rewrite or polish — unified handler for both modes.
+   * Rewrite uses scene/story context; polish skips the expensive DB fetch.
    */
-  private async executeRewrite(
+  private async executeRewriteOrPolish(
+    mode: 'rewrite' | 'polish',
     action: 'rewrite-current' | 'rewrite-original',
     instruction: string,
     currentText: string
   ): Promise<void> {
-    // Determine which text to rewrite
-    const textToRewrite = action === 'rewrite-original' && this.beatData.rewriteContext?.originalText
+    const textToProcess = action === 'rewrite-original' && this.beatData.rewriteContext?.originalText
       ? this.beatData.rewriteContext.originalText
       : currentText;
 
-    // Store/update rewrite context (persists instruction)
-    this.beatData.lastAction = 'rewrite';
+    this.beatData.lastAction = mode;
     this.beatData.rewriteContext = {
       originalText: this.beatData.rewriteContext?.originalText || currentText,
       instruction: instruction
     };
 
-    // Start rewrite process
     this.beatData.isGenerating = true;
     this.cdr.markForCheck();
     this.beatData.wordCount = this.getActualWordCount();
     this.beatData.model = this.selectedModel;
 
-    // Persist the selected scenes and story outline setting
-    this.beatData.selectedScenes = this.selectedScenes.map(scene => ({
-      sceneId: scene.sceneId,
-      chapterId: scene.chapterId
-    }));
-    this.beatData.includeStoryOutline = this.includeStoryOutline;
-
-    // Build custom context from selected scenes
-    const customContext = await this.buildCustomContext();
+    // Rewrite uses scene/story context; polish skips the expensive DB fetch
+    let customContext: Awaited<ReturnType<typeof this.buildCustomContext>> | undefined;
+    if (mode === 'rewrite') {
+      this.beatData.selectedScenes = this.selectedScenes.map(scene => ({
+        sceneId: scene.sceneId,
+        chapterId: scene.chapterId
+      }));
+      this.beatData.includeStoryOutline = this.includeStoryOutline;
+      customContext = await this.buildCustomContext();
+    }
 
     this.promptSubmit.emit({
       beatId: this.beatData.id,
       prompt: this.beatData.prompt,
-      rewriteInstruction: instruction,
-      action: 'rewrite',
-      existingText: textToRewrite,
+      rewriteInstruction: instruction || undefined,
+      action: mode,
+      existingText: textToProcess,
       wordCount: this.getActualWordCount(),
       model: this.selectedModel,
       storyId: this.storyId,
@@ -594,12 +654,26 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
+      // Extract protagonist name from Codex
+      let protagonistName: string | undefined;
+      const codex = this.codexService.getCodex(this.storyId);
+      if (codex) {
+        for (const category of codex.categories) {
+          const protagonist = category.entries.find(e => e.metadata?.['storyRole'] === 'Protagonist');
+          if (protagonist?.title?.trim()) {
+            protagonistName = protagonist.title;
+            break;
+          }
+        }
+      }
+
       const result = await this.sceneAIGenerationService.generateStagingNotes({
         storyId: this.storyId,
         sceneId: this.sceneId,
         sceneContent: scene.content,
         storyLanguage: story.settings?.language || 'en',
-        beatId: this.beatData.id // Only use content BEFORE this beat
+        beatId: this.beatData.id, // Only use content BEFORE this beat
+        protagonistName
       });
 
       if (result.success && result.text) {
@@ -631,8 +705,19 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Rewrite the generated content with a custom rewrite prompt
-   * Opens modal with instruction input and rewrite options
+   * Cancel the ongoing staging notes generation
+   */
+  cancelStagingNotesGeneration(): void {
+    if (!this.isGeneratingStagingNotes || !this.sceneId) return;
+
+    this.sceneAIGenerationService.cancelGeneration(this.sceneId);
+    this.isGeneratingStagingNotes = false;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Rewrite or polish the generated content
+   * Opens ActionSheet with rewrite and polish options
    */
   async rewriteContent(): Promise<void> {
     // Premium gate check
@@ -654,23 +739,47 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    // Open rewrite modal
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Rewrite Options',
+      buttons: [
+        {
+          text: 'Rewrite with custom prompt',
+          icon: 'create-outline',
+          handler: () => { this.openRewriteModal(existingText, 'rewrite'); }
+        },
+        {
+          text: 'Polish expression & wording',
+          icon: 'color-palette-outline',
+          handler: () => { this.openRewriteModal(existingText, 'polish'); }
+        },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await actionSheet.present();
+  }
+
+  /**
+   * Open rewrite/polish modal with the specified mode
+   */
+  private async openRewriteModal(existingText: string, mode: 'rewrite' | 'polish'): Promise<void> {
     const modal = await this.modalController.create({
       component: BeatRewriteModalComponent,
       componentProps: {
         beatId: this.beatData.id,
         currentInstruction: this.beatData.rewriteContext?.instruction || '',
-        hasOriginalText: !!this.beatData.rewriteContext?.originalText
+        hasOriginalText: !!this.beatData.rewriteContext?.originalText,
+        mode: mode
       },
       cssClass: 'beat-rewrite-modal'
     });
-
     await modal.present();
-
     const { data } = await modal.onDidDismiss();
-    if (data?.action && data?.instruction &&
-        (data.action === 'rewrite-current' || data.action === 'rewrite-original')) {
-      await this.executeRewrite(data.action, data.instruction, existingText);
+    if (data?.action) {
+      if (mode === 'polish') {
+        await this.executeRewriteOrPolish('polish', data.action, data.instruction || '', existingText);
+      } else if (data.instruction) {
+        await this.executeRewriteOrPolish('rewrite', data.action, data.instruction, existingText);
+      }
     }
   }
 
@@ -702,6 +811,7 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
       if (data?.versionChanged && data?.restoredPrompt !== undefined) {
         this.currentPrompt = data.restoredPrompt;
         this.beatData.prompt = data.restoredPrompt;
+        this.invalidateContentCache(); // Version restore changes content after beat
       }
 
       // Update hasHistory flag if history was deleted
@@ -719,8 +829,8 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async deleteContentAfterBeat(): Promise<void> {
     const confirmed = await this.dialogService.confirmDestructive({
-      header: 'Delete Content',
-      message: 'Delete writing after this beat until the next beat or the end of this scene? This cannot be undone.',
+      header: 'Delete Generated Content',
+      message: 'Delete the generated content for this beat? Content you wrote after the generation will be preserved. This cannot be undone.',
       confirmText: 'Delete'
     });
     if (confirmed) {
@@ -1023,6 +1133,7 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
   stopGeneration(): void {
     this.beatAIService.stopGeneration(this.beatData.id);
     this.beatData.isGenerating = false;
+    this.invalidateContentCache(); // Content may have changed during partial generation
     this.contentUpdate.emit(this.beatData);
   }
 
@@ -1084,6 +1195,13 @@ export class BeatAIComponent implements OnInit, OnDestroy, AfterViewInit {
     this.favoriteModels = favoriteIds
       .map(id => this.availableModels.find(model => model.id === id))
       .filter((model): model is ModelOption => !!model);
+
+    // Cancel any pending scroll check to prevent multiple executions
+    if (this.scrollCheckTimeout) {
+      clearTimeout(this.scrollCheckTimeout);
+    }
+    // Recheck scroll state after favorite models are updated
+    this.scrollCheckTimeout = setTimeout(() => this.checkFavoritesScroll(), 50);
   }
   
   selectFavoriteModel(model: ModelOption): void {

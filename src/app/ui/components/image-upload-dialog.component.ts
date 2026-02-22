@@ -1,8 +1,8 @@
-import { ChangeDetectorRef, Component, DestroyRef, ElementRef, EventEmitter, Output, ViewChild, ViewRef, inject, NgZone } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, EventEmitter, Output, ViewChild, ViewRef, inject, NgZone, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalController } from '@ionic/angular/standalone';
-import { ImageService, ImageUploadResult } from '../../shared/services/image.service';
+import { StoryImageService } from '../../shared/services/story-image.service';
 import { ImageCropperModalComponent } from './image-cropper-modal.component';
 import { DialogService } from '../../core/services/dialog.service';
 import imageCompression from 'browser-image-compression';
@@ -14,6 +14,7 @@ export interface ImageInsertResult {
   alt: string;
   title?: string;
   imageId?: string;
+  storyId?: string;  // Required for per-story image storage
 }
 
 @Component({
@@ -142,6 +143,11 @@ export interface ImageInsertResult {
           
           <div *ngIf="originalSize" class="size-info">
             <div class="size-comparison">
+              <div class="size-item" *ngIf="originalWidth > 0">
+                <span class="size-label">Dimensions:</span>
+                <span class="size-value">{{ originalWidth }} × {{ originalHeight }}px</span>
+              </div>
+
               <div class="size-item">
                 <span class="size-label">Original:</span>
                 <span class="size-value">{{ formatFileSize(originalSize) }}</span>
@@ -187,112 +193,112 @@ export interface ImageInsertResult {
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.8);
+      background: var(--cw-bg-modal-backdrop);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 2000;
+      z-index: var(--cw-z-modal);
     }
 
     .dialog-content {
-      background: #2a2a2a;
-      border: 1px solid #404040;
-      border-radius: 8px;
-      padding: 1.5rem;
+      background: var(--cw-bg-elevated);
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-md);
+      padding: var(--cw-space-xl);
       max-width: 500px;
       width: 90vw;
       max-height: 90vh;
       overflow-y: auto;
       overflow-x: hidden;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--cw-shadow-xl);
       position: relative;
     }
 
     h3 {
-      margin: 0 0 1rem 0;
-      color: #e0e0e0;
-      font-size: 1.2rem;
+      margin: 0 0 var(--cw-space-lg) 0;
+      color: var(--cw-text-primary);
+      font-size: var(--cw-font-size-lg);
     }
 
     .upload-tabs {
       display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
+      gap: var(--cw-space-sm);
+      margin-bottom: var(--cw-space-lg);
     }
 
     .tab-button {
       flex: 1;
-      padding: 0.5rem 1rem;
-      background: #3a3a3a;
-      border: 1px solid #404040;
-      color: #adb5bd;
+      padding: var(--cw-space-sm) var(--cw-space-lg);
+      background: var(--cw-bg-input);
+      border: 1px solid var(--cw-border-input);
+      color: var(--cw-text-muted);
       cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s;
+      border-radius: var(--cw-radius-xs);
+      transition: all var(--cw-transition-fast);
     }
 
     .tab-button:hover {
-      background: #404040;
+      background: var(--cw-bg-hover);
     }
 
     .tab-button.active {
-      background: #4a4a4a;
-      color: #fff;
-      border-color: #6c757d;
+      background: var(--cw-bg-active);
+      color: var(--cw-text-primary);
+      border-color: var(--cw-border-default);
     }
 
     .tab-content {
-      margin-bottom: 1rem;
+      margin-bottom: var(--cw-space-lg);
     }
 
     .upload-area {
-      border: 2px dashed #6c757d;
-      border-radius: 8px;
-      padding: 2rem;
+      border: 2px dashed var(--cw-border-default);
+      border-radius: var(--cw-radius-md);
+      padding: var(--cw-space-2xl);
       text-align: center;
-      transition: all 0.3s;
+      transition: all var(--cw-transition-normal);
     }
 
     .upload-area.dragover {
-      border-color: #28a745;
-      background: rgba(40, 167, 69, 0.1);
+      border-color: var(--cw-color-success-darker);
+      background: var(--cw-bg-success-subtle);
     }
 
     .upload-btn {
-      padding: 0.5rem 1rem;
-      background: #007bff;
+      padding: var(--cw-space-sm) var(--cw-space-lg);
+      background: var(--cw-color-primary);
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--cw-radius-xs);
       cursor: pointer;
-      font-size: 1rem;
+      font-size: var(--cw-font-size-md);
     }
 
     .upload-btn:hover {
-      background: #0056b3;
+      background: var(--cw-color-primary-dark);
     }
 
     .upload-hint {
-      margin: 0.5rem 0 0 0;
-      color: #adb5bd;
-      font-size: 0.9rem;
+      margin: var(--cw-space-sm) 0 0 0;
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-sm);
     }
 
     .url-input {
       width: 100%;
-      padding: 0.5rem;
-      background: #1a1a1a;
-      border: 1px solid #404040;
-      color: #fff;
-      border-radius: 4px;
-      font-size: 1rem;
+      padding: var(--cw-space-sm);
+      background: var(--cw-bg-base);
+      border: 1px solid var(--cw-border-input);
+      color: var(--cw-text-primary);
+      border-radius: var(--cw-radius-xs);
+      font-size: var(--cw-font-size-md);
     }
 
     .preview-section {
       position: relative;
-      margin-top: 1rem;
-      border: 1px solid #404040;
-      border-radius: 4px;
+      margin-top: var(--cw-space-lg);
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-xs);
       overflow: hidden;
     }
 
@@ -301,15 +307,15 @@ export interface ImageInsertResult {
       height: auto;
       max-height: 300px;
       object-fit: contain;
-      background: #1a1a1a;
+      background: var(--cw-bg-base);
     }
 
     .image-actions {
       position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
+      top: var(--cw-space-sm);
+      right: var(--cw-space-sm);
       display: flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
     }
 
     .crop-btn, .remove-btn {
@@ -318,82 +324,82 @@ export interface ImageInsertResult {
       border: none;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: var(--cw-font-size-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      transition: all var(--cw-transition-fast);
     }
 
     .crop-btn {
-      background: rgba(40, 167, 69, 0.9);
+      background: var(--cw-color-success);
       color: white;
     }
 
     .crop-btn:hover {
-      background: #28a745;
+      background: var(--cw-color-success-darker);
     }
 
     .remove-btn {
-      background: rgba(220, 53, 69, 0.9);
+      background: var(--cw-color-danger);
       color: white;
-      font-size: 1.2rem;
+      font-size: var(--cw-font-size-lg);
     }
 
     .remove-btn:hover {
-      background: #dc3545;
+      background: var(--cw-color-danger-dark);
     }
 
     .image-details {
-      margin-bottom: 1rem;
+      margin-bottom: var(--cw-space-lg);
     }
 
     .image-details label {
       display: block;
-      margin-bottom: 0.5rem;
-      color: #adb5bd;
-      font-size: 0.9rem;
+      margin-bottom: var(--cw-space-sm);
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-sm);
     }
 
     .image-details input {
       width: 100%;
-      padding: 0.5rem;
-      margin-top: 0.25rem;
-      background: #1a1a1a;
-      border: 1px solid #404040;
-      color: #fff;
-      border-radius: 4px;
-      font-size: 0.9rem;
+      padding: var(--cw-space-sm);
+      margin-top: var(--cw-space-xs);
+      background: var(--cw-bg-base);
+      border: 1px solid var(--cw-border-input);
+      color: var(--cw-text-primary);
+      border-radius: var(--cw-radius-xs);
+      font-size: var(--cw-font-size-sm);
     }
 
     .compression-settings {
-      margin-bottom: 1rem;
-      padding: 1rem;
-      background: #1e1e1e;
-      border: 1px solid #404040;
-      border-radius: 4px;
+      margin-bottom: var(--cw-space-lg);
+      padding: var(--cw-space-lg);
+      background: var(--cw-bg-surface);
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-xs);
     }
 
     .compression-settings label {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
+      gap: var(--cw-space-sm);
+      margin-bottom: var(--cw-space-sm);
     }
 
     .quality-slider {
       flex: 1;
       height: 4px;
-      background: #404040;
+      background: var(--cw-bg-hover);
       outline: none;
-      border-radius: 2px;
+      border-radius: var(--cw-radius-xs);
     }
 
     .quality-value {
       min-width: 40px;
       text-align: right;
-      font-weight: bold;
-      color: #28a745;
+      font-weight: var(--cw-font-weight-bold);
+      color: var(--cw-color-success);
     }
 
     .size-input {
@@ -401,10 +407,10 @@ export interface ImageInsertResult {
     }
 
     .size-info {
-      margin-top: 0.8rem;
-      padding: 0.8rem;
-      background: #1e1e1e;
-      border-radius: 8px;
+      margin-top: var(--cw-space-md);
+      padding: var(--cw-space-md);
+      background: var(--cw-bg-surface);
+      border-radius: var(--cw-radius-md);
       text-align: left;
     }
 
@@ -418,59 +424,59 @@ export interface ImageInsertResult {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 13px;
+      font-size: var(--cw-font-size-sm);
     }
 
     .size-label {
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.7);
+      font-weight: var(--cw-font-weight-medium);
+      color: var(--cw-text-muted);
     }
 
     .size-value {
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.9);
+      font-weight: var(--cw-font-weight-semibold);
+      color: var(--cw-text-primary);
     }
 
     .size-value.estimated {
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--cw-text-disabled);
       font-style: italic;
     }
 
     .size-value.good-compression {
-      color: #28a745;
+      color: var(--cw-color-success);
     }
 
     .dialog-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
       justify-content: flex-end;
-      margin-top: 1.5rem;
+      margin-top: var(--cw-space-xl);
     }
 
     .cancel-btn, .insert-btn {
-      padding: 0.5rem 1rem;
+      padding: var(--cw-space-sm) var(--cw-space-lg);
       border: none;
-      border-radius: 4px;
+      border-radius: var(--cw-radius-xs);
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: var(--cw-font-size-sm);
     }
 
     .cancel-btn {
-      background: #6c757d;
+      background: var(--cw-bg-active);
       color: white;
     }
 
     .cancel-btn:hover {
-      background: #5a6268;
+      background: var(--cw-border-default);
     }
 
     .insert-btn {
-      background: #28a745;
+      background: var(--cw-color-success);
       color: white;
     }
 
     .insert-btn:hover:not(:disabled) {
-      background: #218838;
+      background: var(--cw-color-success-darker);
     }
 
     .insert-btn:disabled {
@@ -481,12 +487,12 @@ export interface ImageInsertResult {
     .processing-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: var(--cw-bg-modal-backdrop);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 5;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(var(--cw-blur-xs));
       pointer-events: all;
     }
 
@@ -494,26 +500,26 @@ export interface ImageInsertResult {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.75rem;
-      padding: 1rem 1.5rem;
-      background: rgba(26, 26, 26, 0.9);
-      border: 1px solid #404040;
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      gap: var(--cw-space-md);
+      padding: var(--cw-space-lg) var(--cw-space-xl);
+      background: var(--cw-bg-glass);
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-md);
+      box-shadow: var(--cw-shadow-xl);
     }
 
     .processing-container p {
       margin: 0;
-      color: #e0e0e0;
-      font-size: 0.95rem;
-      font-weight: 500;
+      color: var(--cw-text-primary);
+      font-size: var(--cw-font-size-sm);
+      font-weight: var(--cw-font-weight-medium);
     }
 
     .processing-spinner {
       width: 42px;
       height: 42px;
-      border: 4px solid rgba(255, 255, 255, 0.2);
-      border-top-color: #28a745;
+      border: 4px solid var(--cw-border-subtle);
+      border-top-color: var(--cw-color-success);
       border-radius: 50%;
       animation: processing-spin 1s linear infinite;
     }
@@ -526,50 +532,53 @@ export interface ImageInsertResult {
 
     @media (max-width: 480px) {
       .dialog-content {
-        padding: 1rem;
+        padding: var(--cw-space-lg);
         width: 95vw;
       }
 
       h3 {
-        font-size: 1.1rem;
+        font-size: var(--cw-font-size-md);
       }
 
       .upload-area {
-        padding: 1.5rem;
+        padding: var(--cw-space-xl);
       }
     }
   `]
 })
 export class ImageUploadDialogComponent {
+  @Input() storyId!: string;  // Required: story to add the image to
   @Output() imageInserted = new EventEmitter<ImageInsertResult>();
   @Output() cancelled = new EventEmitter<void>();
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
 
   activeTab: 'upload' | 'url' = 'upload';
   isDragging = false;
-  
+
   // Upload state
   uploadedFile: File | null = null;
   uploadPreview: string | null = null;
-  
+
   // URL state
   imageUrl = '';
   urlPreview: string | null = null;
-  
+
   // Image details
   altText = '';
   titleText = '';
-  
+
   // Compression settings
   compressionQuality = 0.8;
   maxWidth = 1200;
   originalSize = 0;
   compressedSize = 0;
+  originalWidth = 0;
+  originalHeight = 0;
   Math = Math;
   isProcessing = false;
   processingStage: ProcessingStage | null = null;
 
-  private readonly imageService = inject(ImageService);
+  private readonly storyImageService = inject(StoryImageService);
   private readonly modalController = inject(ModalController);
   private readonly zone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -635,6 +644,8 @@ export class ImageUploadDialogComponent {
       this.commitState(() => {
         this.uploadPreview = preview;
       });
+      // Extract image dimensions for accurate size estimation
+      this.extractImageDimensions(preview);
     } catch (error) {
       console.error('Error reading image file', error);
       this.commitState(() => {
@@ -688,6 +699,31 @@ export class ImageUploadDialogComponent {
     }
 
     return btoa(binary);
+  }
+
+  private extractImageDimensions(dataUrl: string): void {
+    const img = new Image();
+    const cleanup = () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+    img.onload = () => {
+      // Guard against rapid file selection - ensure this is still the current preview
+      if (this.uploadPreview !== dataUrl) {
+        cleanup();
+        return;
+      }
+      this.commitState(() => {
+        this.originalWidth = img.naturalWidth;
+        this.originalHeight = img.naturalHeight;
+      });
+      cleanup();
+    };
+    img.onerror = () => {
+      console.warn('Failed to extract image dimensions');
+      cleanup();
+    };
+    img.src = dataUrl;
   }
 
   private commitState(mutator: () => void): void {
@@ -757,6 +793,8 @@ export class ImageUploadDialogComponent {
     this.uploadPreview = null;
     this.originalSize = 0;
     this.compressedSize = 0;
+    this.originalWidth = 0;
+    this.originalHeight = 0;
     this.resetFileInput();
   }
 
@@ -813,7 +851,20 @@ export class ImageUploadDialogComponent {
     // JPEG achieves 10-20% size reduction at quality 0.8
     const qualityMultiplier = this.compressionQuality;
     const formatReduction = 0.7; // Assume 30% reduction for WebP format
-    return Math.round(this.originalSize * qualityMultiplier * formatReduction);
+
+    // Calculate resize reduction based on maxWidth
+    // browser-image-compression uses maxWidthOrHeight, so use the larger dimension
+    let resizeMultiplier = 1;
+    if (this.originalWidth > 0 && this.originalHeight > 0) {
+      const largerDimension = Math.max(this.originalWidth, this.originalHeight);
+      if (this.maxWidth < largerDimension) {
+        // Image will be scaled down - area reduces by scale^2
+        const scale = this.maxWidth / largerDimension;
+        resizeMultiplier = scale * scale;
+      }
+    }
+
+    return Math.round(this.originalSize * qualityMultiplier * formatReduction * resizeMultiplier);
   }
 
   getEstimatedReduction(): number {
@@ -851,19 +902,30 @@ export class ImageUploadDialogComponent {
     try {
       let imageUrl: string;
       let imageId: string | undefined;
+      let storyId: string | undefined;
 
       if (this.activeTab === 'upload' && this.uploadedFile) {
+        if (!this.storyId) {
+          throw new Error('Story ID is required to upload images');
+        }
+
         this.updateProcessingStage('compressing');
         const compressedFile = await this.compressImage(this.uploadedFile);
 
         this.updateProcessingStage('uploading');
-        const uploadResult: ImageUploadResult = await this.imageService.uploadImageWithId(compressedFile);
-        imageUrl = uploadResult.url;
-        imageId = uploadResult.imageId;
+        const result = await this.storyImageService.addImage(
+          this.storyId,
+          compressedFile,
+          this.altText || compressedFile.name
+        );
+        imageUrl = result.blobUrl;
+        imageId = result.meta.id;
+        storyId = this.storyId;
       } else {
         imageUrl = this.imageUrl;
         // External URL images don't have IDs from our system
         imageId = undefined;
+        storyId = undefined;
       }
 
       this.updateProcessingStage('finalizing');
@@ -871,7 +933,8 @@ export class ImageUploadDialogComponent {
         url: imageUrl,
         alt: this.altText || 'Image',
         title: this.titleText || undefined,
-        imageId: imageId
+        imageId: imageId,
+        storyId: storyId
       });
     } catch (error) {
       this.handleInsertError(error);

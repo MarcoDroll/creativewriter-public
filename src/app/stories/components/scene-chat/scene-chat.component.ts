@@ -14,7 +14,7 @@ import { addIcons } from 'ionicons';
 import {
   arrowBack, sendOutline, peopleOutline, documentTextOutline,
   addOutline, checkmarkOutline, closeOutline, sparklesOutline,
-  personOutline, locationOutline, cubeOutline, readerOutline,
+  personOutline, locationOutline, cubeOutline, readerOutline, libraryOutline,
   copyOutline, logoGoogle, globeOutline, chatbubbleOutline, gitNetworkOutline, cloudUploadOutline, hardwareChip,
   refreshOutline, createOutline, timeOutline, stopCircle
 } from 'ionicons/icons';
@@ -27,13 +27,16 @@ import { AIRequestLoggerService } from '../../../core/services/ai-request-logger
 import { ModelService } from '../../../core/services/model.service';
 import { ChatHistoryService } from '../../services/chat-history.service';
 import { AIProviderValidationService } from '../../../core/services/ai-provider-validation.service';
+import { CodexContextService } from '../../../shared/services/codex-context.service';
 import { ProviderIconComponent } from '../../../shared/components/provider-icon/provider-icon.component';
 import { getProviderIcon as getIcon } from '../../../core/provider-icons';
 import { Story, Scene, Chapter } from '../../models/story.interface';
 import { ModelOption } from '../../../core/models/model.interface';
+import { buildOpenRouterProviderPrefs } from '../../../core/models/settings.interface';
 import { StoryRole } from '../../models/codex.interface';
 import { Subscription, Observable, of, from } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
+import { KeyboardService } from '../../../core/services/keyboard.service';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { ChatHistoryDoc } from '../../models/chat-history.interface';
 
@@ -145,6 +148,8 @@ export class SceneChatComponent implements OnInit, OnDestroy {
   private readonly alertController = inject(AlertController);
   private chatHistoryService = inject(ChatHistoryService);
   private aiProviderValidation = inject(AIProviderValidationService);
+  private keyboardService = inject(KeyboardService);
+  private codexContextService = inject(CodexContextService);
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
   @ViewChild('messageInput') messageInput!: ElementRef;
@@ -166,7 +171,8 @@ export class SceneChatComponent implements OnInit, OnDestroy {
   presetPrompts: PresetPrompt[] = [];
   
   includeStoryOutline = false;
-  
+  includeCodexContext = false;
+
   selectedModel = '';
   availableModels: ModelOption[] = [];
   
@@ -174,7 +180,6 @@ export class SceneChatComponent implements OnInit, OnDestroy {
   
   private subscriptions = new Subscription();
   private abortController: AbortController | null = null;
-  keyboardVisible = false;
   private chatSessionId = Date.now();
   
   // Editing state
@@ -199,7 +204,7 @@ export class SceneChatComponent implements OnInit, OnDestroy {
     addIcons({
       arrowBack, sendOutline, peopleOutline, documentTextOutline,
       addOutline, checkmarkOutline, closeOutline, sparklesOutline,
-      personOutline, locationOutline, cubeOutline, readerOutline,
+      personOutline, locationOutline, cubeOutline, readerOutline, libraryOutline,
       copyOutline, logoGoogle, globeOutline, chatbubbleOutline, gitNetworkOutline, cloudUploadOutline, hardwareChip,
       refreshOutline, createOutline, timeOutline, stopCircle
     });
@@ -251,7 +256,7 @@ export class SceneChatComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  resendMessage(message: ChatMessage): void {
+  async resendMessage(message: ChatMessage): Promise<void> {
     if (this.isGenerating) return;
     const index = this.messages.indexOf(message);
     if (index === -1) return;
@@ -265,34 +270,8 @@ export class SceneChatComponent implements OnInit, OnDestroy {
     const userMessage = message.content;
     const extractionType = message.extractionType;
 
-    // Prepare scene context
-    const sceneContext = this.selectedScenes
-      .map(s => `<scene chapter="${s.chapterTitle}" title="${s.sceneTitle}">\n${s.content}\n</scene>`)
-      .join('\n\n');
-
-    // Prepare story outline if enabled
-    let storyOutline = '';
-    if (this.includeStoryOutline) {
-      storyOutline = this.buildStoryOutline();
-    }
-
-    // Generate a unique beat ID for this chat message
+    const contextText = await this.buildContextText(userMessage);
     const beatId = 'chat-' + Date.now();
-
-    // Build context text
-    let contextText = '';
-    if (storyOutline) {
-      contextText += `Story Overview:\n${storyOutline}\n\n`;
-    }
-    if (sceneContext) {
-      contextText += `Scene Text:\n${sceneContext}\n\n`;
-    }
-
-    // Add chat history context (exclude initial system message and preset prompts)
-    const chatHistory = this.buildChatHistory();
-    if (chatHistory) {
-      contextText += `Previous chat history:\n${chatHistory}\n\n`;
-    }
 
     const languageInstruction = this.getLanguageInstruction();
 
@@ -336,6 +315,16 @@ export class SceneChatComponent implements OnInit, OnDestroy {
     
     // Load available models
     this.loadAvailableModels();
+
+    // Subscribe to keyboard visibility for scroll-to-bottom
+    this.subscriptions.add(
+      this.keyboardService.keyboardVisible$.subscribe(visible => {
+        if (visible) {
+          setTimeout(() => this.scrollToBottom(), 400);
+        }
+        this.cdr.markForCheck();
+      })
+    );
   }
 
   ngOnDestroy() {
@@ -427,34 +416,8 @@ export class SceneChatComponent implements OnInit, OnDestroy {
       extractionType: effectiveExtractionType
     });
 
-    // Prepare scene context
-    const sceneContext = this.selectedScenes
-      .map(scene => `<scene chapter="${scene.chapterTitle}" title="${scene.sceneTitle}">\n${scene.content}\n</scene>`)
-      .join('\n\n');
-
-    // Prepare story outline if enabled
-    let storyOutline = '';
-    if (this.includeStoryOutline) {
-      storyOutline = this.buildStoryOutline();
-    }
-
-    // Generate a unique beat ID for this chat message
+    const contextText = await this.buildContextText(userMessage);
     const beatId = 'chat-' + Date.now();
-
-    // Build context text
-    let contextText = '';
-    if (storyOutline) {
-      contextText += `Story Overview:\n${storyOutline}\n\n`;
-    }
-    if (sceneContext) {
-      contextText += `Scene Text:\n${sceneContext}\n\n`;
-    }
-
-    // Add chat history context (exclude initial system message and preset prompts)
-    const chatHistory = this.buildChatHistory();
-    if (chatHistory) {
-      contextText += `Previous chat history:\n${chatHistory}\n\n`;
-    }
 
     // Build prompt based on type
     let prompt = '';
@@ -550,22 +513,6 @@ export class SceneChatComponent implements OnInit, OnDestroy {
     return cleanText.substring(0, 100) + (cleanText.length > 100 ? '...' : '');
   }
 
-  onInputFocus() {
-    this.keyboardVisible = true;
-    // Use longer timeout to allow keyboard to fully appear
-    setTimeout(() => {
-      this.scrollToBottom();
-    }, 400);
-  }
-
-  onInputBlur() {
-    // Add slight delay to ensure keyboard is fully closed before resetting
-    setTimeout(() => {
-      this.keyboardVisible = false;
-      this.cdr.markForCheck();
-    }, 100);
-  }
-
   private extractFullTextFromScene(scene: Scene): string {
     if (!scene.content) return '';
 
@@ -628,7 +575,7 @@ export class SceneChatComponent implements OnInit, OnDestroy {
 
 **Name:** [Character name]
 **Story Role:** [Protagonist | Antagonist | Supporting Character | Love Interest | Background Character | Unknown]
-**Tags:** [Comma-separated keywords used only to identify the character inside beat prompts, written in the story's language]
+**Tags:** [Comma-separated topic keywords (e.g. Combat, Romance, Politics) — entries are auto-included when a tag appears in the beat prompt or scene text, written in the story's language]
 **Description:** [...]
 
 **Physical Appearance:** [...]
@@ -653,7 +600,7 @@ Separate each character block with a blank line.`
 
 **Name:** [Location name]
 **Location Type:** [City, Ship, Tavern, Space Station, etc.]
-**Tags:** [Comma-separated keywords used only to identify this location inside beat prompts, written in the story's language]
+**Tags:** [Comma-separated topic keywords (e.g. Combat, Romance, Politics) — entries are auto-included when a tag appears in the beat prompt or scene text, written in the story's language]
 **Description:** [...]
 
 **Overview:** [...]
@@ -677,7 +624,7 @@ Separate each location block with a blank line.`
 
 **Name:** [Object name]
 **Object Type:** [Weapon, Relic, Document, Tool, etc.]
-**Tags:** [Comma-separated keywords used only to identify this object inside beat prompts, written in the story's language]
+**Tags:** [Comma-separated topic keywords (e.g. Combat, Romance, Politics) — entries are auto-included when a tag appears in the beat prompt or scene text, written in the story's language]
 **Description:** [...]
 
 **Physical Description:** [...]
@@ -919,6 +866,49 @@ Separate each object block with a blank line.`
     return outline;
   }
 
+  private async buildContextText(userMessage: string): Promise<string> {
+    const sceneContext = this.selectedScenes
+      .map(s => `<scene chapter="${s.chapterTitle}" title="${s.sceneTitle}">\n${s.content}\n</scene>`)
+      .join('\n\n');
+
+    let storyOutline = '';
+    if (this.includeStoryOutline) {
+      storyOutline = this.buildStoryOutline();
+    }
+
+    let contextText = '';
+    if (storyOutline) {
+      contextText += `Story Overview:\n${storyOutline}\n\n`;
+    }
+    if (sceneContext) {
+      contextText += `Scene Text:\n${sceneContext}\n\n`;
+    }
+
+    if (this.includeCodexContext && this.story) {
+      try {
+        const codexResult = await this.codexContextService.buildCodexXml(
+          this.story.id,
+          userMessage,
+          '',
+          sceneContext,
+          1000
+        );
+        if (codexResult.xml) {
+          contextText += `Codex (World Knowledge):\n${codexResult.xml}\n\n`;
+        }
+      } catch (error) {
+        console.error('Failed to build codex context:', error);
+      }
+    }
+
+    const chatHistory = this.buildChatHistory();
+    if (chatHistory) {
+      contextText += `Previous chat history:\n${chatHistory}\n\n`;
+    }
+
+    return contextText;
+  }
+
   /**
    * Shared streaming response handler - consolidates duplicate streaming logic
    * from sendMessage and resendMessage
@@ -1113,7 +1103,9 @@ Separate each object block with a blank line.`
     const apiKey = settings.openRouter.apiKey;
     const model = options.model || settings.openRouter.model || 'anthropic/claude-3-haiku';
     const maxTokens = this.getChatMaxTokens(options.wordCount);
-    
+
+    const providerPrefs = buildOpenRouterProviderPrefs(settings.openRouter);
+
     const requestBody = {
       model: model,
       messages: [{
@@ -1122,9 +1114,10 @@ Separate each object block with a blank line.`
       }],
       stream: true,
       max_tokens: maxTokens,
-      temperature: 0.7
+      temperature: 0.7,
+      ...(providerPrefs && { provider: providerPrefs })
     };
-    
+
     return from(fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1143,7 +1136,7 @@ Separate each object block with a blank line.`
       })
     );
   }
-  
+
   private processStreamResponse(response: Response): Observable<string> {
     return new Observable<string>(observer => {
       const reader = response.body?.getReader();
@@ -1623,6 +1616,13 @@ Separate each object block with a blank line.`
         showOnDesktop: true
       },
       {
+        icon: 'library-outline',
+        action: () => this.includeCodexContext = !this.includeCodexContext,
+        color: this.includeCodexContext ? 'primary' : 'medium',
+        showOnMobile: true,
+        showOnDesktop: true
+      },
+      {
         icon: 'add-outline',
         action: () => this.showSceneSelector = true,
         showOnMobile: true,
@@ -1707,6 +1707,7 @@ Separate each object block with a blank line.`
       messages: this.messages,
       selectedScenes: selectedScenesRefs,
       includeStoryOutline: this.includeStoryOutline,
+      includeCodexContext: this.includeCodexContext,
       selectedModel: this.selectedModel || undefined,
       historyId: this.activeHistoryId
     });
@@ -1759,6 +1760,7 @@ Separate each object block with a blank line.`
       });
     }
     this.includeStoryOutline = !!history.includeStoryOutline;
+    this.includeCodexContext = !!history.includeCodexContext;
     if (history.selectedModel) this.selectedModel = history.selectedModel;
     if (history.selectedScenes && this.story) {
       const restored: SceneContext[] = [];
@@ -1780,5 +1782,40 @@ Separate each object block with a blank line.`
     }
     this.activeHistoryId = history.historyId;
     this.scrollToBottom();
+  }
+
+  // ============================================
+  // trackBy functions for mobile performance
+  // ============================================
+  trackBySceneId(index: number, scene: SceneContext | Scene): string {
+    return 'sceneId' in scene ? scene.sceneId : scene.id;
+  }
+
+  trackByMessageTimestamp(index: number, message: ChatMessage): number {
+    return message.timestamp.getTime();
+  }
+
+  trackByEntryName(index: number, entry: CodexEntryPreview): string {
+    return entry.name;
+  }
+
+  trackByHistoryId(index: number, history: ChatHistoryDoc): string {
+    return history._id;
+  }
+
+  trackByChapterId(index: number, chapter: Chapter): string {
+    return chapter.id;
+  }
+
+  trackByPresetId(index: number, preset: PresetPrompt): string {
+    return preset.id;
+  }
+
+  trackByFieldName(index: number, fieldName: string): string {
+    return fieldName;
+  }
+
+  trackByTag(index: number, tag: string): string {
+    return tag;
   }
 }

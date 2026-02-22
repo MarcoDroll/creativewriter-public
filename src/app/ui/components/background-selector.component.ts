@@ -226,31 +226,31 @@ interface BackgroundOption {
 
     .no-background {
       background: linear-gradient(45deg,
-        rgba(60, 60, 60, 0.5) 25%,
+        var(--cw-bg-hover) 25%,
         transparent 25%),
       linear-gradient(-45deg,
-        rgba(60, 60, 60, 0.5) 25%,
+        var(--cw-bg-hover) 25%,
         transparent 25%),
       linear-gradient(45deg,
         transparent 75%,
-        rgba(60, 60, 60, 0.5) 75%),
+        var(--cw-bg-hover) 75%),
       linear-gradient(-45deg,
         transparent 75%,
-        rgba(60, 60, 60, 0.5) 75%);
+        var(--cw-bg-hover) 75%);
       background-size: 10px 10px;
       background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
-      background-color: rgba(30, 30, 30, 0.6);
+      background-color: var(--cw-bg-input);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .no-bg-placeholder {
-      background: rgba(0, 0, 0, 0.6);
+      background: var(--cw-bg-modal-backdrop);
       color: var(--cw-text-secondary);
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.7rem;
+      padding: var(--cw-space-xs) var(--cw-space-sm);
+      border-radius: var(--cw-radius-xs);
+      font-size: var(--cw-font-size-2xs);
     }
 
     .background-name {
@@ -262,25 +262,25 @@ interface BackgroundOption {
     }
 
     ion-card {
-      --background: linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(20, 20, 20, 0.6) 100%);
+      --background: var(--cw-gradient-glass);
       --color: var(--cw-text-secondary);
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-md);
-      margin: 0.25rem;
+      margin: var(--cw-space-xs);
       cursor: pointer;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      transition: all var(--cw-transition-fast);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
     }
 
     ion-card:hover {
       transform: translateY(-2px);
       border-color: var(--cw-border-accent);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--cw-shadow-md);
     }
 
     .selected {
-      --background: linear-gradient(135deg, rgba(139, 180, 248, 0.15) 0%, rgba(139, 180, 248, 0.1) 100%);
+      --background: var(--cw-gradient-primary-subtle);
       border-color: var(--cw-color-primary-light) !important;
     }
 
@@ -307,12 +307,12 @@ interface BackgroundOption {
 
     .delete-button {
       position: absolute;
-      top: 0.25rem;
-      left: 0.25rem;
+      top: var(--cw-space-xs);
+      left: var(--cw-space-xs);
       z-index: 10;
       opacity: 0;
-      transition: opacity 0.2s ease;
-      --background: rgba(0, 0, 0, 0.7);
+      transition: opacity var(--cw-transition-fast);
+      --background: var(--cw-bg-modal-backdrop);
       --color: white;
       width: 28px;
       height: 28px;
@@ -331,18 +331,18 @@ interface BackgroundOption {
 
     .empty-custom-backgrounds {
       text-align: center;
-      padding: 2rem;
-      background: linear-gradient(135deg, rgba(30, 30, 30, 0.4) 0%, rgba(20, 20, 20, 0.4) 100%);
+      padding: var(--cw-space-2xl);
+      background: var(--cw-bg-input);
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-md);
-      margin-top: 1rem;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      margin-top: var(--cw-space-lg);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
     }
 
     .empty-custom-backgrounds p {
-      margin: 0.5rem 0;
-      font-size: 0.9rem;
+      margin: var(--cw-space-sm) 0;
+      font-size: var(--cw-font-size-sm);
       color: var(--cw-text-muted);
     }
 

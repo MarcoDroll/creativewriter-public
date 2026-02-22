@@ -451,8 +451,8 @@ ion-chip {
   background: rgba(15, 15, 15, 0.3);
   border-radius: var(--cw-radius-sm);
   border: 1px solid rgba(139, 180, 248, 0.1);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(var(--cw-blur-sm));
+  -webkit-backdrop-filter: blur(var(--cw-blur-sm));
 
   &.disabled {
     opacity: 0.6;

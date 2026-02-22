@@ -52,15 +52,17 @@
             </ion-note>
           </div>
 
-          <!-- Verify Button -->
+          <!-- Verify/Manage Button -->
           <ion-button
             expand="block"
             class="verify-button"
             (click)="verifySubscription()"
             [disabled]="isVerifying || verificationPending || !email">
             <ion-spinner *ngIf="isVerifying || verificationPending" name="crescent" slot="start"></ion-spinner>
-            <ion-icon *ngIf="!isVerifying && !verificationPending" name="refresh" slot="start"></ion-icon>
-            {{ isVerifying || verificationPending ? 'Verifying...' : 'Verify via Stripe Portal' }}
+            <ion-icon *ngIf="!isVerifying && !verificationPending" [name]="hasAuthToken ? 'card-outline' : 'refresh'" slot="start"></ion-icon>
+            {{ isVerifying || verificationPending
+               ? 'Verifying...'
+               : (hasAuthToken ? 'Manage Subscription' : 'Verify via Stripe Portal') }}
           </ion-button>
 
           <!-- Error/Success Message -->

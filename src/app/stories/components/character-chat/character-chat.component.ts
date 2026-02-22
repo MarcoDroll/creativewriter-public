@@ -21,13 +21,14 @@ import {
   arrowBack, send, personCircle, chatbubbles, copy, refresh,
   close, helpCircle, timeOutline, chevronForward,
   createOutline, refreshOutline, checkmarkOutline, closeOutline, personOutline, copyOutline,
-  lockClosed, sparkles, stopCircle
+  lockClosed, sparkles, stopCircle, shieldCheckmark
 } from 'ionicons/icons';
 import { ModelSelectorComponent } from '../../../shared/components/model-selector/model-selector.component';
 
 import { StoryService } from '../../services/story.service';
 import { CodexService } from '../../services/codex.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
+import { PremiumAccessService } from '../../../core/services/premium-access.service';
 import { CharacterChatHistoryService } from '../../services/character-chat-history.service';
 import { CharacterChatHistoryDoc } from '../../models/chat-history.interface';
 import {
@@ -86,6 +87,7 @@ export class CharacterChatComponent implements OnInit, OnDestroy {
   private storyService = inject(StoryService);
   private codexService = inject(CodexService);
   private subscriptionService = inject(SubscriptionService);
+  private premiumAccessService = inject(PremiumAccessService);
   private premiumModuleService = inject(PremiumModuleService);
   private openRouterService = inject(OpenRouterApiService);
   private geminiService = inject(GoogleGeminiApiService);
@@ -104,6 +106,7 @@ export class CharacterChatComponent implements OnInit, OnDestroy {
   isGenerating = false;
   isPremium = false;
   isPremiumChecking = true; // Start with loading state
+  needsVerification = false; // Premium but needs auth token verification
   isModuleLoading = false;
   moduleError: string | null = null;
 
@@ -147,7 +150,7 @@ export class CharacterChatComponent implements OnInit, OnDestroy {
       arrowBack, send, personCircle, chatbubbles, copy, refresh,
       close, helpCircle, timeOutline, chevronForward,
       createOutline, refreshOutline, checkmarkOutline, closeOutline, personOutline, copyOutline,
-      lockClosed, sparkles, stopCircle
+      lockClosed, sparkles, stopCircle, shieldCheckmark
     });
     this.initializeHeaderActions();
   }
@@ -161,24 +164,29 @@ export class CharacterChatComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
-    // FIRST: Actively verify subscription status and WAIT for result
+    // FIRST: Actively verify premium access (including auth token) and WAIT for result
     // This ensures premium users see the chat immediately without race conditions
     this.isPremiumChecking = true;
-    const isPremium = await this.subscriptionService.checkSubscription();
-    console.log('[CharacterChat] Initial premium check:', isPremium);
-    this.isPremium = isPremium;
+    const accessResult = await this.premiumAccessService.checkAccess();
+    console.log('[CharacterChat] Initial premium access check:', accessResult);
+    this.isPremium = accessResult.hasAccess;
+    this.needsVerification = accessResult.reason === 'verification_needed';
     this.isPremiumChecking = false; // Done checking
-    if (isPremium) {
+    if (accessResult.hasAccess) {
       this.loadPremiumModule();
     }
 
     // THEN subscribe for any future changes (after initial value is set)
     this.subscriptions.add(
-      this.subscriptionService.isPremiumObservable.subscribe(newPremiumStatus => {
+      this.subscriptionService.isPremiumObservable.subscribe(async newPremiumStatus => {
         console.log('[CharacterChat] isPremium observable changed:', newPremiumStatus);
-        if (this.isPremium !== newPremiumStatus) {
-          this.isPremium = newPremiumStatus;
-          if (newPremiumStatus) {
+        // Re-check access when subscription status changes
+        const result = await this.premiumAccessService.checkAccess();
+        const newHasAccess = result.hasAccess;
+        if (this.isPremium !== newHasAccess) {
+          this.isPremium = newHasAccess;
+          this.needsVerification = result.reason === 'verification_needed';
+          if (newHasAccess) {
             this.loadPremiumModule();
           }
         }
@@ -800,5 +808,28 @@ export class CharacterChatComponent implements OnInit, OnDestroy {
    */
   stopGeneration(): void {
     this.isGenerating = false;
+  }
+
+  // ============================================
+  // trackBy functions for mobile performance
+  // ============================================
+  trackByCharacterId(index: number, character: CodexEntry): string {
+    return character.id;
+  }
+
+  trackByStarterText(index: number, starter: string): string {
+    return starter;
+  }
+
+  trackByMessageIndex(index: number, _message: ConversationMessage): number {
+    return index;
+  }
+
+  trackByChapterId(index: number, chapter: { id: string }): string {
+    return chapter.id;
+  }
+
+  trackByHistoryId(index: number, history: CharacterChatHistoryDoc): string {
+    return history._id;
   }
 }

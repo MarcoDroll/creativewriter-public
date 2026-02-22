@@ -72,4 +72,9 @@ export class BeatNavigationPanelComponent implements OnInit {
     }
     return prompt.substring(0, maxLength) + '...';
   }
+
+  // trackBy function for mobile performance
+  trackByBeatId(index: number, beat: BeatItem): string {
+    return beat.beatId;
+  }
 }

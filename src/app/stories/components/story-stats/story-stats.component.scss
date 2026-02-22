@@ -23,8 +23,8 @@
         /* Fallback dark background */
         #1a1a2e;
       background-size: cover, cover, auto;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
       border-bottom: 2px solid rgba(139, 180, 248, 0.3);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }
@@ -109,8 +109,8 @@
     ion-card {
       --background: rgba(42, 42, 42, 0.85);
       --color: #f8f9fa;
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      backdrop-filter: blur(var(--cw-blur-lg));
+      -webkit-backdrop-filter: blur(var(--cw-blur-lg));
       border: 1px solid rgba(139, 180, 248, 0.2);
       border-radius: 16px;
       margin-bottom: 1.5rem;

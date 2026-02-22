@@ -4,7 +4,7 @@
 
 const logger = require('./logger');
 const config = require('./config');
-const { DatabaseClient, getAllUserDatabases } = require('./couchdb-client');
+const { DatabaseClient, getAllUserDatabases, withRetry } = require('./couchdb-client');
 
 /**
  * Prune expired snapshots across all databases
@@ -122,31 +122,33 @@ async function pruneExcessSnapshotsForStory(db, storyId, maxSnapshots = config.M
  * Get snapshot statistics for a database
  */
 async function getSnapshotStats(dbName) {
-  const db = new DatabaseClient(dbName);
-  await db.init();
+  return withRetry(async () => {
+    const db = new DatabaseClient(dbName);
+    await db.init();
 
-  try {
-    const result = await db.view('snapshots', 'by_tier', {
-      group: true
-    });
+    try {
+      const result = await db.view('snapshots', 'by_tier', {
+        group: true
+      });
 
-    const stats = {
-      total: 0,
-      byTier: {}
-    };
+      const stats = {
+        total: 0,
+        byTier: {}
+      };
 
-    result.rows.forEach(row => {
-      const tier = row.key[0];
-      const count = row.value;
-      stats.byTier[tier] = count;
-      stats.total += count;
-    });
+      result.rows.forEach(row => {
+        const tier = row.key[0];
+        const count = row.value;
+        stats.byTier[tier] = count;
+        stats.total += count;
+      });
 
-    return stats;
-  } catch (error) {
-    logger.debug(`Error getting snapshot stats for ${dbName}:`, error.message);
-    return { total: 0, byTier: {} };
-  }
+      return stats;
+    } catch (error) {
+      logger.debug(`Error getting snapshot stats for ${dbName}:`, error.message);
+      return { total: 0, byTier: {} };
+    }
+  }, `getSnapshotStats(${dbName})`);
 }
 
 /**

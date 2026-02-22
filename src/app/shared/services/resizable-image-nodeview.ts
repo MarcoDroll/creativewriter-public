@@ -1,6 +1,15 @@
 import { Node as ProseMirrorNode } from 'prosemirror-model';
 import { EditorView, NodeView } from 'prosemirror-view';
+import { StoryImageService } from './story-image.service';
 
+/**
+ * Resizable image NodeView for ProseMirror.
+ *
+ * NOTE: Image deletion tracking is handled via the imageDeletionTracking plugin
+ * in ProseMirrorPluginsService, NOT in this NodeView's destroy() method.
+ * This ensures images are only deleted when actually removed from the document,
+ * not when the editor is destroyed (e.g., navigation away).
+ */
 export class ResizableImageNodeView implements NodeView {
   dom!: HTMLElement;
   contentDOM?: HTMLElement;
@@ -14,6 +23,9 @@ export class ResizableImageNodeView implements NodeView {
   private startWidth = 0;
   private startHeight = 0;
   private aspectRatio = 1;
+  private currentImageId: string | null = null; // Track current imageId for video association
+  private currentStoryId: string | null = null; // Track current storyId for per-story storage
+  private isDestroyed = false; // Flag for async operation safety
 
   // Event handler references for proper cleanup
   private handleMouseEnter: (() => void) | null = null;
@@ -25,9 +37,12 @@ export class ResizableImageNodeView implements NodeView {
   constructor(
     private node: ProseMirrorNode,
     private view: EditorView,
-    private getPos: () => number
+    private getPos: () => number,
+    private storyImageService?: StoryImageService  // Optional for blob URL resolution
   ) {
     this.createDOM();
+    // Resolve stale blob URLs after DOM is created
+    void this.resolveImageIfNeeded();
   }
 
   private createDOM(): void {
@@ -50,10 +65,29 @@ export class ResizableImageNodeView implements NodeView {
       this.img.title = this.node.attrs['title'];
     }
 
-    // Set initial dimensions
+    // Track imageId and storyId for video association and deletion handling
+    const imageId = this.node.attrs['imageId'] as string | null;
+    const storyId = this.node.attrs['storyId'] as string | null;
+
+    if (imageId) {
+      this.currentImageId = imageId;
+      this.img.setAttribute('data-image-id', imageId);
+      this.img.classList.add('image-id-' + imageId);
+    }
+
+    if (storyId) {
+      this.currentStoryId = storyId;
+      this.img.setAttribute('data-story-id', storyId);
+    }
+
+    // Set initial dimensions with responsive scaling for mobile (Issue A fix)
     if (this.node.attrs['width'] && this.node.attrs['height']) {
-      this.img.style.width = this.node.attrs['width'] + 'px';
-      this.img.style.height = this.node.attrs['height'] + 'px';
+      // Use max-width and aspect-ratio instead of explicit width/height
+      // This allows images to scale down on mobile while preserving aspect ratio
+      this.img.style.maxWidth = this.node.attrs['width'] + 'px';
+      this.img.style.width = '100%';
+      this.img.style.height = 'auto';
+      this.img.style.aspectRatio = `${this.node.attrs['width']} / ${this.node.attrs['height']}`;
     } else {
       this.img.style.maxWidth = '100%';
       this.img.style.height = 'auto';
@@ -277,27 +311,74 @@ export class ResizableImageNodeView implements NodeView {
 
   update(node: ProseMirrorNode): boolean {
     if (node.type !== this.node.type) return false;
-    
+
     this.node = node;
-    
+
     // Update image attributes
     this.img.src = node.attrs['src'];
     this.img.alt = node.attrs['alt'] || '';
-    
+
     if (node.attrs['title']) {
       this.img.title = node.attrs['title'];
     }
-    
-    // Update dimensions if they changed
-    if (node.attrs['width'] && node.attrs['height']) {
-      this.img.style.width = node.attrs['width'] + 'px';
-      this.img.style.height = node.attrs['height'] + 'px';
+
+    // Update imageId for video association tracking
+    const newImageId = node.attrs['imageId'] as string | null;
+    if (newImageId !== this.currentImageId) {
+      // Clean up old imageId class and attribute
+      if (this.currentImageId) {
+        this.img.classList.remove('image-id-' + this.currentImageId);
+        if (!newImageId) {
+          this.img.removeAttribute('data-image-id');
+        }
+      }
+      // Set new imageId
+      if (newImageId) {
+        this.img.setAttribute('data-image-id', newImageId);
+        this.img.classList.add('image-id-' + newImageId);
+      }
+      this.currentImageId = newImageId;
     }
-    
+
+    // Update storyId for per-story storage
+    const newStoryId = node.attrs['storyId'] as string | null;
+    if (newStoryId !== this.currentStoryId) {
+      if (newStoryId) {
+        this.img.setAttribute('data-story-id', newStoryId);
+      } else {
+        this.img.removeAttribute('data-story-id');
+      }
+      this.currentStoryId = newStoryId;
+    }
+
+    // Update dimensions with responsive scaling for mobile (Issue A fix)
+    // Skip if currently resizing to prevent race condition
+    if (!this.isResizing && node.attrs['width'] && node.attrs['height']) {
+      // Use max-width and aspect-ratio instead of explicit width/height
+      // This allows images to scale down on mobile while preserving aspect ratio
+      this.img.style.maxWidth = node.attrs['width'] + 'px';
+      this.img.style.width = '100%';
+      this.img.style.height = 'auto';
+      this.img.style.aspectRatio = `${node.attrs['width']} / ${node.attrs['height']}`;
+    }
+
+    // Re-check if URL needs resolution (handles undo/redo restoring stale blob URLs)
+    void this.resolveImageIfNeeded();
+
     return true;
   }
 
   destroy(): void {
+    // Mark as destroyed to prevent async operations from modifying destroyed DOM
+    this.isDestroyed = true;
+
+    // NOTE: Image deletion tracking is handled via the imageDeletionTracking plugin
+    // in ProseMirrorPluginsService, NOT here. This ensures images are only deleted
+    // when actually removed from the document, not when the editor is destroyed.
+
+    // Clean up img.onload handler to prevent callback on destroyed view
+    this.img.onload = null;
+
     // Clean up wrapper event listeners
     if (this.handleMouseEnter) {
       this.wrapper.removeEventListener('mouseenter', this.handleMouseEnter);
@@ -331,5 +412,59 @@ export class ResizableImageNodeView implements NodeView {
       handle.remove();
     });
     this.resizeHandles = [];
+  }
+
+  // ===== Blob URL Resolution =====
+
+  /**
+   * Check if the image src needs resolution (stale blob URL from previous session)
+   */
+  private needsUrlResolution(): boolean {
+    if (!this.currentImageId || !this.storyImageService) return false;
+    const src = this.node.attrs['src'] as string;
+    // Blob URLs from previous sessions are invalid after page reload
+    return !!src && src.startsWith('blob:');
+  }
+
+  /**
+   * Resolve stale blob URL to fresh one from database.
+   * Called after DOM creation to fix images that were saved with volatile blob URLs.
+   */
+  private async resolveImageIfNeeded(): Promise<void> {
+    if (!this.needsUrlResolution() || !this.currentStoryId || !this.currentImageId) {
+      return;
+    }
+
+    this.img.classList.add('image-resolving');
+
+    try {
+      const freshBlobUrl = await this.storyImageService!.getImageBlobUrl(
+        this.currentStoryId,
+        this.currentImageId
+      );
+
+      // Check if destroyed during async operation
+      if (this.isDestroyed) return;
+
+      if (freshBlobUrl && this.img) {
+        this.img.src = freshBlobUrl;
+        this.img.classList.remove('image-resolving');
+      } else {
+        this.showImageNotFound();
+      }
+    } catch (error) {
+      console.error('Failed to resolve image:', this.currentImageId, error);
+      this.showImageNotFound();
+    }
+  }
+
+  /**
+   * Show error state when image cannot be found in database
+   */
+  private showImageNotFound(): void {
+    if (this.img) {
+      this.img.classList.remove('image-resolving');
+      this.img.classList.add('image-not-found');
+    }
   }
 }

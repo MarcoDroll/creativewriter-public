@@ -138,7 +138,10 @@ describe('StorySettingsComponent - Export/Import', () => {
       'getMaxImportFileSize',
       'validateImportData',
       'parseImportData',
-      'importStory'
+      'importStory',
+      'isArchiveFile',
+      'parseArchiveForPreview',
+      'importStoryFromArchive'
     ]);
     mockDbMaintenanceService = jasmine.createSpyObj('DbMaintenanceService', ['formatBytes'], {
       operationProgress$: of({ operation: '', progress: 0, message: '' })
@@ -161,7 +164,8 @@ describe('StorySettingsComponent - Export/Import', () => {
     // Default mock returns
     mockStoryService.getStory.and.returnValue(Promise.resolve(mockStory));
     mockModelService.getCombinedModels.and.returnValue(of([]));
-    mockExportImportService.getMaxImportFileSize.and.returnValue(50 * 1024 * 1024);
+    mockExportImportService.getMaxImportFileSize.and.returnValue(500 * 1024 * 1024);
+    mockExportImportService.isArchiveFile.and.returnValue(false); // Default to legacy JSON behavior
 
     await TestBed.configureTestingModule({
       imports: [StorySettingsComponent],
@@ -204,18 +208,19 @@ describe('StorySettingsComponent - Export/Import', () => {
     }));
 
     it('should export story successfully', async () => {
-      const mockJsonData = '{"test": "data"}';
-      mockExportImportService.exportStory.and.returnValue(Promise.resolve(mockJsonData));
+      const mockBlob = new Blob(['{"test": "data"}'], { type: 'application/zip' });
+      mockExportImportService.exportStory.and.returnValue(Promise.resolve(mockBlob));
 
       await component.exportStory();
 
       expect(mockExportImportService.exportStory).toHaveBeenCalledWith('story-123');
-      expect(mockExportImportService.downloadExport).toHaveBeenCalledWith(mockJsonData, 'Test Story');
+      expect(mockExportImportService.downloadExport).toHaveBeenCalledWith(mockBlob, 'Test Story');
     });
 
     it('should set isExporting to true during export', async () => {
+      const mockBlob = new Blob(['{}'], { type: 'application/zip' });
       mockExportImportService.exportStory.and.returnValue(
-        new Promise(resolve => setTimeout(() => resolve('{}'), 100))
+        new Promise(resolve => setTimeout(() => resolve(mockBlob), 100))
       );
 
       const exportPromise = component.exportStory();
@@ -248,11 +253,12 @@ describe('StorySettingsComponent - Export/Import', () => {
 
     it('should use default title if story title is empty', async () => {
       component.story = { ...mockStory, title: '' };
-      mockExportImportService.exportStory.and.returnValue(Promise.resolve('{}'));
+      const mockBlob = new Blob(['{}'], { type: 'application/zip' });
+      mockExportImportService.exportStory.and.returnValue(Promise.resolve(mockBlob));
 
       await component.exportStory();
 
-      expect(mockExportImportService.downloadExport).toHaveBeenCalledWith('{}', 'story');
+      expect(mockExportImportService.downloadExport).toHaveBeenCalledWith(mockBlob, 'story');
     });
   });
 
@@ -264,7 +270,7 @@ describe('StorySettingsComponent - Export/Import', () => {
 
     it('should reject files that are too large', async () => {
       const largeFile = new File(['x'.repeat(100)], 'large.json', { type: 'application/json' });
-      Object.defineProperty(largeFile, 'size', { value: 100 * 1024 * 1024 }); // 100MB
+      Object.defineProperty(largeFile, 'size', { value: 600 * 1024 * 1024 }); // 600MB (max is 500MB)
 
       const mockInput = { files: [largeFile], value: '' } as unknown as HTMLInputElement;
       const mockEvent = { target: mockInput } as unknown as Event;
@@ -331,13 +337,18 @@ describe('StorySettingsComponent - Export/Import', () => {
   });
 
   describe('confirmImport', () => {
+    let mockFile: File;
+
     beforeEach(fakeAsync(() => {
       fixture.detectChanges();
       tick();
       // Set up import preview state
       component.importPreview = mockExportData;
+      // Create a mock file for testing
+      mockFile = new File([JSON.stringify(mockExportData)], 'test.json', { type: 'application/json' });
       // Access private property for testing
-      (component as unknown as { importFileContent: string }).importFileContent = JSON.stringify(mockExportData);
+      (component as unknown as { importFile: File }).importFile = mockFile;
+      (component as unknown as { isArchiveImport: boolean }).isArchiveImport = false;
     }));
 
     it('should import story successfully', async () => {
@@ -388,8 +399,8 @@ describe('StorySettingsComponent - Export/Import', () => {
       expect(component.isImporting).toBeFalse();
     });
 
-    it('should do nothing if no import file content', async () => {
-      (component as unknown as { importFileContent: string | null }).importFileContent = null;
+    it('should do nothing if no import file', async () => {
+      (component as unknown as { importFile: File | null }).importFile = null;
 
       await component.confirmImport();
 
@@ -415,14 +426,16 @@ describe('StorySettingsComponent - Export/Import', () => {
     }));
 
     it('should clear all import state', () => {
+      const mockFile = new File(['{}'], 'test.json', { type: 'application/json' });
       component.importPreview = mockExportData;
-      (component as unknown as { importFileContent: string }).importFileContent = '{}';
+      (component as unknown as { importFile: File | null }).importFile = mockFile;
+      (component as unknown as { isArchiveImport: boolean }).isArchiveImport = false;
       component.importError = 'Some error';
 
       component.cancelImport();
 
       expect(component.importPreview).toBeNull();
-      expect((component as unknown as { importFileContent: string | null }).importFileContent).toBeNull();
+      expect((component as unknown as { importFile: File | null }).importFile).toBeNull();
       expect(component.importError).toBeNull();
     });
   });

@@ -7,6 +7,8 @@ import { BeatAIPreviewModalComponent } from './stories/components/beat-ai-previe
 import { MemoryWarningService } from './core/services/memory-warning.service';
 import { BeatHistoryService } from './shared/services/beat-history.service';
 import { SubscriptionService } from './core/services/subscription.service';
+import { PendingJobsService } from './core/services/pending-jobs.service';
+import { AIErrorInterceptorService } from './core/services/ai-error-interceptor.service';
 
 // Preload PouchDB modules to avoid lazy loading delay during database initialization
 import PouchDB from 'pouchdb-browser';
@@ -37,6 +39,9 @@ export class App {
   private memoryWarning = inject(MemoryWarningService);
   private beatHistoryService = inject(BeatHistoryService);
   private subscriptionService = inject(SubscriptionService);
+  private pendingJobsService = inject(PendingJobsService);
+  // Injected to initialize the service at app startup - subscribes to AI error logs and shows toast notifications
+  private aiErrorInterceptor = inject(AIErrorInterceptorService);
 
   constructor() {
     // Initialize background service to apply global background
@@ -53,5 +58,10 @@ export class App {
     // Initialize subscription status from cache on app startup
     // This restores premium status without requiring manual verification
     this.subscriptionService.initialize();
+
+    // Initialize pending jobs service for server-side generation recovery
+    this.pendingJobsService.initialize().catch(error => {
+      console.error('[App] Failed to initialize pending jobs service:', error);
+    });
   }
 }

@@ -1,6 +1,6 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Rewrite Beat</ion-title>
+    <ion-title>{{ mode === 'polish' ? 'Polish Expression' : 'Rewrite Beat' }}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="dismiss()" aria-label="Close modal">
         <ion-icon name="close" slot="icon-only"></ion-icon>
@@ -12,16 +12,22 @@
 <ion-content class="ion-padding">
   <!-- Instruction Section -->
   <div class="rewrite-instruction-section">
-    <label class="instruction-label" for="rewrite-instruction">Rewrite Instruction</label>
+    <label class="instruction-label" for="rewrite-instruction">
+      {{ mode === 'polish' ? 'Extra Guidance (Optional)' : 'Rewrite Instruction' }}
+    </label>
     <ion-textarea
       id="rewrite-instruction"
       [(ngModel)]="instruction"
-      placeholder="e.g., 'Make it more dramatic', 'Add more sensory details', 'Change the pacing'"
+      [placeholder]="mode === 'polish'
+        ? 'Optionally add extra guidance...'
+        : 'e.g., \'Make it more dramatic\', \'Add more sensory details\', \'Change the pacing\''"
       [rows]="4"
       class="instruction-textarea">
     </ion-textarea>
     <p class="instruction-hint">
-      Describe how you want the AI to rewrite the existing text.
+      {{ mode === 'polish'
+        ? 'Style instructions and codex entries will be used automatically. Add extra guidance if needed.'
+        : 'Describe how you want the AI to rewrite the existing text.' }}
     </p>
   </div>
 
@@ -41,26 +47,26 @@
       <ion-button
         expand="block"
         fill="outline"
-        [disabled]="!instruction.trim()"
-        [attr.aria-disabled]="!instruction.trim()"
+        [disabled]="mode !== 'polish' && !instruction.trim()"
+        [attr.aria-disabled]="mode !== 'polish' && !instruction.trim()"
         (click)="rewriteCurrent()">
         <ion-icon name="refresh-outline" slot="start"></ion-icon>
-        Rewrite Current
+        {{ mode === 'polish' ? 'Polish Current' : 'Rewrite Current' }}
       </ion-button>
       <ion-button
         expand="block"
         fill="solid"
         color="primary"
-        [disabled]="!instruction.trim() || !hasOriginalText"
-        [attr.aria-disabled]="!instruction.trim() || !hasOriginalText"
+        [disabled]="(mode !== 'polish' && !instruction.trim()) || !hasOriginalText"
+        [attr.aria-disabled]="(mode !== 'polish' && !instruction.trim()) || !hasOriginalText"
         (click)="rewriteOriginal()">
         <ion-icon name="document-text-outline" slot="start"></ion-icon>
-        Rewrite Original
+        {{ mode === 'polish' ? 'Polish Original' : 'Rewrite Original' }}
       </ion-button>
     </div>
     <p class="action-descriptions">
-      <span><strong>Current:</strong> Apply instruction to current beat content</span>
-      <span><strong>Original:</strong> Apply instruction to the original stored text</span>
+      <span><strong>Current:</strong> Apply {{ mode === 'polish' ? 'polish' : 'instruction' }} to current beat content</span>
+      <span><strong>Original:</strong> Apply {{ mode === 'polish' ? 'polish' : 'instruction' }} to the original stored text</span>
     </p>
   </ion-toolbar>
 </ion-footer>

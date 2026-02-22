@@ -1,13 +1,14 @@
 <app-header
   title="Sync History"
-  [leftActions]="leftActions">
+  [showBackButton]="true"
+  [backAction]="backAction">
 </app-header>
 
 <ion-content>
   <div class="sync-history-container">
     <!-- View Mode Selector -->
     <div class="controls-section">
-      <ion-segment [value]="viewMode" (ionChange)="onViewModeChange($event)">
+      <ion-segment [value]="viewMode()" (ionChange)="onViewModeChange($event)">
         <ion-segment-button value="logs">
           <ion-label>Sync Logs</ion-label>
         </ion-segment-button>
@@ -18,9 +19,9 @@
     </div>
 
     <!-- Filters and Actions (Logs View) -->
-    <div class="filters-section" *ngIf="viewMode === 'logs'">
+    <div class="filters-section" *ngIf="viewMode() === 'logs'">
       <ion-searchbar
-        [(ngModel)]="searchText"
+        [value]="searchText()"
         (ionInput)="onSearchChange($event)"
         placeholder="Search logs..."
         debounce="300">
@@ -28,7 +29,7 @@
 
       <div class="filter-row">
         <ion-select
-          [(ngModel)]="filterType"
+          [value]="filterType()"
           (ionChange)="onFilterChange($event)"
           interface="popover"
           placeholder="Filter by type">
@@ -51,21 +52,21 @@
     </div>
 
     <!-- Loading Spinner -->
-    <div class="loading-container" *ngIf="loading">
+    <div class="loading-container" *ngIf="loading()">
       <ion-spinner></ion-spinner>
       <p>Loading sync history...</p>
     </div>
 
     <!-- Logs View -->
-    <div class="logs-view" *ngIf="viewMode === 'logs' && !loading">
-      <div class="empty-state" *ngIf="filteredLogs.length === 0">
+    <div class="logs-view" *ngIf="viewMode() === 'logs' && !loading()">
+      <div class="empty-state" *ngIf="filteredLogs().length === 0">
         <ion-icon name="information-circle" size="large"></ion-icon>
-        <p *ngIf="allLogs.length === 0">No sync logs yet</p>
-        <p *ngIf="allLogs.length > 0">No logs match your filters</p>
+        <p *ngIf="allLogs().length === 0">No sync logs yet</p>
+        <p *ngIf="allLogs().length > 0">No logs match your filters</p>
       </div>
 
-      <ion-list *ngIf="filteredLogs.length > 0">
-        <ion-item *ngFor="let log of filteredLogs; trackBy: trackByLogId">
+      <ion-list *ngIf="filteredLogs().length > 0">
+        <ion-item *ngFor="let log of filteredLogs(); trackBy: trackByLogId">
           <ion-icon
             [name]="getTypeIcon(log.type)"
             [color]="getTypeColor(log.type)"
@@ -99,14 +100,14 @@
     </div>
 
     <!-- Stories View -->
-    <div class="stories-view" *ngIf="viewMode === 'stories' && !loading">
-      <div class="empty-state" *ngIf="storyModifications.length === 0">
+    <div class="stories-view" *ngIf="viewMode() === 'stories' && !loading()">
+      <div class="empty-state" *ngIf="storyModifications().length === 0">
         <ion-icon name="information-circle" size="large"></ion-icon>
         <p>No story modifications tracked yet</p>
       </div>
 
-      <ion-list *ngIf="storyModifications.length > 0">
-        <ion-card *ngFor="let mod of storyModifications; trackBy: trackByStoryId" class="story-card">
+      <ion-list *ngIf="storyModifications().length > 0">
+        <ion-card *ngFor="let mod of storyModifications(); trackBy: trackByStoryId" class="story-card">
           <ion-card-header>
             <ion-card-title>{{ mod.storyTitle }}</ion-card-title>
           </ion-card-header>
@@ -120,7 +121,7 @@
                   <ion-label>{{ mod.lastModifiedBy.deviceName }}</ion-label>
                   <ion-badge *ngIf="isCurrentDevice(mod.lastModifiedBy.deviceId)">Current</ion-badge>
                 </ion-chip>
-                <ion-note>{{ formatDateTime(mod.lastModifiedBy.timestamp) }}</ion-note>
+                <ion-note>{{ formatDateTimeStr(mod.lastModifiedBy.timestamp) }}</ion-note>
               </div>
             </div>
 

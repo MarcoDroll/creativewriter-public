@@ -8,12 +8,35 @@
 
   <ion-content class="research-content">
     <div class="content-wrapper">
+      <!-- Recovery banner for interrupted research -->
+      <ion-card *ngIf="hasRecoverableResearch" class="recovery-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="warning-outline"></ion-icon>
+            Interrupted research detected
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>A previous research session was interrupted. You can resume where you left off or start fresh.</p>
+          <div class="recovery-actions">
+            <ion-button color="primary" (click)="resumeRecoverableResearch()">
+              <ion-icon name="play-outline" slot="start"></ion-icon>
+              Resume
+            </ion-button>
+            <ion-button color="medium" fill="outline" (click)="dismissRecoverableResearch()">
+              <ion-icon name="close-outline" slot="start"></ion-icon>
+              Dismiss
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
       <ion-card class="task-card">
         <ion-card-header>
           <ion-card-title>Research Task</ion-card-title>
         </ion-card-header>
         <ion-card-content>
-          <div class="cost-warning">
+          <div class="cost-warning" *ngIf="showCostWarning">
             <ion-icon name="warning-outline"></ion-icon>
             <div>
               <p>Story research sends the full text of every scene to the selected model and finishes with a summary prompt. Expect very high token usage on expensive models.</p>
@@ -136,31 +159,41 @@
         </ion-card-content>
       </ion-card>
 
-      <ion-card *ngIf="activeSceneFindings.length" class="findings-card">
+      <!-- Final synthesis - at top of results -->
+      <ion-card *ngIf="activeSummary" class="summary-card glass-card">
         <ion-card-header>
-          <ion-card-title>Scene findings</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list lines="none">
-            <ion-item *ngFor="let finding of activeSceneFindings">
-              <ion-icon slot="start" name="document-text-outline"></ion-icon>
-              <ion-label>
-                <h3>{{ finding.chapterTitle }} – {{ finding.sceneTitle }}</h3>
-                <div class="finding-response">{{ finding.response }}</div>
-              </ion-label>
-            </ion-item>
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
-
-      <ion-card *ngIf="activeSummary" class="summary-card">
-        <ion-card-header>
-          <ion-card-title>Final synthesis</ion-card-title>
+          <ion-card-title>
+            <ion-icon name="analytics-outline"></ion-icon>
+            Final synthesis
+          </ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <div class="summary-text">{{ activeSummary }}</div>
         </ion-card-content>
       </ion-card>
+
+      <!-- Scene findings as collapsible accordion -->
+      <ion-accordion-group
+        *ngIf="activeSceneFindings.length"
+        [multiple]="true"
+        class="findings-accordion">
+
+        <ion-accordion
+          *ngFor="let finding of activeSceneFindings; let i = index"
+          [value]="'finding-' + i"
+          [attr.aria-label]="'Research findings for ' + finding.chapterTitle + ' - ' + finding.sceneTitle">
+          <ion-item slot="header" lines="full">
+            <ion-icon name="document-text-outline" slot="start"></ion-icon>
+            <ion-label>
+              <h3>{{ finding.chapterTitle }} – {{ finding.sceneTitle }}</h3>
+            </ion-label>
+          </ion-item>
+          <div slot="content" class="accordion-content">
+            <div class="finding-response">{{ finding.response }}</div>
+          </div>
+        </ion-accordion>
+
+      </ion-accordion-group>
     </div>
   </ion-content>
 </div>
@@ -193,7 +226,7 @@
           </ion-label>
           <ion-badge slot="end" [color]="history.status === 'completed' ? 'success' : 'danger'">{{ history.status }}</ion-badge>
           <ion-button fill="clear" color="danger" slot="end" (click)="$event.stopPropagation(); deleteHistory(history)">
-            <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-item>
       </ion-list>

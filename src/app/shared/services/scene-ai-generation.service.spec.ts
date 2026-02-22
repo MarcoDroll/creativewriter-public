@@ -201,6 +201,7 @@ describe('SceneAIGenerationService', () => {
       expect(mockCodexContextService.buildCodexXml).toHaveBeenCalledWith(
         'story-123',
         jasmine.any(String),
+        '',
         jasmine.any(String),
         1000,
         true

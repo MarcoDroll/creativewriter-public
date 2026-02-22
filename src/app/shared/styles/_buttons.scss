@@ -697,3 +697,20 @@
     cursor: not-allowed;
   }
 }
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .cw-btn-glass,
+  .cw-btn-glass-primary,
+  .cw-btn-glass-danger,
+  .cw-btn-glass-success,
+  .cw-btn-glass-warning,
+  .cw-btn-group-glass {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  }
+}

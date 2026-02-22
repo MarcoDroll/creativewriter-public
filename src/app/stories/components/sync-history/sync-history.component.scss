@@ -1,217 +1,477 @@
-// Override ion-app's justify-content: space-between which centers content vertically
+// ============================================
+// Sync History Component Styles
+// Glassmorphism design system implementation
+// ============================================
+
 :host {
   display: flex;
   flex-direction: column;
   flex: 1;
   height: 100%;
+  background: transparent;
 }
+
+ion-content {
+  --background: transparent;
+}
+
+// ============================================
+// Container
+// ============================================
 
 .sync-history-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--cw-space-lg);
 }
 
+// ============================================
+// Segment Controls (Glass Style)
+// ============================================
+
 .controls-section {
-  margin-bottom: 1rem;
+  margin-bottom: var(--cw-space-lg);
 
   ion-segment {
-    margin-bottom: 0.5rem;
+    background: var(--cw-bg-elevated);
+    border: 1px solid var(--cw-border-subtle);
+    border-radius: var(--cw-radius-lg);
+    backdrop-filter: blur(var(--cw-blur-md));
+    -webkit-backdrop-filter: blur(var(--cw-blur-md));
+    padding: var(--cw-space-xs);
+    margin-bottom: var(--cw-space-sm);
+
+    ion-segment-button {
+      --background: transparent;
+      --background-checked: var(--cw-gradient-primary-subtle);
+      --color: var(--cw-text-muted);
+      --color-checked: var(--cw-text-primary);
+      --border-radius: var(--cw-radius-md);
+      --indicator-color: transparent;
+      min-height: 40px;
+      font-weight: var(--cw-font-weight-medium);
+      transition: all var(--cw-transition-normal);
+
+      &::part(indicator) {
+        display: none;
+      }
+
+      &:hover:not(.segment-button-checked) {
+        --background: var(--cw-bg-hover);
+        --color: var(--cw-text-secondary);
+      }
+    }
   }
 }
 
+// ============================================
+// Filters Section (Glass Searchbar & Select)
+// ============================================
+
 .filters-section {
-  margin-bottom: 1rem;
+  margin-bottom: var(--cw-space-lg);
+
+  ion-searchbar {
+    --background: var(--cw-bg-card);
+    --border-radius: var(--cw-radius-md);
+    --box-shadow: none;
+    --placeholder-color: var(--cw-text-disabled);
+    --color: var(--cw-text-secondary);
+    border: 1px solid var(--cw-border-subtle);
+    border-radius: var(--cw-radius-md);
+    backdrop-filter: blur(var(--cw-blur-sm));
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+    margin-bottom: var(--cw-space-sm);
+    transition: border-color var(--cw-transition-normal);
+
+    &:focus-within {
+      border-color: var(--cw-border-accent);
+    }
+  }
 
   .filter-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: var(--cw-space-sm);
 
     ion-select {
       flex: 1;
+      --background: var(--cw-bg-card);
+      --placeholder-color: var(--cw-text-disabled);
+      color: var(--cw-text-secondary);
+      border: 1px solid var(--cw-border-subtle);
+      border-radius: var(--cw-radius-md);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+      padding: var(--cw-space-sm) var(--cw-space-md);
+      transition: border-color var(--cw-transition-normal);
+
+      &:hover {
+        border-color: var(--cw-border-accent);
+      }
     }
 
     ion-button {
+      --background: var(--cw-bg-card);
+      --color: var(--cw-text-muted);
+      --border-radius: var(--cw-radius-md);
+      border: 1px solid var(--cw-border-subtle);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+      transition: all var(--cw-transition-normal);
       flex-shrink: 0;
+
+      &:hover {
+        --background: var(--cw-bg-hover);
+        --color: var(--cw-text-primary);
+        border-color: var(--cw-border-accent);
+        transform: translateY(-1px);
+      }
     }
   }
 }
 
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-  text-align: center;
+// ============================================
+// Loading & Empty States (Glass Style)
+// ============================================
 
-  ion-spinner {
-    margin-bottom: 1rem;
-  }
-
-  p {
-    color: var(--ion-color-medium);
-  }
-}
-
+.loading-container,
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1rem;
+  padding: var(--cw-space-3xl) var(--cw-space-lg);
   text-align: center;
+  background: var(--cw-bg-elevated);
+  border: 1px solid var(--cw-border-subtle);
+  border-radius: var(--cw-radius-xl);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
+  margin: var(--cw-space-xl) 0;
 
   ion-icon {
     font-size: 4rem;
-    color: var(--ion-color-medium);
-    margin-bottom: 1rem;
+    color: var(--cw-text-muted);
+    margin-bottom: var(--cw-space-lg);
+    opacity: 0.6;
+  }
+
+  ion-spinner {
+    margin-bottom: var(--cw-space-lg);
   }
 
   p {
-    color: var(--ion-color-medium);
-    font-size: 1rem;
+    color: var(--cw-text-muted);
+    font-size: var(--cw-font-size-md);
+    margin: 0;
   }
 }
 
-// Logs View Styles
+// ============================================
+// Chips (Glass Style with Color Variants)
+// ============================================
+
+ion-chip {
+  --background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(139, 180, 248, 0.1) 100%);
+  --color: var(--cw-text-secondary);
+  border: 1px solid var(--cw-border-accent);
+  backdrop-filter: blur(var(--cw-blur-sm));
+  -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+  height: 26px;
+  font-size: var(--cw-font-size-xs);
+  margin: 0;
+
+  &[color="primary"] {
+    --background: linear-gradient(135deg, rgba(71, 118, 230, 0.2) 0%, rgba(139, 180, 248, 0.2) 100%);
+    --color: var(--cw-color-primary-light);
+    border-color: rgba(139, 180, 248, 0.3);
+  }
+
+  &[color="medium"] {
+    --background: rgba(108, 117, 125, 0.15);
+    --color: var(--cw-text-muted);
+    border-color: rgba(108, 117, 125, 0.2);
+  }
+
+  &[color="secondary"] {
+    --background: linear-gradient(135deg, rgba(142, 84, 233, 0.2) 0%, rgba(167, 139, 250, 0.2) 100%);
+    --color: var(--cw-color-secondary);
+    border-color: rgba(142, 84, 233, 0.3);
+  }
+
+  &[color="warning"] {
+    --background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 152, 0, 0.2) 100%);
+    --color: var(--cw-color-warning);
+    border-color: rgba(255, 193, 7, 0.3);
+  }
+
+  &[color="danger"] {
+    --background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(220, 53, 69, 0.2) 100%);
+    --color: var(--cw-color-danger);
+    border-color: rgba(255, 107, 107, 0.3);
+  }
+
+  &[color="success"] {
+    --background: linear-gradient(135deg, rgba(40, 167, 69, 0.2) 0%, rgba(81, 207, 102, 0.2) 100%);
+    --color: var(--cw-color-success);
+    border-color: rgba(81, 207, 102, 0.3);
+  }
+
+  ion-icon {
+    font-size: 1rem;
+  }
+
+  ion-badge {
+    margin-left: var(--cw-space-xs);
+    font-size: var(--cw-font-size-2xs);
+  }
+}
+
+// ============================================
+// Badge Styling
+// ============================================
+
+ion-badge {
+  text-transform: uppercase;
+  font-size: var(--cw-font-size-2xs);
+  font-weight: var(--cw-font-weight-semibold);
+  border-radius: var(--cw-radius-sm);
+  padding: var(--cw-space-2xs) var(--cw-space-xs);
+}
+
+// ============================================
+// Logs View (Glass List Items)
+// ============================================
+
 .logs-view {
   ion-list {
     background: transparent;
+    padding: 0;
+  }
 
-    ion-item {
-      --background: var(--ion-card-background, var(--ion-background-color));
-      margin-bottom: 0.5rem;
-      border-radius: 8px;
+  ion-item {
+    --background: var(--cw-bg-card);
+    --color: var(--cw-text-secondary);
+    --border-color: var(--cw-border-subtle);
+    --inner-border-width: 0;
+    margin-bottom: var(--cw-space-sm);
+    border: 1px solid var(--cw-border-subtle);
+    border-radius: var(--cw-radius-md);
+    backdrop-filter: blur(var(--cw-blur-sm));
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+    transition: all var(--cw-transition-normal);
+    overflow: hidden;
 
-      ion-label {
-        h2 {
-          font-weight: 600;
-          margin-bottom: 0.25rem;
-        }
+    &:hover {
+      --background: var(--cw-bg-elevated);
+      border-color: var(--cw-border-accent);
+      transform: translateY(-1px);
+      box-shadow: var(--cw-shadow-sm);
+    }
 
-        p {
-          font-size: 0.875rem;
-          color: var(--ion-color-medium);
-          margin-bottom: 0.5rem;
-        }
-
-        .log-meta {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-          margin-top: 0.5rem;
-
-          ion-chip {
-            margin: 0;
-            height: 24px;
-            font-size: 0.75rem;
-
-            ion-icon {
-              font-size: 1rem;
-            }
-
-            ion-badge {
-              margin-left: 0.25rem;
-              font-size: 0.625rem;
-            }
-          }
-
-          ion-note {
-            font-size: 0.75rem;
-            margin-left: auto;
-          }
-        }
+    ion-label {
+      h2 {
+        color: var(--cw-text-primary);
+        font-weight: var(--cw-font-weight-semibold);
+        margin-bottom: var(--cw-space-xs);
       }
 
-      ion-badge {
-        text-transform: uppercase;
-        font-size: 0.625rem;
-        font-weight: 600;
+      p {
+        color: var(--cw-text-muted);
+        font-size: var(--cw-font-size-sm);
+        margin-bottom: var(--cw-space-sm);
+      }
+
+      .log-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--cw-space-sm);
+        flex-wrap: wrap;
+        margin-top: var(--cw-space-sm);
+
+        ion-chip {
+          margin: 0;
+          height: 24px;
+          font-size: var(--cw-font-size-xs);
+        }
+
+        ion-note {
+          color: var(--cw-text-disabled);
+          font-size: var(--cw-font-size-xs);
+          margin-left: auto;
+        }
       }
     }
   }
 }
 
-// Stories View Styles
+// ============================================
+// Stories View (Full Glass Card Treatment)
+// ============================================
+
 .stories-view {
+  ion-list {
+    background: transparent;
+    padding: 0;
+  }
+
   .story-card {
-    margin-bottom: 1rem;
+    background: var(--cw-gradient-glass);
+    border: 1px solid var(--cw-border-subtle);
+    border-radius: var(--cw-radius-lg);
+    backdrop-filter: blur(var(--cw-blur-md));
+    -webkit-backdrop-filter: blur(var(--cw-blur-md));
+    margin-bottom: var(--cw-space-lg);
+    overflow: hidden;
+    transition: all var(--cw-transition-slow);
+    box-shadow: var(--cw-shadow-sm);
+    position: relative;
 
-    ion-card-header {
-      padding-bottom: 0.5rem;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--cw-gradient-primary-subtle);
+      border-radius: var(--cw-radius-lg);
+      opacity: 0;
+      transition: opacity var(--cw-transition-slow);
+      pointer-events: none;
+    }
 
-      ion-card-title {
-        font-size: 1.25rem;
-        font-weight: 600;
+    &:hover {
+      border-color: var(--cw-border-accent);
+      transform: translateY(-2px);
+      box-shadow: var(--cw-shadow-md);
+
+      &::before {
+        opacity: 1;
       }
     }
 
+    ion-card-header {
+      background: var(--cw-bg-elevated);
+      border-bottom: 1px solid var(--cw-border-subtle);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+      padding: var(--cw-space-lg);
+      position: relative;
+      overflow: hidden;
+
+      // Shimmer effect on hover
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(139, 180, 248, 0.1), transparent);
+        transition: left 0.6s ease;
+      }
+
+      ion-card-title {
+        color: var(--cw-text-primary);
+        font-size: var(--cw-font-size-xl);
+        font-weight: var(--cw-font-weight-semibold);
+        margin: 0;
+        position: relative;
+        display: inline-block;
+
+        // Accent underline
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: -4px;
+          left: 0;
+          width: 40px;
+          height: 2px;
+          background: var(--cw-gradient-primary);
+          border-radius: 1px;
+        }
+      }
+    }
+
+    &:hover ion-card-header::before {
+      left: 100%;
+    }
+
     ion-card-content {
+      padding: var(--cw-space-lg);
+      background: transparent;
+
       .modification-info,
       .sync-logs {
-        margin-bottom: 1.5rem;
+        margin-bottom: var(--cw-space-xl);
 
         &:last-child {
           margin-bottom: 0;
         }
 
         h3 {
-          font-size: 0.875rem;
-          font-weight: 600;
+          font-size: var(--cw-font-size-xs);
+          font-weight: var(--cw-font-weight-semibold);
           text-transform: uppercase;
-          color: var(--ion-color-medium);
-          margin-bottom: 0.75rem;
+          color: var(--cw-text-muted);
           letter-spacing: 0.5px;
+          margin-bottom: var(--cw-space-md);
         }
 
         .device-info {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: var(--cw-space-md);
           flex-wrap: wrap;
 
           ion-chip {
             margin: 0;
-
-            ion-badge {
-              margin-left: 0.25rem;
-              font-size: 0.625rem;
-            }
           }
 
           ion-note {
-            font-size: 0.875rem;
+            color: var(--cw-text-muted);
+            font-size: var(--cw-font-size-sm);
           }
         }
 
+        // Nested sync log list
         ion-list {
-          background: var(--ion-color-light, #f4f5f8);
-          border-radius: 8px;
-          padding: 0.5rem;
+          background: var(--cw-bg-card);
+          border: 1px solid var(--cw-border-subtle);
+          border-radius: var(--cw-radius-md);
+          padding: var(--cw-space-sm);
+          backdrop-filter: blur(var(--cw-blur-sm));
+          -webkit-backdrop-filter: blur(var(--cw-blur-sm));
 
           .mini-log {
             --background: transparent;
-            --padding-start: 0.5rem;
-            --padding-end: 0.5rem;
+            --padding-start: var(--cw-space-sm);
+            --padding-end: var(--cw-space-sm);
             --inner-padding-end: 0;
             min-height: 44px;
+            border-radius: var(--cw-radius-sm);
+            transition: background var(--cw-transition-fast);
+
+            &:hover {
+              --background: var(--cw-bg-hover);
+            }
 
             ion-icon {
-              margin-right: 0.75rem;
+              margin-right: var(--cw-space-md);
             }
 
             ion-label {
               p {
-                font-size: 0.875rem;
-                margin-bottom: 0.25rem;
+                color: var(--cw-text-secondary);
+                font-size: var(--cw-font-size-sm);
+                margin-bottom: var(--cw-space-2xs);
               }
 
               ion-note {
-                font-size: 0.75rem;
+                color: var(--cw-text-disabled);
+                font-size: var(--cw-font-size-xs);
               }
             }
           }
@@ -219,67 +479,101 @@
       }
 
       .no-info {
-        padding: 1rem;
+        padding: var(--cw-space-lg);
         text-align: center;
-        background: var(--ion-color-light, #f4f5f8);
-        border-radius: 8px;
+        background: var(--cw-bg-card);
+        border: 1px solid var(--cw-border-subtle);
+        border-radius: var(--cw-radius-md);
+        backdrop-filter: blur(var(--cw-blur-sm));
+        -webkit-backdrop-filter: blur(var(--cw-blur-sm));
 
         ion-note {
-          font-size: 0.875rem;
+          color: var(--cw-text-muted);
+          font-size: var(--cw-font-size-sm);
         }
       }
     }
   }
 }
 
+// ============================================
 // Responsive Design
+// ============================================
+
 @media (max-width: 768px) {
   .sync-history-container {
-    padding: 0.5rem;
+    padding: var(--cw-space-md);
   }
 
-  .filters-section {
-    .filter-row {
-      flex-wrap: wrap;
+  .filters-section .filter-row {
+    flex-wrap: wrap;
 
-      ion-select {
-        flex-basis: 100%;
-        margin-bottom: 0.5rem;
-      }
+    ion-select {
+      flex-basis: 100%;
+      margin-bottom: var(--cw-space-sm);
     }
   }
 
-  .stories-view {
-    .story-card {
-      ion-card-content {
-        .modification-info,
-        .sync-logs {
-          .device-info {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-        }
+  .stories-view .story-card ion-card-content {
+    .modification-info,
+    .sync-logs {
+      .device-info {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
   }
 }
 
-// Dark Mode Support
-@media (prefers-color-scheme: dark) {
-  .stories-view {
-    .story-card {
-      ion-card-content {
-        .modification-info,
-        .sync-logs {
-          ion-list {
-            background: var(--ion-color-step-50, #1e1e1e);
-          }
-        }
+@media (max-width: 480px) {
+  .sync-history-container {
+    padding: var(--cw-space-sm);
+  }
 
-        .no-info {
-          background: var(--ion-color-step-50, #1e1e1e);
-        }
+  .controls-section ion-segment {
+    ion-segment-button {
+      min-height: 36px;
+      font-size: var(--cw-font-size-sm);
+    }
+  }
+
+  .stories-view .story-card {
+    ion-card-header {
+      padding: var(--cw-space-md);
+
+      // Disable shimmer effect on mobile for performance
+      &::before {
+        display: none;
       }
     }
+
+    ion-card-content {
+      padding: var(--cw-space-md);
+    }
+  }
+
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  ion-segment,
+  ion-searchbar,
+  ion-select,
+  .filters-section ion-button,
+  ion-chip {
+    backdrop-filter: blur(var(--cw-blur-sm));
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+  }
+}
+
+// ============================================
+// Reduced Motion Support
+// ============================================
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
   }
 }

@@ -78,6 +78,58 @@
     </div>
   </ion-accordion>
 
+  <!-- Thinking Color Section -->
+  <ion-accordion value="thinking-color">
+    <ion-item slot="header" lines="full">
+      <ion-icon name="bulb-outline" slot="start"></ion-icon>
+      <ion-label>
+        <h3>Thinking Color</h3>
+        <p>Color for internal thoughts (in asterisks)</p>
+      </ion-label>
+      <div class="color-preview-with-badge" slot="end">
+        <div class="color-preview" [style.background-color]="getEffectiveThinkingColor()"></div>
+        <ion-badge *ngIf="isUsingAutomaticThinkingColor()" color="medium" class="auto-badge">Auto</ion-badge>
+      </div>
+    </ion-item>
+    <div slot="content" class="accordion-content">
+      <p class="section-description">
+        Text in asterisks (*thinking*) is highlighted in this color for internal monologue.
+        By default, it derives from your text color with a cyan tint.
+      </p>
+
+      <div class="color-mode-toggle">
+        <button
+          class="mode-button"
+          [class.active]="isUsingAutomaticThinkingColor()"
+          (click)="resetThinkingColorToAuto()">
+          <ion-icon name="color-wand-outline"></ion-icon>
+          <span>Auto (from text color)</span>
+        </button>
+        <button
+          class="mode-button"
+          [class.active]="!isUsingAutomaticThinkingColor()"
+          (click)="onThinkingColorChange(getEffectiveThinkingColor())">
+          <ion-icon name="color-palette-outline"></ion-icon>
+          <span>Custom</span>
+        </button>
+      </div>
+
+      <div class="color-picker-section" [class.disabled]="isUsingAutomaticThinkingColor()">
+        <app-color-picker
+          [color]="getEffectiveThinkingColor()"
+          (colorChange)="onThinkingColorChange($event)">
+        </app-color-picker>
+      </div>
+
+      <div class="preview-section">
+        <p class="preview-label">Preview:</p>
+        <div class="dialogue-preview" [style.color]="settings.appearance.textColor">
+          She paused. <span [style.color]="getEffectiveThinkingColor()">*What does he really mean?*</span> she wondered.
+        </div>
+      </div>
+    </div>
+  </ion-accordion>
+
   <!-- Background Image Section -->
   <ion-accordion value="background">
     <ion-item slot="header" lines="full">

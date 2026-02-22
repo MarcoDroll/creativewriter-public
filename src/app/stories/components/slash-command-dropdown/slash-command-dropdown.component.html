@@ -1,29 +1,32 @@
-    <div class="slash-dropdown" 
-         [style.top.px]="position.top" 
-         [style.left.px]="position.left"
-         #dropdown>
-      <div class="slash-dropdown-content">
-        <div class="slash-dropdown-header">
-          <span class="slash-icon">/</span>
-          <span class="slash-title">Insert</span>
-        </div>
-        
-        <div class="slash-commands">
-          <div *ngFor="let command of commands; trackBy: trackCommand" 
-               class="slash-command-item"
-               role="button"
-               tabindex="0"
-               [class.active]="selectedIndex === getCommandIndex(command)"
-               (click)="selectCommand(command)"
-               (keyup.enter)="selectCommand(command)"
-               (keyup.space)="selectCommand(command)"
-               (mouseenter)="selectedIndex = getCommandIndex(command)">
-            <span class="command-icon">{{ command.icon }}</span>
-            <div class="command-content">
-              <div class="command-label">{{ command.label }}</div>
-              <div class="command-description">{{ command.description }}</div>
-            </div>
-          </div>
+<div class="slash-dropdown"
+     role="menu"
+     aria-label="Insert commands"
+     [style.top.px]="position.top"
+     [style.left.px]="position.left"
+     #dropdown>
+  <div class="slash-dropdown-content">
+    <div class="slash-dropdown-header">
+      <span class="slash-icon">/</span>
+      <span class="slash-title">Insert</span>
+    </div>
+
+    <div class="slash-commands">
+      <div *ngFor="let command of commands; trackBy: trackCommand"
+           class="slash-command-item"
+           role="menuitem"
+           tabindex="0"
+           [class.active]="selectedIndex === getCommandIndex(command)"
+           [attr.aria-selected]="selectedIndex === getCommandIndex(command)"
+           (click)="selectCommand(command)"
+           (keyup.enter)="selectCommand(command)"
+           (keyup.space)="selectCommand(command)"
+           (mouseenter)="selectedIndex = getCommandIndex(command)">
+        <span class="command-icon" aria-hidden="true">{{ command.icon }}</span>
+        <div class="command-content">
+          <div class="command-label">{{ command.label }}</div>
+          <div class="command-description">{{ command.description }}</div>
         </div>
       </div>
     </div>
+  </div>
+</div>

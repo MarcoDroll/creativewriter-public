@@ -2,25 +2,25 @@
   --width: 100vw;
   --height: 100vh;
   --backdrop-opacity: 0.95;
-  --background: rgba(0, 0, 0, 0.98);
+  --background: var(--cw-bg-backdrop);
 }
 
 .gallery-header {
   ion-toolbar {
     --background: transparent;
-    --color: #fff;
+    --color: var(--cw-text-primary);
   }
 
   ion-title {
-    color: #fff;
-    font-size: 1rem;
+    color: var(--cw-text-primary);
+    font-size: var(--cw-font-size-md);
   }
 
   ion-button {
-    --color: #fff;
+    --color: var(--cw-text-primary);
 
     &:hover {
-      --color: var(--ion-color-primary);
+      --color: var(--cw-color-primary);
     }
   }
 }
@@ -77,22 +77,22 @@ swiper-slide {
   width: 48px;
   height: 48px;
   border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border-radius: var(--cw-radius-full);
+  background: var(--cw-bg-hover);
+  color: var(--cw-text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
+  transition: all var(--cw-transition-normal);
+  backdrop-filter: blur(var(--cw-blur-sm));
 
   ion-icon {
     font-size: 1.5rem;
   }
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--cw-bg-button-ghost-hover);
   }
 
   &:disabled {
@@ -101,11 +101,11 @@ swiper-slide {
   }
 
   &.prev {
-    left: 16px;
+    left: var(--cw-space-lg);
   }
 
   &.next {
-    right: 16px;
+    right: var(--cw-space-lg);
   }
 }
 
@@ -113,18 +113,18 @@ swiper-slide {
 .pagination-dots {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 16px;
+  gap: var(--cw-space-sm);
+  padding: var(--cw-space-lg);
 
   .dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transition: all 0.2s ease;
+    border-radius: var(--cw-radius-full);
+    background: var(--cw-scrollbar-thumb);
+    transition: all var(--cw-transition-normal);
 
     &.active {
-      background: var(--ion-color-primary);
+      background: var(--cw-color-primary);
       transform: scale(1.2);
     }
   }
@@ -132,14 +132,14 @@ swiper-slide {
 
 // Prompt display
 .prompt-display {
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--cw-space-md) var(--cw-space-lg);
+  background: var(--cw-bg-hover);
+  border-top: 1px solid var(--cw-border-subtle);
 
   p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.85rem;
+    color: var(--cw-text-muted);
+    font-size: var(--cw-font-size-xs);
     text-align: center;
     overflow: hidden;
     display: -webkit-box;
@@ -155,11 +155,11 @@ swiper-slide {
     height: 40px;
 
     &.prev {
-      left: 8px;
+      left: var(--cw-space-sm);
     }
 
     &.next {
-      right: 8px;
+      right: var(--cw-space-sm);
     }
 
     ion-icon {
@@ -168,8 +168,8 @@ swiper-slide {
   }
 
   .pagination-dots {
-    padding: 12px;
-    gap: 6px;
+    padding: var(--cw-space-md);
+    gap: var(--cw-space-sm);
 
     .dot {
       width: 6px;

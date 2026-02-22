@@ -3,8 +3,8 @@
 }
 
 .lightbox-header {
-  --background: rgba(18, 18, 18, 0.92);
-  --color: #f1f3f5;
+  --background: var(--cw-bg-glass);
+  --color: var(--cw-text-primary);
 
   ion-toolbar {
     --min-height: 56px;
@@ -12,7 +12,7 @@
 }
 
 .lightbox-content {
-  --background: rgba(10, 10, 10, 0.9);
+  --background: var(--cw-bg-base);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -24,17 +24,21 @@
 
 .image-wrapper {
   width: 100%;
+  flex: 1;
+  min-height: 0;  // Allow shrinking in flexbox
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 16px;
-  background: rgba(0, 0, 0, 0.35);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  border-radius: var(--cw-radius-xl);
+  background: var(--cw-bg-modal-backdrop);
+  box-shadow: var(--cw-shadow-xl);
 
   ion-img {
-    width: 100%;
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
   }
 }
@@ -47,8 +51,8 @@
   gap: 0.75rem;
 
   &.loading {
-    color: #ced4da;
-    font-size: 0.95rem;
+    color: var(--cw-text-secondary);
+    font-size: var(--cw-font-size-sm);
 
     ion-spinner {
       width: 36px;
@@ -59,38 +63,38 @@
   video {
     width: 100%;
     max-height: 45vh;
-    border-radius: 12px;
-    background: #000;
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    border-radius: var(--cw-radius-lg);
+    background: var(--cw-bg-backdrop);
+    box-shadow: var(--cw-shadow-lg);
   }
 
   .video-name {
     margin: 0;
-    color: #adb5bd;
-    font-size: 0.95rem;
+    color: var(--cw-text-muted);
+    font-size: var(--cw-font-size-sm);
   }
 }
 
 .no-video {
   margin: 0;
-  color: #868e96;
-  font-size: 0.95rem;
+  color: var(--cw-text-disabled);
+  font-size: var(--cw-font-size-sm);
 }
 
 .lightbox-footer {
-  --background: rgba(18, 18, 18, 0.92);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  --background: var(--cw-bg-glass);
+  border-top: 1px solid var(--cw-border-subtle);
 
   ion-toolbar {
     --min-height: 56px;
   }
 
   ion-button[fill="clear"] {
-    --color: #f1f3f5;
+    --color: var(--cw-text-primary);
 
     &:hover,
     &:focus {
-      --color: #ffffff;
+      --color: var(--cw-text-primary);
     }
   }
 }
@@ -101,6 +105,6 @@
   }
 
   .image-wrapper {
-    border-radius: 12px;
+    border-radius: var(--cw-radius-lg);
   }
 }

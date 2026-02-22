@@ -75,6 +75,48 @@
     </div>
   </ion-accordion>
 
+  <!-- Server-Side Generation -->
+  <ion-accordion value="server-generation">
+    <ion-item slot="header" lines="full">
+      <ion-icon name="server-outline" slot="start" style="color: #2196f3;"></ion-icon>
+      <ion-label>
+        <h3>Server-Side Generation</h3>
+        <p>Run AI generations on the server (prevents browser minimization issues)</p>
+      </ion-label>
+      <ion-badge slot="end" [color]="settings.serverGeneration?.enabled ? 'success' : 'medium'">
+        {{ settings.serverGeneration?.enabled ? 'Enabled' : 'Disabled' }}
+      </ion-badge>
+    </ion-item>
+    <div slot="content" class="accordion-content">
+      <ion-item>
+        <ion-label>
+          <h3>Enable Server-Side Generation</h3>
+          <p>When enabled, AI generations run on the server instead of your browser</p>
+        </ion-label>
+        <ion-toggle
+          [ngModel]="settings.serverGeneration?.enabled"
+          (ngModelChange)="settings.serverGeneration = { enabled: $event }; settingsChange.emit()"
+          slot="end">
+        </ion-toggle>
+      </ion-item>
+
+      <div class="model-info">
+        <p class="info-text">
+          <strong>Benefits:</strong>
+        </p>
+        <ul class="info-list">
+          <li>Generations continue even when browser is minimized</li>
+          <li>Page reloads won't interrupt ongoing generations</li>
+          <li>Better handling of long AI generations</li>
+        </ul>
+        <p class="info-text" style="margin-top: 12px;">
+          <strong>Note:</strong> Requires the server to be running with the generation-service enabled.
+          This feature is only available in self-hosted deployments.
+        </p>
+      </div>
+    </div>
+  </ion-accordion>
+
   <!-- OpenRouter Settings -->
   <ion-accordion value="openrouter">
     <ion-item slot="header" lines="full">
@@ -109,6 +151,92 @@
           helperText="Find your OpenRouter API key at openrouter.ai/keys">
         </ion-input>
       </ion-item>
+
+      <!-- Privacy Settings -->
+      <div class="privacy-section" [class.disabled]="!settings.openRouter.enabled">
+        <h4 class="section-title">Privacy Settings</h4>
+
+        <ion-item>
+          <ion-label>
+            <h3>Zero Data Retention</h3>
+            <p>Only route to providers that don't store prompts</p>
+          </ion-label>
+          <ion-toggle
+            [(ngModel)]="settings.openRouter.zeroDataRetention"
+            (ngModelChange)="settingsChange.emit()"
+            [disabled]="!settings.openRouter.enabled"
+            slot="end">
+          </ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>
+            <h3>Deny Data Collection</h3>
+            <p>Block providers that may collect user data</p>
+          </ion-label>
+          <ion-toggle
+            [(ngModel)]="settings.openRouter.denyDataCollection"
+            (ngModelChange)="settingsChange.emit()"
+            [disabled]="!settings.openRouter.enabled"
+            slot="end">
+          </ion-toggle>
+        </ion-item>
+
+        <div class="model-info">
+          <p class="info-text">
+            Disable these if a model returns 503 errors (no compliant provider available).
+          </p>
+        </div>
+      </div>
+
+      <!-- Provider Routing -->
+      <div class="privacy-section" [class.disabled]="!settings.openRouter.enabled">
+        <h4 class="section-title">Provider Routing</h4>
+
+        <div class="provider-routing-container">
+          <div class="model-header">
+            <ion-label>Excluded Providers</ion-label>
+            <ion-button
+              size="small"
+              fill="outline"
+              (click)="loadOpenRouterProviders()"
+              [disabled]="!settings.openRouter.enabled || !settings.openRouter.apiKey || loadingProviders"
+              title="Load provider list from OpenRouter">
+              {{ loadingProviders ? 'Loading...' : 'Load Providers' }}
+            </ion-button>
+          </div>
+          <ng-select [(ngModel)]="settings.openRouter.ignoredProviders"
+                     [items]="openRouterProviders"
+                     [multiple]="true"
+                     bindLabel="name"
+                     bindValue="slug"
+                     [searchable]="true"
+                     [clearable]="true"
+                     [disabled]="!settings.openRouter.enabled || openRouterProviders.length === 0"
+                     placeholder="Select providers to exclude..."
+                     (ngModelChange)="settingsChange.emit()"
+                     [loading]="loadingProviders"
+                     class="ng-select-custom"
+                     appendTo="body">
+            <ng-template ng-option-tmp let-item="item">
+              <div class="provider-option">
+                <span class="provider-option-name">{{ item.name }}</span>
+                <span class="provider-option-slug">{{ item.slug }}</span>
+              </div>
+            </ng-template>
+          </ng-select>
+          <div class="model-info">
+            <p class="info-text">
+              Exclude specific backend providers from routing your requests.
+              Click "Load Providers" to fetch the full list.
+            </p>
+            <p *ngIf="(settings.openRouter.ignoredProviders?.length || 0) > 3" class="info-text warning-text">
+              <ion-icon name="warning-outline"></ion-icon>
+              Excluding many providers increases the risk of 503 errors if no remaining provider can serve the model.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div class="model-info" [class.disabled]="!settings.openRouter.enabled">
         <p class="info-text">Use the global model selection above.</p>
@@ -532,6 +660,19 @@
           label="Base URL"
           labelPlacement="stacked"
           helperText="URL where your OpenAI-compatible server is running (LM Studio default: localhost:1234)">
+        </ion-input>
+      </ion-item>
+
+      <ion-item [class.disabled]="!settings.openAICompatible.enabled">
+        <ion-input
+          type="password"
+          [(ngModel)]="settings.openAICompatible.apiKey"
+          (ngModelChange)="onOpenAICompatibleApiKeyChange()"
+          placeholder="sk-... (optional)"
+          [disabled]="!settings.openAICompatible.enabled"
+          label="API Key (Optional)"
+          labelPlacement="stacked"
+          helperText="Required for authenticated endpoints. Leave empty for local servers.">
         </ion-input>
       </ion-item>
 

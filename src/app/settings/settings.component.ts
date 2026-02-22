@@ -131,7 +131,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
           this.settings.appearance = {
             textColor: '#e0e0e0',
             backgroundImage: 'none',
-            directSpeechColor: null
+            directSpeechColor: null,
+            thinkingColor: null
           };
         }
 

@@ -34,20 +34,20 @@ export interface TabItem {
     </div>
   `,
   styles: [`
-    /* Tab Navigation Styles */
+    /* Tab Navigation Styles - Compact */
     .settings-tabs-container {
       position: sticky;
       top: 0;
       z-index: 10;
       width: 100%;
       overflow-x: auto;
-      background: rgba(45, 45, 45, 0.3);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
-      padding: 0.5rem;
-      margin-bottom: 1rem;
+      background: var(--cw-bg-elevated);
+      backdrop-filter: blur(var(--cw-blur-lg));
+      -webkit-backdrop-filter: blur(var(--cw-blur-lg));
+      border-bottom: 1px solid var(--cw-border-subtle);
+      box-shadow: var(--cw-shadow-md);
+      padding: 0.125rem;
+      margin-bottom: 0.375rem;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
     }
@@ -58,7 +58,7 @@ export interface TabItem {
 
     .settings-tabs {
       display: inline-flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-xs);
       min-width: 100%;
       width: max-content;
       flex-wrap: nowrap;
@@ -70,69 +70,73 @@ export interface TabItem {
 
     ion-segment-button {
       --background: transparent;
-      --background-checked: linear-gradient(135deg, rgba(71, 118, 230, 0.2) 0%, rgba(139, 180, 248, 0.2) 100%);
-      --color: #f8f9fa;
-      --color-checked: #ffffff;
-      --indicator-color: linear-gradient(135deg, #4776e6 0%, #8bb4f8 100%);
-      --indicator-height: 3px;
-      --border-radius: 8px;
-      padding: 0.5rem;
-      min-height: 48px;
+      --background-checked: var(--cw-gradient-primary-subtle);
+      --color: var(--cw-text-primary);
+      --color-checked: var(--cw-text-primary);
+      --indicator-color: var(--cw-gradient-primary);
+      --indicator-height: 2px;
+      --border-radius: var(--cw-radius-sm);
+      padding: 0.125rem var(--cw-space-xs);
+      min-height: 28px;
       flex: 0 0 auto;
-      transition: all 0.3s ease;
+      transition: all var(--cw-transition-normal);
       border: 1px solid transparent;
       opacity: 0.8;
     }
-    
+
     ion-segment-button:hover {
-      --background: rgba(139, 180, 248, 0.1);
+      --background: var(--cw-bg-hover);
       opacity: 1;
       transform: translateY(-1px);
     }
-    
+
     ion-segment-button.segment-button-checked {
-      border-color: rgba(139, 180, 248, 0.3);
-      background: linear-gradient(135deg, rgba(71, 118, 230, 0.2) 0%, rgba(139, 180, 248, 0.2) 100%);
+      border-color: var(--cw-border-accent);
+      background: var(--cw-gradient-primary-subtle);
       opacity: 1;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
-    
+
     ion-segment-button ion-icon {
-      font-size: 1.3rem;
-      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+      margin-bottom: 0;
       color: inherit;
     }
-    
+
     ion-segment-button ion-label {
-      font-size: 0.85rem;
-      font-weight: 500;
-      letter-spacing: 0.3px;
+      font-size: var(--cw-font-size-2xs);
+      font-weight: var(--cw-font-weight-medium);
+      letter-spacing: 0.2px;
       color: inherit;
     }
-    
+
     ion-segment-button.segment-button-checked ion-icon,
     ion-segment-button.segment-button-checked ion-label {
-      color: #ffffff;
+      color: var(--cw-text-primary);
     }
 
     @media (max-width: 768px) {
       .settings-tabs-container {
-        padding: 0.25rem;
+        padding: 0.125rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .settings-tabs {
+        gap: 0.125rem;
       }
 
       ion-segment-button {
-        padding: 0.25rem;
-        min-height: 40px;
-        min-width: 110px;
+        padding: 0.125rem;
+        min-height: 24px;
+        min-width: 80px;
       }
 
       ion-segment-button ion-icon {
-        font-size: 1.1rem;
-        margin-bottom: 0;
+        font-size: 0.85rem;
       }
-      
+
       ion-segment-button ion-label {
-        font-size: 0.75rem;
+        font-size: 0.6rem;
       }
     }
   `]

@@ -35,11 +35,11 @@ interface GenerationStatus {
     .generation-status {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.4rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      transition: all 0.2s ease;
+      gap: var(--cw-space-xs);
+      padding: var(--cw-space-xs) var(--cw-space-sm);
+      border-radius: var(--cw-radius-xs);
+      font-size: var(--cw-font-size-xs);
+      transition: all var(--cw-transition-normal);
       max-width: 180px;
       overflow: hidden;
       z-index: 1;
@@ -61,16 +61,16 @@ interface GenerationStatus {
     }
 
     .generation-status.generating {
-      background-color: rgba(138, 43, 226, 0.2);
-      color: #b380ff;
-      border: 1px solid rgba(138, 43, 226, 0.4);
+      background-color: var(--cw-bg-processing-subtle);
+      color: var(--cw-color-processing);
+      border: 1px solid var(--cw-border-processing);
       animation: pulse 1.5s ease-in-out infinite;
     }
 
     .generation-status.error {
-      background-color: rgba(220, 53, 69, 0.2);
-      color: #ff6b7a;
-      border: 1px solid rgba(220, 53, 69, 0.4);
+      background-color: var(--cw-bg-danger-subtle);
+      color: var(--cw-color-danger-light);
+      border: 1px solid var(--cw-border-danger);
     }
 
     @keyframes pulse {
@@ -79,7 +79,7 @@ interface GenerationStatus {
     }
 
     .generation-icon {
-      font-size: 0.9rem;
+      font-size: var(--cw-font-size-sm);
       flex-shrink: 0;
     }
 
@@ -87,14 +87,14 @@ interface GenerationStatus {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      line-height: 1.2;
+      line-height: var(--cw-line-height-tight);
     }
 
     /* Responsive styles */
     @media (max-width: 768px) {
       .generation-status {
-        padding: 0.3rem 0.5rem;
-        font-size: 0.75rem;
+        padding: var(--cw-space-xs) var(--cw-space-sm);
+        font-size: var(--cw-font-size-2xs);
         max-width: 140px;
       }
     }

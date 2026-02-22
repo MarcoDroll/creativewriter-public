@@ -48,20 +48,53 @@
       box-shadow: none;
     }
 
-    .beat-ai-container.generating {
-      border-color: var(--cw-color-warning);
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.8; }
+    // Define animatable angle property for rotating gradient border
+    @property --gradient-angle {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
     }
 
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes rotate-gradient {
+      to {
+        --gradient-angle: 360deg;
+      }
     }
+
+    .beat-ai-container.generating {
+      // Use layered backgrounds: solid center (padding-box) + gradient border (border-box)
+      border: 2px solid transparent;
+      background:
+        linear-gradient(rgb(30, 30, 30), rgb(30, 30, 30)) padding-box,
+        conic-gradient(
+          from var(--gradient-angle),
+          #4776E6,
+          #8E54E9,
+          #FF6B6B,
+          #8E54E9,
+          #4776E6
+        ) border-box;
+      animation: rotate-gradient 2s linear infinite;
+
+      // Respect reduced motion preferences for accessibility
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
+
+      // Prevent text selection in prompt input during generation (mobile fix)
+      // This prevents Android Chrome from auto-selecting text when the main editor
+      // becomes read-only. See: https://github.com/ProseMirror/prosemirror/issues/565
+      .prompt-input.prosemirror-container,
+      .prompt-input.prosemirror-container :global(.ProseMirror),
+      .prompt-input.prosemirror-container :global(.ProseMirror *) {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+    }
+
 
     .beat-prompt-section {
       padding: 0.5rem;
@@ -109,7 +142,8 @@
       flex: 1;
     }
 
-    .rewrite-indicator {
+    .rewrite-indicator,
+    .polish-indicator {
       font-size: 0.75rem;
       height: 24px;
       margin: 0;
@@ -239,15 +273,6 @@
 
         ion-icon {
           font-size: 0.875rem;
-
-          &.spinning {
-            animation: spin 1s linear infinite;
-          }
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
         }
       }
 
@@ -310,7 +335,7 @@
     .prompt-input.prosemirror-container {
       width: 100%;
       background: var(--cw-bg-card);
-      backdrop-filter: blur(3px);
+      backdrop-filter: blur(var(--cw-blur-sm));
       border: 1px solid var(--cw-border-subtle);
       border-radius: var(--cw-radius-sm);
       padding: 0;
@@ -345,7 +370,7 @@
       padding: 0.6rem !important;
       min-height: auto;
       background: rgba(15, 15, 15, 0.1);
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(var(--cw-blur-xs));
       color: var(--beat-ai-text-color, var(--cw-text-secondary)) !important;
       font-size: var(--cw-font-size-sm);
       line-height: 1.2;
@@ -470,6 +495,8 @@
       /* Allow dropdowns to overflow parent */
       overflow: visible;
       position: relative;
+      /* Allow shrinking in grid for text truncation */
+      min-width: 0;
     }
     
     .model-selection-group {
@@ -488,8 +515,8 @@
         rgba(20, 20, 28, 0.5) 0%,
         rgba(15, 15, 22, 0.6) 100%
       );
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(var(--cw-blur-md));
+      -webkit-backdrop-filter: blur(var(--cw-blur-md));
       grid-column: 1 / -1;
       margin-bottom: 0.4rem;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
@@ -718,10 +745,19 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      // Allow container to be constrained by parent
+      min-width: 0;
+      overflow: hidden;
     }
 
     .model-label {
       color: var(--cw-text-secondary);
+      // Flexible truncation - uses available space, truncates when needed
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .provider-icon-inline {
@@ -864,7 +900,7 @@
     .prompt-display {
       margin-top: 0.25rem;
       background: var(--cw-bg-card);
-      backdrop-filter: blur(3px);
+      backdrop-filter: blur(var(--cw-blur-sm));
       padding: 0.5rem;
       border-radius: var(--cw-radius-xs);
     }
@@ -879,7 +915,7 @@
     .generation-status {
       padding: 0.5rem 1rem;
       background: var(--cw-bg-elevated);
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(var(--cw-blur-sm));
       border-top: 1px solid var(--cw-border-default);
       display: flex;
       align-items: center;
@@ -951,11 +987,18 @@
       background: var(--cw-bg-base) !important;
       border: 1px solid var(--cw-border-input) !important;
       border-radius: var(--cw-radius-xs) !important;
+      /* Width constraints for text truncation */
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
     }
     
     :global(.model-select .ng-select-container .ng-value-container) {
       padding-left: 0.3rem !important;
       background: transparent !important;
+      /* Width constraints for text truncation */
+      min-width: 0;
+      overflow: hidden;
     }
     
     :global(.model-select .ng-select-container .ng-value-container .ng-input > input) {
@@ -966,6 +1009,10 @@
     :global(.model-select .ng-select-container .ng-value-container .ng-value) {
       color: var(--cw-text-secondary) !important;
       background: transparent !important;
+      /* Width constraints for flex truncation */
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     :global(.model-select .ng-select-container .ng-value-container .ng-placeholder) {
@@ -1001,6 +1048,14 @@
       /* Mobile touch improvements */
       -webkit-tap-highlight-color: rgba(13, 110, 253, 0.2);
       touch-action: manipulation;
+    }
+
+    // Allow text wrapping in dropdown options to show full model names including variant suffixes
+    :global(.model-select .ng-dropdown-panel .ng-dropdown-panel-items .ng-option .model-label) {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      overflow-wrap: break-word;
     }
 
     :global(.model-select .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-highlighted) {
@@ -1205,3 +1260,21 @@
         }
       }
     }
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .beat-ai-container,
+  .beat-card,
+  .prompt-section,
+  .output-section,
+  .beat-header,
+  ion-chip,
+  ion-searchbar {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  }
+}

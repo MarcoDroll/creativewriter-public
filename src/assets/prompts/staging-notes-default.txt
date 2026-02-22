@@ -19,6 +19,9 @@ Extract staging notes describing the CURRENT STATE at the end of this content. T
 - Do NOT describe how things changed or evolved - only the current state
 - Omit any details that are no longer relevant (e.g., if a character left, don't include them)
 - Include only what matters for continuing the narrative from this point
+- Use actual character names from the text (e.g., "Sarah stands by the window"). For the protagonist/narrator, use the name provided below if not stated in the text. Generic terms are acceptable only for other unnamed characters.
+
+{protagonistName}
 
 ## Focus Areas
 - Character positions (where each character currently is in the space)

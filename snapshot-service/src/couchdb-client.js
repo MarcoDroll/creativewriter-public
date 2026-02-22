@@ -4,16 +4,65 @@
  */
 
 const nano = require('nano');
+const http = require('http');
 const config = require('./config');
 const logger = require('./logger');
 
 const COUCHDB_URL = `http://${config.COUCHDB_USER}:${config.COUCHDB_PASSWORD}@${config.COUCHDB_HOST}:${config.COUCHDB_PORT}`;
 
+// Reusable HTTP agent with connection pooling to prevent DNS resolution overload
+const agent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 50,           // Increased from 10 for better parallel query handling
+  keepAliveMsecs: 30000
+});
+
+// Request timeout in ms (applied via nano requestDefaults)
+const REQUEST_TIMEOUT = 30000;
+
 let connection = null;
+
+// Transient error codes that should trigger retry
+const TRANSIENT_ERRORS = ['EAI_AGAIN', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED'];
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+/**
+ * Retry wrapper for operations that may fail due to transient network errors
+ * Uses exponential backoff
+ */
+async function withRetry(operation, operationName) {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const isTransient = TRANSIENT_ERRORS.some(code =>
+        error.message?.includes(code) || error.code === code
+      );
+
+      if (!isTransient || attempt === MAX_RETRIES) {
+        throw error;
+      }
+
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      logger.warn(`${operationName} failed (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}ms: ${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+}
 
 function getConnection() {
   if (!connection) {
-    connection = nano(COUCHDB_URL);
+    connection = nano({
+      url: COUCHDB_URL,
+      requestDefaults: {
+        agent,
+        timeout: REQUEST_TIMEOUT  // Request timeout to prevent hanging connections
+      }
+    });
     logger.info(`Connected to CouchDB at ${config.COUCHDB_HOST}:${config.COUCHDB_PORT}`);
   }
   return connection;
@@ -23,18 +72,20 @@ function getConnection() {
  * Get all user databases (those matching the pattern)
  */
 async function getAllUserDatabases() {
-  const couch = getConnection();
-  const allDbs = await couch.db.list();
+  return withRetry(async () => {
+    const couch = getConnection();
+    const allDbs = await couch.db.list();
 
-  // Filter for story databases
-  const userDbs = allDbs.filter(db =>
-    db.startsWith(config.DATABASE_PATTERN) &&
-    !db.includes('_replicator') &&
-    !db.includes('_users')
-  );
+    // Filter for story databases
+    const userDbs = allDbs.filter(db =>
+      db.startsWith(config.DATABASE_PATTERN) &&
+      !db.includes('_replicator') &&
+      !db.includes('_users')
+    );
 
-  logger.debug(`Found ${userDbs.length} user databases: ${userDbs.join(', ')}`);
-  return userDbs;
+    logger.debug(`Found ${userDbs.length} user databases: ${userDbs.join(', ')}`);
+    return userDbs;
+  }, 'getAllUserDatabases');
 }
 
 /**
@@ -47,24 +98,26 @@ class DatabaseClient {
   }
 
   async init() {
-    const couch = getConnection();
+    return withRetry(async () => {
+      const couch = getConnection();
 
-    try {
-      // Check if database exists
-      await couch.db.get(this.dbName);
-      this.db = couch.use(this.dbName);
-    } catch (error) {
-      if (error.statusCode === 404) {
-        // Database doesn't exist, create it
-        await couch.db.create(this.dbName);
-        logger.info(`Created database: ${this.dbName}`);
+      try {
+        // Check if database exists
+        await couch.db.get(this.dbName);
         this.db = couch.use(this.dbName);
-      } else {
-        throw error;
+      } catch (error) {
+        if (error.statusCode === 404) {
+          // Database doesn't exist, create it
+          await couch.db.create(this.dbName);
+          logger.info(`Created database: ${this.dbName}`);
+          this.db = couch.use(this.dbName);
+        } else {
+          throw error;
+        }
       }
-    }
 
-    await this.ensureViews();
+      await this.ensureViews();
+    }, `DatabaseClient.init(${this.dbName})`);
   }
 
   /**
@@ -169,14 +222,99 @@ class DatabaseClient {
   }
 
   /**
+   * Insert or update a document
+   */
+  async insert(doc) {
+    return this.db.insert(doc);
+  }
+
+  /**
    * Get all documents
    * Note: nano's list() function may not include docs by default.
    * We use the _all_docs endpoint with include_docs=true.
    */
+  /**
+   * Get all documents - returns the raw db reference for direct access
+   */
+  getDb() {
+    return this.db;
+  }
+
   async allDocs(options = {}) {
+    // Store debug info that can be accessed externally
+    this._lastAllDocsDebug = { started: true, options };
+
     try {
-      // Use nano's list function with include_docs
-      const result = await this.db.list(options);
+      // Check this.db before calling
+      this._lastAllDocsDebug.hasDb = !!this.db;
+      this._lastAllDocsDebug.dbType = typeof this.db;
+
+      // Get a fresh db reference from the connection
+      const couch = getConnection();
+      const freshDb = couch.use(this.dbName);
+      this._lastAllDocsDebug.usingFreshDb = true;
+
+      // WORKAROUND: nano methods return undefined for include_docs
+      // Use native fetch to make direct HTTP request to CouchDB
+      let result;
+
+      if (options.include_docs) {
+        // Build query string with all supported parameters
+        const params = new URLSearchParams();
+        params.append('include_docs', 'true');
+        if (options.startkey !== undefined) {
+          params.append('startkey', JSON.stringify(options.startkey));
+        }
+        if (options.endkey !== undefined) {
+          params.append('endkey', JSON.stringify(options.endkey));
+        }
+        if (options.limit !== undefined) {
+          params.append('limit', options.limit.toString());
+        }
+        if (options.descending !== undefined) {
+          params.append('descending', options.descending.toString());
+        }
+
+        const url = `http://${config.COUCHDB_HOST}:${config.COUCHDB_PORT}/${this.dbName}/_all_docs?${params.toString()}`;
+        const authHeader = 'Basic ' + Buffer.from(`${config.COUCHDB_USER}:${config.COUCHDB_PASSWORD}`).toString('base64');
+        this._lastAllDocsDebug.fetchUrl = url;
+
+        // When using 'keys' parameter, CouchDB requires a POST request with keys in body
+        const fetchOptions = {
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json'
+          }
+        };
+
+        if (options.keys && Array.isArray(options.keys)) {
+          fetchOptions.method = 'POST';
+          fetchOptions.body = JSON.stringify({ keys: options.keys });
+          this._lastAllDocsDebug.usingKeysPost = true;
+        }
+
+        const response = await fetch(url, fetchOptions);
+        this._lastAllDocsDebug.fetchStatus = response.status;
+        this._lastAllDocsDebug.fetchOk = response.ok;
+
+        if (response.ok) {
+          result = await response.json();
+          this._lastAllDocsDebug.parsedJson = true;
+        } else {
+          const errorText = await response.text();
+          this._lastAllDocsDebug.fetchError = errorText;
+          throw new Error(`CouchDB request failed: ${response.status} ${errorText}`);
+        }
+      } else {
+        result = await freshDb.list(options);
+      }
+
+      this._lastAllDocsDebug.gotResult = true;
+      this._lastAllDocsDebug.resultType = typeof result;
+      this._lastAllDocsDebug.resultKeys = result ? Object.keys(result) : [];
+      this._lastAllDocsDebug.totalRows = result?.total_rows;
+      this._lastAllDocsDebug.rowsLength = result?.rows?.length;
+      this._lastAllDocsDebug.rowsIsArray = Array.isArray(result?.rows);
 
       // Debug: log the structure we got back
       logger.debug(`allDocs for ${this.dbName}: got ${result?.rows?.length || 0} rows, total_rows=${result?.total_rows || 'undefined'}`);
@@ -184,10 +322,12 @@ class DatabaseClient {
       // Ensure result has expected structure
       if (!result || typeof result !== 'object') {
         logger.warn(`Unexpected allDocs result type for ${this.dbName}: ${typeof result}`);
+        this._lastAllDocsDebug.earlyReturn = 'not object';
         return { rows: [], total_rows: 0, offset: 0 };
       }
       if (!Array.isArray(result.rows)) {
         logger.warn(`allDocs result missing rows array for ${this.dbName}`);
+        this._lastAllDocsDebug.earlyReturn = 'rows not array';
         return { rows: [], total_rows: 0, offset: 0 };
       }
 
@@ -197,8 +337,10 @@ class DatabaseClient {
         logger.debug(`First row structure: id=${firstRow.id}, hasDoc=${firstRow.doc !== undefined}, keys=${Object.keys(firstRow).join(',')}`);
       }
 
+      this._lastAllDocsDebug.success = true;
       return result;
     } catch (error) {
+      this._lastAllDocsDebug.error = error.message;
       logger.error(`Error fetching allDocs for ${this.dbName}:`, error);
       throw error;
     }
@@ -208,5 +350,6 @@ class DatabaseClient {
 module.exports = {
   getConnection,
   getAllUserDatabases,
-  DatabaseClient
+  DatabaseClient,
+  withRetry
 };

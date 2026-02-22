@@ -71,5 +71,20 @@ ion-item {
       opacity: 0.7;
       margin: 0.125rem 0;
     }
+
+    .related-docs-info {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--ion-color-primary);
+      font-size: 0.8rem;
+      opacity: 1;
+      margin-top: 0.25rem;
+
+      ion-icon {
+        font-size: 0.9rem;
+        flex-shrink: 0;
+      }
+    }
   }
 }

@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonButton, IonIcon, IonSpinner,
   IonContent, IonChip, IonLabel, IonMenu, IonSplitPane, MenuController, LoadingController, ModalController,
-  IonFab, IonFabButton
+  IonFab, IonFabButton, Platform, ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -24,7 +24,7 @@ import { StoryStatsComponent } from '../story-stats/story-stats.component';
 import { StoryMediaGalleryComponent } from '../story-media-gallery/story-media-gallery.component';
 import { BeatNavigationPanelComponent } from '../beat-navigation-panel/beat-navigation-panel.component';
 import { SlashCommandResult, SlashCommandAction } from '../../models/slash-command.interface';
-import { Subscription, debounceTime, Subject, throttleTime } from 'rxjs';
+import { Subscription, debounceTime, Subject, throttleTime, combineLatest, filter } from 'rxjs';
 import { ProseMirrorEditorService } from '../../../shared/services/prosemirror-editor.service';
 import { EditorView } from 'prosemirror-view';
 import { TextSelection } from 'prosemirror-state';
@@ -34,8 +34,9 @@ import { PromptManagerService } from '../../../shared/services/prompt-manager.se
 import { ImageUploadDialogComponent, ImageInsertResult } from '../../../ui/components/image-upload-dialog.component';
 import { VideoModalComponent } from '../../../ui/components/video-modal.component';
 import { ImageViewerModalComponent } from '../../../shared/components/image-viewer-modal/image-viewer-modal.component';
-import { ImageVideoService, ImageClickEvent } from '../../../shared/services/image-video.service';
-import { VideoService } from '../../../shared/services/video.service';
+import { StoryMediaService } from '../../../shared/services/story-media.service';
+import { StoryImageService } from '../../../shared/services/story-image.service';
+import { ImageClickEvent } from '../../../shared/models/story-media.interface';
 import { AppHeaderComponent, HeaderAction, BurgerMenuGroup } from '../../../ui/components/app-header.component';
 import { GenerationStatusComponent } from '../../../ui/components/generation-status.component';
 import { VersionTooltipComponent } from '../../../ui/components/version-tooltip.component';
@@ -52,6 +53,8 @@ import { StoryEditorStateService } from '../../services/story-editor-state.servi
 import { MobileDebugService } from '../../../core/services/mobile-debug.service';
 import { DialogService } from '../../../core/services/dialog.service';
 import { BeatHistoryService } from '../../../shared/services/beat-history.service';
+import { KeyboardService } from '../../../core/services/keyboard.service';
+import { SceneGenerationService } from '../../../shared/services/scene-generation.service';
 
 @Component({
   selector: 'app-story-editor',
@@ -82,8 +85,8 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   versionService = inject(VersionService);
   private menuController = inject(MenuController);
   private pdfExportService = inject(PDFExportService);
-  private imageVideoService = inject(ImageVideoService);
-  private videoService = inject(VideoService);
+  private storyMediaService = inject(StoryMediaService);
+  private storyImageService = inject(StoryImageService);
   private loadingController = inject(LoadingController);
   private databaseService = inject(DatabaseService);
   private modalController = inject(ModalController);
@@ -93,6 +96,10 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   private mobileDebug = inject(MobileDebugService);
   private dialogService = inject(DialogService);
   private beatHistoryService = inject(BeatHistoryService);
+  private platform = inject(Platform);
+  private keyboardService = inject(KeyboardService);
+  private sceneGenService = inject(SceneGenerationService);
+  private toastController = inject(ToastController);
   private lastSyncTime: Date | undefined;
 
   @ViewChild('headerTitle', { static: true }) headerTitle!: TemplateRef<unknown>;
@@ -109,6 +116,7 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   wordCount = 0;
   currentTextColor = '#e0e0e0';
   currentDirectSpeechColor: string | null = null; // null = derive from text color
+  currentThinkingColor: string | null = null; // null = derive from text color
   story: Story = {
     id: '',
     title: '',
@@ -185,25 +193,17 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   private minSwipeDistance = 50;
   private maxVerticalDistance = 100;
 
-  // Mobile keyboard handling
-  private keyboardHeight = 0;
-  private originalViewportHeight = 0;
-  private keyboardVisible = false;
-
   private hideVideoButtonTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Timer tracking for waitForStorySynced cleanup
   private syncCheckInterval: ReturnType<typeof setInterval> | null = null;
   private syncHardTimeout: ReturnType<typeof setTimeout> | null = null;
   private syncStatusSubscription: Subscription | null = null;
+  private flashTimeoutIds: ReturnType<typeof setTimeout>[] = [];
 
   // Bound event handlers for proper cleanup (prevents memory leaks)
   private boundHandleTouchStart = this.handleTouchStart.bind(this);
   private boundHandleTouchEnd = this.handleTouchEnd.bind(this);
-  private boundHandleViewportResize = this.handleViewportResize.bind(this);
-  private boundHandleKeyboardShow = this.handleKeyboardShow.bind(this);
-  private boundHandleKeyboardHide = this.handleKeyboardHide.bind(this);
-  private boundHandleVisualViewportResize = this.handleVisualViewportResize.bind(this);
   private boundHandleEditorClick: (() => void) | null = null;
   private boundHandleEditorFocus: (() => void) | null = null;
   private boundHandleEditorInput: (() => void) | null = null;
@@ -222,20 +222,22 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     // Setup header actions first
     this.setupHeaderActions();
 
-    // Subscribe to settings changes for text color and direct speech color
+    // Subscribe to settings changes for text color, direct speech color, and thinking color
     this.subscription.add(
       this.settingsService.settings$.subscribe(settings => {
         this.currentTextColor = settings.appearance?.textColor || '#e0e0e0';
         this.currentDirectSpeechColor = settings.appearance?.directSpeechColor ?? null;
+        this.currentThinkingColor = settings.appearance?.thinkingColor ?? null;
         this.applyTextColorToProseMirror();
         this.applyDirectSpeechColor();
+        this.applyThinkingColor();
         this.cdr.markForCheck();
       })
     );
 
     // Subscribe to image click events
     this.subscription.add(
-      this.imageVideoService.imageClicked$.subscribe((event: ImageClickEvent) => {
+      this.storyMediaService.imageClicked$.subscribe((event: ImageClickEvent) => {
         this.onImageClicked(event);
       })
     );
@@ -297,26 +299,59 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
             // This ensures the story and codex are pulled even if live sync hasn't picked them up yet
             this.addDebugLog(`Force replicating story and codex from remote...`);
             const codexDocId = `codex_${storyId}`;
+            let storyExistsOnRemote = true;
             try {
-              // Replicate both story and codex in parallel
-              await Promise.all([
-                this.databaseService.forceReplicateDocument(storyId),
-                this.databaseService.forceReplicateDocument(codexDocId).catch(() => {
-                  // Codex might not exist yet for new stories - this is fine
-                  console.info(`[StoryEditor] No codex found on remote for story ${storyId}`);
-                })
-              ]);
-              this.addDebugLog(`✓ Story replicated successfully`);
+              // SERIALIZE: Replicate story first, then codex (fixes race condition)
+              // Each forceReplicateDocument() stops/restarts main sync, so parallel calls
+              // caused race conditions where documents were lost or not readable
+              const storyReplicated = await this.databaseService.forceReplicateDocument(storyId);
+
+              // Replicate codex separately (codex might not exist yet for new stories)
+              try {
+                await this.databaseService.forceReplicateDocument(codexDocId);
+              } catch {
+                console.info(`[StoryEditor] No codex found on remote for story ${storyId}`);
+              }
+
+              if (storyReplicated) {
+                this.addDebugLog(`✓ Story replicated successfully`);
+              } else {
+                // Story doesn't exist on remote - this could happen if:
+                // 1. The story was deleted on another device
+                // 2. The story metadata index is out of sync
+                this.addDebugLog(`⚠️ Story not found on remote server`);
+                console.warn(`[StoryEditor] Story ${storyId} not found on remote server`);
+                storyExistsOnRemote = false;
+              }
             } catch (error) {
               this.addDebugLog(`⚠️ Replication failed: ${error}`);
-              console.warn('[StoryEditor] Force replication failed, will wait for live sync:', error);
+              console.warn('[StoryEditor] Force replication failed:', error);
+              // On replication error, skip sync waiting to avoid potential infinite loop
+              // The story might still exist locally
+              storyExistsOnRemote = false;
+            }
+
+            // Force replicate images for this story (only if story exists on remote)
+            if (storyExistsOnRemote) {
+              this.addDebugLog(`Replicating images from remote...`);
+              try {
+                await this.databaseService.forceReplicateStoryImages(storyId);
+                this.addDebugLog(`✓ Images replicated successfully`);
+              } catch (error) {
+                this.addDebugLog(`⚠️ Image replication failed: ${error}`);
+                console.warn('[StoryEditor] Image replication failed, will rely on live sync:', error);
+              }
+
+              // Wait for story to be available in local database (with 10s timeout)
+              await this.waitForStorySynced(storyId);
+            } else {
+              // Story not on remote - skip image replication and sync waiting
+              // We'll still try to load from local database (might be a local-only story)
+              this.addDebugLog(`Skipping sync wait (story not on remote)`);
             }
 
             // Reload codex from database to ensure we have the latest version
             await this.codexService.reloadCodexFromDatabase(storyId);
-
-            // Wait for story to be available in local database (with 10s timeout)
-            await this.waitForStorySynced(storyId);
 
             // Update loading message
             this.loadingMessage = 'Opening story...';
@@ -394,10 +429,70 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Subscribe to streaming state to pause auto-save during generation
+    // Subscribe to scene streaming events for real-time content updates
     this.subscription.add(
-      this.beatAIService.isStreaming$.subscribe(isStreaming => {
+      this.sceneGenService.streaming$.pipe(
+        filter(event => event.sceneId === this.activeSceneId)
+      ).subscribe(event => {
+        if (event.isComplete) {
+          // Refresh content from saved scene after streaming completes
+          this.updateEditorContent();
+        } else if (event.chunk) {
+          // Append streaming chunk using requestAnimationFrame for smooth rendering
+          requestAnimationFrame(() => {
+            this.proseMirrorService.appendStreamingText(event.chunk);
+          });
+        }
+        this.cdr.markForCheck();
+      })
+    );
+
+    // Subscribe to all scene generation completions for toast notifications
+    // This handles notifications even when user navigates to a different scene
+    this.subscription.add(
+      this.sceneGenService.streaming$.pipe(
+        filter(event => event.storyId === this.story.id && event.isComplete)
+      ).subscribe(async event => {
+        if (event.error) {
+          // Show error toast
+          const toast = await this.toastController.create({
+            message: `Scene generation failed: ${event.error}`,
+            duration: 5000,
+            color: 'danger',
+            position: 'bottom',
+            buttons: [{ text: 'Dismiss', role: 'cancel' }]
+          });
+          await toast.present();
+
+          // Delete the placeholder scene on error
+          try {
+            await this.storyService.deleteScene(event.storyId, event.chapterId, event.sceneId);
+          } catch (deleteErr) {
+            console.warn('Failed to delete placeholder scene after error:', deleteErr);
+          }
+        } else {
+          // Show success toast
+          const toast = await this.toastController.create({
+            message: 'Scene generated successfully!',
+            duration: 4000,
+            color: 'success',
+            position: 'bottom',
+            buttons: [{ text: 'Dismiss', role: 'cancel' }]
+          });
+          await toast.present();
+        }
+      })
+    );
+
+    // Combine beat + scene streaming for editor lock and streaming state
+    this.subscription.add(
+      combineLatest([
+        this.beatAIService.isStreaming$,
+        this.sceneGenService.isStreaming$
+      ]).subscribe(([beatStreaming, sceneStreaming]) => {
+        const isStreaming = beatStreaming || sceneStreaming;
         this.editorState.setStreamingActive(isStreaming);
+        this.proseMirrorService.setEditorLocked(isStreaming);
         this.cdr.markForCheck();
       })
     );
@@ -420,8 +515,14 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     // Add touch gesture listeners for mobile
     this.setupTouchGestures();
 
-    // Setup mobile keyboard handling
-    this.setupMobileKeyboardHandling();
+    // Subscribe to keyboard state for scroll-to-cursor
+    this.subscription.add(
+      this.keyboardService.keyboardState$.subscribe(state => {
+        if (state.visible && state.height > 0) {
+          this.scrollToActiveFocus();
+        }
+      })
+    );
   }
 
 
@@ -445,12 +546,16 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     // Cleanup image click handlers
     if (this.editorContainer?.nativeElement) {
       const containerEl = this.editorContainer.nativeElement;
-      this.imageVideoService.removeImageClickHandlers(containerEl);
+      this.storyMediaService.removeImageClickHandlers(containerEl);
       containerEl.removeEventListener('pointerenter', this.handleImagePointerEnter, true);
       containerEl.removeEventListener('pointerleave', this.handleImagePointerLeave, true);
       containerEl.removeEventListener('focusin', this.handleImageFocusIn, true);
       containerEl.removeEventListener('focusout', this.handleImageFocusOut, true);
     }
+
+    // Clean up blob URLs to prevent memory leaks
+    this.storyImageService.cleanupAllBlobUrls();
+    this.storyMediaService.cleanupAllBlobUrls();
 
     window.removeEventListener('resize', this.handleWindowViewportChange);
     window.removeEventListener('scroll', this.handleWindowViewportChange, true);
@@ -474,19 +579,17 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
       this.syncStatusSubscription = null;
     }
 
+    // Clean up flash animation timeouts
+    this.flashTimeoutIds.forEach(id => clearTimeout(id));
+    this.flashTimeoutIds = [];
+
     this.subscription.unsubscribe();
 
     // Remove touch gesture listeners
     this.removeTouchGestures();
 
-    // Remove mobile keyboard handling listeners
-    this.removeMobileKeyboardHandling();
-
     // Remove editor container listeners
     this.removeEditorContainerListeners();
-
-    // Remove keyboard adjustments
-    this.removeKeyboardAdjustments();
   }
 
   async onSceneSelected(event: {chapterId: string, sceneId: string}): Promise<void> {
@@ -1140,131 +1243,19 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private setupMobileKeyboardHandling(): void {
-    // Only setup keyboard handling on mobile devices
-    if (!this.isMobileDevice()) return;
-
-    // Store original viewport height
-    this.originalViewportHeight = window.innerHeight;
-
-    // Listen for viewport resize events (indicates keyboard show/hide)
-    // Use pre-bound handlers to ensure proper cleanup
-    window.addEventListener('resize', this.boundHandleViewportResize);
-
-    // iOS specific keyboard handling
-    if (this.isIOS()) {
-      window.addEventListener('focusin', this.boundHandleKeyboardShow);
-      window.addEventListener('focusout', this.boundHandleKeyboardHide);
-    }
-
-    // Modern browsers: Visual Viewport API
-    if ('visualViewport' in window && window.visualViewport) {
-      window.visualViewport.addEventListener('resize', this.boundHandleVisualViewportResize);
-    }
-  }
-
-  private removeMobileKeyboardHandling(): void {
-    // Remove all keyboard-related event listeners using pre-bound handlers
-    window.removeEventListener('resize', this.boundHandleViewportResize);
-
-    if (this.isIOS()) {
-      window.removeEventListener('focusin', this.boundHandleKeyboardShow);
-      window.removeEventListener('focusout', this.boundHandleKeyboardHide);
-    }
-
-    if ('visualViewport' in window && window.visualViewport) {
-      window.visualViewport.removeEventListener('resize', this.boundHandleVisualViewportResize);
-    }
-  }
-
+  /**
+   * Checks if the current device is mobile.
+   */
   private isMobileDevice(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           window.innerWidth <= 768;
+    return this.keyboardService.isMobile();
   }
 
-  private isIOS(): boolean {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent);
-  }
-
-  private handleViewportResize(): void {
-    if (!this.isMobileDevice()) return;
-
-    const currentHeight = window.innerHeight;
-    const heightDifference = this.originalViewportHeight - currentHeight;
-
-    // Keyboard is likely visible if height decreased significantly
-    if (heightDifference > 150) {
-      this.keyboardHeight = heightDifference;
-      this.keyboardVisible = true;
-      this.adjustForKeyboard();
-    } else {
-      this.keyboardVisible = false;
-      this.keyboardHeight = 0;
-      this.removeKeyboardAdjustments();
-    }
-  }
-
-  private handleVisualViewportResize(): void {
-    if (!this.isMobileDevice() || !window.visualViewport) return;
-
-    const viewport = window.visualViewport;
-    const heightDifference = this.originalViewportHeight - viewport.height;
-
-    if (heightDifference > 100) {
-      this.keyboardHeight = heightDifference;
-      this.keyboardVisible = true;
-      this.adjustForKeyboard();
-    } else {
-      this.keyboardVisible = false;
-      this.keyboardHeight = 0;
-      this.removeKeyboardAdjustments();
-    }
-  }
-
-  private handleKeyboardShow(): void {
-    if (!this.isMobileDevice()) return;
-
-    setTimeout(() => {
-      this.keyboardVisible = true;
-      this.adjustForKeyboard();
-      this.scrollToActiveFocus();
-    }, 300);
-  }
-
-  private handleKeyboardHide(): void {
-    if (!this.isMobileDevice()) return;
-
-    setTimeout(() => {
-      this.keyboardVisible = false;
-      this.removeKeyboardAdjustments();
-    }, 300);
-  }
-
-  private adjustForKeyboard(): void {
-    if (!this.keyboardVisible) return;
-
-    const editorElement = this.editorContainer?.nativeElement;
-    if (!editorElement) return;
-
-    // Add keyboard-visible class to body for CSS adjustments
-    document.body.classList.add('keyboard-visible');
-
-    // Set CSS custom property for keyboard height
-    document.documentElement.style.setProperty('--keyboard-height', `${this.keyboardHeight}px`);
-
-    // Scroll to keep cursor visible
-    setTimeout(() => {
-      this.scrollToActiveFocus();
-    }, 100);
-  }
-
-  private removeKeyboardAdjustments(): void {
-    document.body.classList.remove('keyboard-visible');
-    document.documentElement.style.removeProperty('--keyboard-height');
-  }
-
+  /**
+   * Scrolls the editor to keep the cursor visible when keyboard is shown.
+   */
   private scrollToActiveFocus(): void {
-    if (!this.editorView || !this.keyboardVisible) return;
+    const keyboardState = this.keyboardService.getState();
+    if (!this.editorView || keyboardState.height === 0) return;
 
     try {
       const { state } = this.editorView;
@@ -1274,7 +1265,7 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
       const coords = this.editorView.coordsAtPos(from);
 
       // Calculate available space above keyboard
-      const availableHeight = window.innerHeight - this.keyboardHeight;
+      const availableHeight = window.innerHeight - keyboardState.height;
       const targetPosition = availableHeight * 0.4; // Position cursor at 40% of available space
 
       // Scroll to keep cursor visible
@@ -1342,7 +1333,7 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     const containerEl = this.editorContainer.nativeElement;
 
     // Initialize image click handlers for image viewer functionality
-    this.imageVideoService.initializeImageClickHandlers(containerEl);
+    this.storyMediaService.initializeImageClickHandlers(containerEl);
 
     // Add auxiliary listeners for hovering/focusing images to surface video button
     containerEl.addEventListener('pointerenter', this.handleImagePointerEnter, true);
@@ -1370,7 +1361,7 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
       this.editorContainer.nativeElement.addEventListener('focus', this.boundHandleEditorFocus, true);
 
       this.boundHandleEditorInput = () => {
-        if (this.keyboardVisible) {
+        if (this.keyboardService.getState().height > 0) {
           setTimeout(() => this.scrollToActiveFocus(), 100);
         }
       };
@@ -1511,10 +1502,13 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
 
     // Calculate dropdown dimensions (approximate)
     const dropdownHeight = 200; // Estimated height based on content
+    const dropdownWidth = 300; // Max width from CSS
     const gap = 5;
+    const padding = 16;
 
-    // Get viewport height
+    // Get viewport dimensions
     const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
 
     // Check if there's enough space below the cursor
     const spaceBelow = viewportHeight - coords.bottom;
@@ -1539,10 +1533,21 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Handle horizontal positioning to prevent overflow
+    let left = coords.left;
+
+    // Check if dropdown would overflow right edge
+    if (left + dropdownWidth > viewportWidth - padding) {
+      left = viewportWidth - dropdownWidth - padding;
+    }
+
+    // Ensure it doesn't go past left edge
+    left = Math.max(padding, left);
+
     // Calculate dropdown position relative to viewport
     this.slashDropdownPosition = {
       top: top,
-      left: coords.left
+      left: left
     };
 
     this.showSlashDropdown = true;
@@ -1565,9 +1570,6 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     switch (result.action) {
       case SlashCommandAction.INSERT_BEAT:
         this.proseMirrorService.insertBeatAI(this.slashCursorPosition, replaceSlash, 'story');
-        break;
-      case SlashCommandAction.INSERT_SCENE_BEAT:
-        this.proseMirrorService.insertBeatAI(this.slashCursorPosition, replaceSlash, 'scene');
         break;
       case SlashCommandAction.INSERT_IMAGE:
         this.showImageDialog = true;
@@ -1837,22 +1839,8 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     this.hideImageDialog();
 
     // Insert image through ProseMirror service
+    // Note: imageId is now automatically added to DOM by ResizableImageNodeView
     this.proseMirrorService.insertImage(imageData, this.imageCursorPosition, true);
-
-    // If the image has an ID (from our image service), add it to the image element for video association
-    if (imageData.imageId) {
-      // Wait a bit for the image to be inserted into the DOM
-      setTimeout(() => {
-        const editorElement = this.editorContainer.nativeElement;
-        const images = editorElement.querySelectorAll('img[src="' + imageData.url + '"]');
-
-        // Find the most recently added image (should be the last one)
-        if (images.length > 0) {
-          const lastImage = images[images.length - 1] as HTMLImageElement;
-          this.imageVideoService.addImageIdToElement(lastImage, imageData.imageId!);
-        }
-      }, 100);
-    }
 
     // Focus the editor
     // Only focus on desktop to prevent mobile keyboard from opening
@@ -1944,6 +1932,82 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   closeMediaGallery(): void {
     this.showMediaGallery = false;
     this.cdr.markForCheck();
+  }
+
+  async onJumpToImageInEditor(event: { imageId: string }): Promise<void> {
+    this.closeMediaGallery();
+
+    // Verify editor is initialized
+    if (!this.editorContainer?.nativeElement || !this.ionContent) {
+      console.warn('Editor not fully initialized for image jump');
+      return;
+    }
+
+    // Find which scene contains this image
+    const sceneInfo = this.findSceneContainingImage(event.imageId);
+
+    if (!sceneInfo) {
+      console.warn(`Image not found in any scene: ${event.imageId}`);
+      return;
+    }
+
+    // Navigate to the scene if different from current
+    if (sceneInfo.sceneId !== this.activeSceneId) {
+      await this.selectScene(sceneInfo.chapterId, sceneInfo.sceneId);
+    }
+
+    // Wait for modal close and editor to update with new scene content
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const imageElement = this.editorContainer.nativeElement.querySelector(
+      `[data-image-id="${event.imageId}"]`
+    ) as HTMLElement;
+
+    if (!imageElement) {
+      console.warn(`Image element not found after navigation: ${event.imageId}`);
+      return;
+    }
+
+    // Scroll using IonContent for proper offset
+    const contentElement = await this.ionContent.getScrollElement();
+    const imageRect = imageElement.getBoundingClientRect();
+    const contentRect = contentElement.getBoundingClientRect();
+    const scrollTop = contentElement.scrollTop + imageRect.top - contentRect.top - 100;
+
+    await this.ionContent.scrollToPoint(0, scrollTop, 500);
+
+    // Flash the image to indicate it
+    this.flashImageElement(imageElement);
+  }
+
+  private flashImageElement(element: HTMLElement): void {
+    element.style.transition = 'box-shadow 0.3s ease';
+    element.style.boxShadow = '0 0 0 4px var(--ion-color-primary)';
+
+    const timeoutId1 = setTimeout(() => {
+      if (!element.isConnected) return; // Element removed from DOM
+      element.style.boxShadow = '';
+      const timeoutId2 = setTimeout(() => {
+        if (!element.isConnected) return;
+        element.style.transition = '';
+      }, 300);
+      this.flashTimeoutIds.push(timeoutId2);
+    }, 1500);
+    this.flashTimeoutIds.push(timeoutId1);
+  }
+
+  private findSceneContainingImage(imageId: string): { chapterId: string; sceneId: string } | null {
+    if (!this.story?.chapters) return null;
+
+    for (const chapter of this.story.chapters) {
+      for (const scene of chapter.scenes || []) {
+        // Check if scene content contains this imageId
+        if (scene.content && scene.content.includes(`data-image-id="${imageId}"`)) {
+          return { chapterId: chapter.id, sceneId: scene.id };
+        }
+      }
+    }
+    return null;
   }
 
   private handleImagePointerEnter = (event: Event): void => {
@@ -2044,16 +2108,19 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     let imageId = imageElement.getAttribute('data-image-id');
     if (!imageId || imageId === 'no-id') {
       imageId = this.generateImageId();
-      this.imageVideoService.addImageIdToElement(imageElement, imageId);
-      this.proseMirrorService.updateImageId(imageElement.src, imageId);
+      const storyId = this.story?.id;
+      if (storyId) {
+        this.storyMediaService.addMediaIdsToElement(imageElement, imageId, storyId);
+      }
+      this.proseMirrorService.updateImageId(imageElement.src, imageId, storyId);
       this.editorState.recordUserActivity();
       this.saveSubject.next();
     }
     return imageId;
   }
 
-  onImageClicked(event: ImageClickEvent): void {
-    const imageElement = event.imageElement;
+  async onImageClicked(event: ImageClickEvent): Promise<void> {
+    const imageElement = event.element;
     const imageId = event.imageId && event.imageId !== 'no-id'
       ? event.imageId
       : this.ensureImageHasId(imageElement);
@@ -2063,8 +2130,18 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     const alt = imageElement.getAttribute('alt') || 'Story image';
     const title = imageElement.getAttribute('title') || alt;
 
+    // Resolve blob URL using imageId/storyId for reliability after page reload
+    // The DOM element's src may have a stale blob URL from a previous session
+    let resolvedImageSrc = imageElement.src;
+    if (this.story?.id && imageId) {
+      const freshBlobUrl = await this.storyImageService.getImageBlobUrl(this.story.id, imageId);
+      if (freshBlobUrl) {
+        resolvedImageSrc = freshBlobUrl;
+      }
+    }
+
     this.imageViewerState = {
-      imageSrc: imageElement.src,
+      imageSrc: resolvedImageSrc,
       imageAlt: alt,
       imageTitle: title,
       videoSrc: null,
@@ -2159,17 +2236,41 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     };
     this.cdr.markForCheck();
 
+    if (!this.story?.id) {
+      this.imageViewerState = {
+        ...this.imageViewerState,
+        loadingVideo: false
+      };
+      this.cdr.markForCheck();
+      return;
+    }
+
     try {
-      const video = await this.videoService.getVideoForImage(imageId);
-      if (video) {
-        this.imageViewerState = {
-          ...this.imageViewerState,
-          videoSrc: this.videoService.getVideoDataUrl(video),
-          videoName: video.name,
-          loadingVideo: false
-        };
-        if (imageElement) {
-          this.imageVideoService.addVideoIndicator(imageElement);
+      // Get image metadata to find associated videoId
+      const imageMeta = await this.storyImageService.getImageMeta(this.story.id, imageId);
+
+      if (imageMeta?.videoId) {
+        // Get video metadata and blob URL
+        const videoMeta = await this.storyMediaService.getVideoMeta(this.story.id, imageMeta.videoId);
+        const videoBlobUrl = await this.storyMediaService.getVideoBlobUrl(this.story.id, imageMeta.videoId);
+
+        if (videoMeta && videoBlobUrl) {
+          this.imageViewerState = {
+            ...this.imageViewerState,
+            videoSrc: videoBlobUrl,
+            videoName: videoMeta.name,
+            loadingVideo: false
+          };
+          if (imageElement) {
+            this.storyMediaService.addVideoIndicator(imageElement);
+          }
+        } else {
+          this.imageViewerState = {
+            ...this.imageViewerState,
+            videoSrc: null,
+            videoName: null,
+            loadingVideo: false
+          };
         }
       } else {
         this.imageViewerState = {
@@ -2197,12 +2298,11 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   }
 
   onVideoAssociated(event: { imageId: string; videoId: string }): void {
-    console.log('Video associated with image:', event);
 
     const imageElements = this.editorContainer.nativeElement.querySelectorAll(`[data-image-id="${event.imageId}"]`);
     imageElements.forEach((imgElement: Element) => {
       if (imgElement instanceof HTMLImageElement) {
-        this.imageVideoService.addVideoIndicator(imgElement);
+        this.storyMediaService.addVideoIndicator(imgElement);
       }
     });
 
@@ -2216,24 +2316,24 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
    * Check all images in the editor for existing video associations and add indicators
    */
   private async updateImageVideoIndicators(): Promise<void> {
-    if (!this.editorContainer) return;
+    if (!this.editorContainer || !this.story?.id) return;
+
+    const storyId = this.story.id;
 
     // Only check images that already have IDs for video associations
     const images = this.editorContainer.nativeElement.querySelectorAll('img[data-image-id]');
-    console.log('Checking for video associations, found images with IDs:', images.length);
 
     for (const imgElement of Array.from(images)) {
       const imageId = imgElement.getAttribute('data-image-id');
-      console.log('Checking image with ID:', imageId);
 
       if (imageId && imgElement instanceof HTMLImageElement) {
         try {
-          const video = await this.videoService.getVideoForImage(imageId);
-          console.log('Video found for image', imageId, ':', !!video);
+          // Get image metadata to check for videoId
+          const imageMeta = await this.storyImageService.getImageMeta(storyId, imageId);
+          const hasVideo = !!imageMeta?.videoId;
 
-          if (video) {
-            this.imageVideoService.addVideoIndicator(imgElement);
-            console.log('Added video indicator for image:', imageId);
+          if (hasVideo) {
+            this.storyMediaService.addVideoIndicator(imgElement);
           }
         } catch (error) {
           console.error('Error checking video for image:', imageId, error);
@@ -2406,6 +2506,55 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     const newR = Math.min(255, Math.round(r * 0.85 + 40)); // Add some red for warmth
     const newG = Math.max(0, Math.round(g * 0.7)); // Reduce green
     const newB = Math.min(255, Math.round(b * 0.85 + 60)); // Add more blue
+
+    // Convert back to hex
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+  }
+
+  /**
+   * Apply the thinking (internal monologue) highlight color.
+   * If custom color is set, use it; otherwise derive from text color.
+   */
+  private applyThinkingColor(): void {
+    const effectiveColor = this.getEffectiveThinkingColor();
+
+    // Apply to document root so it's available globally via CSS variable
+    document.documentElement.style.setProperty('--cw-thinking-color', effectiveColor);
+  }
+
+  /**
+   * Get the effective thinking color (custom or derived from text color)
+   */
+  private getEffectiveThinkingColor(): string {
+    if (this.currentThinkingColor) {
+      return this.currentThinkingColor;
+    }
+    // Derive from text color with a slight cyan/teal shift
+    return this.deriveThinkingColor(this.currentTextColor);
+  }
+
+  /**
+   * Derive a thinking color from the text color by shifting it toward cyan/teal.
+   * Creates a subtle but noticeable difference for internal monologue highlighting.
+   */
+  private deriveThinkingColor(textColor: string): string {
+    // Validate hex color format
+    if (!textColor || !textColor.match(/^#[0-9a-fA-F]{6}$/)) {
+      return '#06b6d4'; // Return fallback cyan for invalid input
+    }
+
+    // Parse hex color
+    const hex = textColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    // Shift toward cyan: reduce red, increase green and blue
+    // This creates a subtle cyan/teal tint
+    const newR = Math.max(0, Math.round(r * 0.6)); // Reduce red significantly
+    const newG = Math.min(255, Math.round(g * 0.85 + 50)); // Add green
+    const newB = Math.min(255, Math.round(b * 0.85 + 60)); // Add blue
 
     // Convert back to hex
     const toHex = (n: number) => n.toString(16).padStart(2, '0');

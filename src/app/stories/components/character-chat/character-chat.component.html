@@ -28,8 +28,19 @@
       <p>Checking subscription...</p>
     </div>
 
-    <!-- Premium Required Message -->
-    <div *ngIf="!isPremiumChecking && !isPremium" class="premium-required">
+    <!-- Verification Needed Message (premium but needs auth token) -->
+    <div *ngIf="!isPremiumChecking && !isPremium && needsVerification" class="premium-required verification-needed">
+      <ion-icon name="shield-checkmark" class="lock-icon"></ion-icon>
+      <h2>Email Verification Required</h2>
+      <p>You have an active premium subscription, but need to verify your email to use premium features.</p>
+      <p class="hint">Please complete the verification process in Settings.</p>
+      <ion-button routerLink="/settings" [queryParams]="{tab: 'premium'}">
+        Go to Settings
+      </ion-button>
+    </div>
+
+    <!-- Premium Required Message (not subscribed) -->
+    <div *ngIf="!isPremiumChecking && !isPremium && !needsVerification" class="premium-required">
       <ion-icon name="lock-closed" class="lock-icon"></ion-icon>
       <h2>Premium Feature</h2>
       <p>Character Chat is a premium feature. Subscribe to unlock conversations with your characters.</p>
@@ -62,7 +73,7 @@
       </div>
 
       <div class="character-grid">
-        <div *ngFor="let character of characters"
+        <div *ngFor="let character of characters; trackBy: trackByCharacterId"
              class="character-card"
              (click)="selectCharacter(character)"
              (keydown.enter)="selectCharacter(character)"
@@ -106,7 +117,7 @@
           <!-- Suggested starters -->
           <div class="starters" *ngIf="suggestedStarters.length > 0">
             <p class="starters-label">Try asking:</p>
-            <ion-chip *ngFor="let starter of suggestedStarters"
+            <ion-chip *ngFor="let starter of suggestedStarters; trackBy: trackByStarterText"
                       (click)="useStarter(starter)"
                       class="starter-chip">
               {{ starter }}
@@ -115,7 +126,7 @@
         </div>
 
         <!-- Message list -->
-        <div *ngFor="let message of messages; let i = index"
+        <div *ngFor="let message of messages; let i = index; trackBy: trackByMessageIndex"
              class="message"
              [class.user-message]="message.role === 'user'"
              [class.assistant-message]="message.role === 'assistant'"
@@ -275,7 +286,7 @@
       </p>
 
       <ion-list *ngIf="story && story.chapters">
-        <ion-item *ngFor="let chapter of story.chapters"
+        <ion-item *ngFor="let chapter of story.chapters; trackBy: trackByChapterId"
                   [button]="true"
                   (click)="setKnowledgeCutoff(chapter.order)">
           <ion-label>
@@ -315,7 +326,7 @@
       </div>
 
       <ion-list *ngIf="histories.length > 0">
-        <ion-item *ngFor="let history of histories"
+        <ion-item *ngFor="let history of histories; trackBy: trackByHistoryId"
                   [button]="true"
                   (click)="selectHistory(history)">
           <ion-icon name="chatbubbles" slot="start" color="primary"></ion-icon>

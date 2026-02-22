@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -20,7 +20,8 @@ import { SyncLoggerService, SyncLog } from '../../../core/services/sync-logger.s
 import { DeviceService } from '../../../core/services/device.service';
 import { StoryService } from '../../services/story.service';
 import { Story } from '../../models/story.interface';
-import { AppHeaderComponent, HeaderAction } from '../../../ui/components/app-header.component';
+import { AppHeaderComponent } from '../../../ui/components/app-header.component';
+import { toDate, formatRelativeDate, formatDateTime } from '../../../shared/utils/date-utils';
 
 type ViewMode = 'logs' | 'stories';
 type FilterType = 'all' | 'upload' | 'download' | 'conflict' | 'error' | 'info';
@@ -28,10 +29,11 @@ type FilterType = 'all' | 'upload' | 'download' | 'conflict' | 'error' | 'info';
 interface StoryModification {
   storyId: string;
   storyTitle: string;
+  updatedAt: Date | string;
   lastModifiedBy?: {
     deviceId: string;
     deviceName: string;
-    timestamp: Date;
+    timestamp: Date | string;
   };
   modifications: SyncLog[];
 }
@@ -56,85 +58,64 @@ export class SyncHistoryComponent implements OnInit, OnDestroy {
   private deviceService = inject(DeviceService);
   private storyService = inject(StoryService);
   private router = inject(Router);
-  private cdr = inject(ChangeDetectorRef);
   private actionSheetCtrl = inject(ActionSheetController);
   private toastCtrl = inject(ToastController);
   private destroy$ = new Subject<void>();
 
-  viewMode: ViewMode = 'logs';
-  filterType: FilterType = 'all';
-  searchText = '';
+  // Signals for reactive state
+  viewMode = signal<ViewMode>('logs');
+  filterType = signal<FilterType>('all');
+  searchText = signal('');
+  allLogs = signal<SyncLog[]>([]);
+  stories = signal<Story[]>([]);
+  currentDeviceId = signal('');
+  loading = signal(true);
 
-  allLogs: SyncLog[] = [];
-  filteredLogs: SyncLog[] = [];
-  stories: Story[] = [];
-  storyModifications: StoryModification[] = [];
-  currentDeviceId = '';
-  loading = true;
+  // Computed signal for filtered logs
+  filteredLogs = computed(() => {
+    const logs = this.allLogs();
+    const filter = this.filterType();
+    const search = this.searchText().toLowerCase().trim();
 
-  leftActions: HeaderAction[] = [
-    {
-      icon: 'arrow-back',
-      label: 'Back to story list',
-      action: () => this.goBack()
+    let result = logs;
+
+    // Apply type filter
+    if (filter !== 'all') {
+      result = result.filter(log => log.type === filter);
     }
-  ];
 
-  constructor() {
-    addIcons({
-      arrowBack, cloudUpload, cloudDownload, warning, alertCircle, informationCircle,
-      checkmarkCircle, close, funnel, trash, refresh, laptop, desktop
-    });
-  }
-
-  async ngOnInit(): Promise<void> {
-    this.currentDeviceId = this.deviceService.getDeviceId();
-
-    // Subscribe to sync logs
-    this.syncLogger.logs$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(logs => {
-        this.allLogs = logs;
-        this.applyFilters();
-        this.cdr.markForCheck();
-      });
-
-    // Load stories
-    await this.loadStories();
-    this.loading = false;
-    this.cdr.markForCheck();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  async loadStories(): Promise<void> {
-    try {
-      this.stories = await this.storyService.getAllStories();
-      this.buildStoryModifications();
-    } catch (error) {
-      console.error('Error loading stories:', error);
-      await this.showToast('Error loading stories', 'danger');
+    // Apply search filter
+    if (search) {
+      result = result.filter(log =>
+        log.action.toLowerCase().includes(search) ||
+        log.details?.toLowerCase().includes(search) ||
+        log.deviceName?.toLowerCase().includes(search)
+      );
     }
-  }
 
-  buildStoryModifications(): void {
+    return result;
+  });
+
+  // Computed signal for story modifications
+  storyModifications = computed(() => {
+    const storiesArray = this.stories();
+    const logs = this.allLogs();
+
     const storyMap = new Map<string, StoryModification>();
 
     // First, add all stories with their device modification info
-    this.stories.forEach(story => {
+    storiesArray.forEach(story => {
       storyMap.set(story.id, {
         storyId: story.id,
         storyTitle: story.title || 'Untitled Story',
+        updatedAt: story.updatedAt,
         lastModifiedBy: story.lastModifiedBy,
         modifications: []
       });
     });
 
     // Then, add sync logs that reference stories
-    this.allLogs.forEach(log => {
+    logs.forEach(log => {
       if (log.storyIds && log.storyIds.length > 0) {
         log.storyIds.forEach(storyId => {
           const modification = storyMap.get(storyId);
@@ -145,51 +126,66 @@ export class SyncHistoryComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.storyModifications = Array.from(storyMap.values())
-      .filter(mod => mod.lastModifiedBy || mod.modifications.length > 0)
+    // Show ALL stories, sorted by lastModifiedBy timestamp or updatedAt
+    return Array.from(storyMap.values())
       .sort((a, b) => {
-        const aTime = a.lastModifiedBy?.timestamp?.getTime() || 0;
-        const bTime = b.lastModifiedBy?.timestamp?.getTime() || 0;
+        // Use lastModifiedBy timestamp if available, otherwise fall back to updatedAt
+        const aTime = toDate(a.lastModifiedBy?.timestamp)?.getTime() || toDate(a.updatedAt)?.getTime() || 0;
+        const bTime = toDate(b.lastModifiedBy?.timestamp)?.getTime() || toDate(b.updatedAt)?.getTime() || 0;
         return bTime - aTime;
       });
+  });
+
+  // Use built-in back button instead of leftActions for proper visibility
+  backAction = () => this.goBack();
+
+  constructor() {
+    addIcons({
+      arrowBack, cloudUpload, cloudDownload, warning, alertCircle, informationCircle,
+      checkmarkCircle, close, funnel, trash, refresh, laptop, desktop
+    });
   }
 
-  applyFilters(): void {
-    let filtered = [...this.allLogs];
+  async ngOnInit(): Promise<void> {
+    this.currentDeviceId.set(this.deviceService.getDeviceId());
 
-    // Apply type filter
-    if (this.filterType !== 'all') {
-      filtered = filtered.filter(log => log.type === this.filterType);
+    // Subscribe to sync logs
+    this.syncLogger.logs$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(logs => {
+        this.allLogs.set(logs);
+      });
+
+    // Load stories
+    await this.loadStories();
+    this.loading.set(false);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  async loadStories(): Promise<void> {
+    try {
+      const stories = await this.storyService.getAllStories();
+      this.stories.set(stories);
+    } catch (error) {
+      console.error('Error loading stories:', error);
+      await this.showToast('Error loading stories', 'danger');
     }
-
-    // Apply search filter
-    if (this.searchText.trim()) {
-      const search = this.searchText.toLowerCase();
-      filtered = filtered.filter(log =>
-        log.action.toLowerCase().includes(search) ||
-        log.details?.toLowerCase().includes(search) ||
-        log.deviceName?.toLowerCase().includes(search)
-      );
-    }
-
-    this.filteredLogs = filtered;
   }
 
   onViewModeChange(event: CustomEvent): void {
-    this.viewMode = event.detail.value as ViewMode;
-    this.cdr.markForCheck();
+    this.viewMode.set(event.detail.value as ViewMode);
   }
 
   onFilterChange(event: CustomEvent): void {
-    this.filterType = event.detail.value as FilterType;
-    this.applyFilters();
-    this.cdr.markForCheck();
+    this.filterType.set(event.detail.value as FilterType);
   }
 
   onSearchChange(event: CustomEvent): void {
-    this.searchText = event.detail.value || '';
-    this.applyFilters();
-    this.cdr.markForCheck();
+    this.searchText.set(event.detail.value || '');
   }
 
   async clearLogs(): Promise<void> {
@@ -218,18 +214,17 @@ export class SyncHistoryComponent implements OnInit, OnDestroy {
   }
 
   async refreshData(): Promise<void> {
-    this.loading = true;
-    this.cdr.markForCheck();
-
-    await this.loadStories();
-
-    this.loading = false;
-    this.cdr.markForCheck();
-    await this.showToast('Data refreshed', 'success');
+    try {
+      this.loading.set(true);
+      await this.loadStories();
+      await this.showToast('Data refreshed', 'success');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   goBack(): void {
-    this.router.navigate(['/stories']);
+    this.router.navigate(['/']);
   }
 
   getTypeIcon(type: SyncLog['type']): string {
@@ -265,34 +260,16 @@ export class SyncHistoryComponent implements OnInit, OnDestroy {
   }
 
   isCurrentDevice(deviceId?: string): boolean {
-    return deviceId === this.currentDeviceId;
+    return deviceId === this.currentDeviceId();
   }
 
-  formatDate(date: Date): string {
-    if (!date) return '';
-    const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 7) {
-      return new Date(date).toLocaleDateString();
-    } else if (days > 0) {
-      return `${days} day${days > 1 ? 's' : ''} ago`;
-    } else if (hours > 0) {
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else if (minutes > 0) {
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    } else {
-      return 'Just now';
-    }
+  // Use imported utility functions for date formatting
+  formatDate(date: Date | string | unknown): string {
+    return formatRelativeDate(date);
   }
 
-  formatDateTime(date: Date): string {
-    if (!date) return '';
-    return new Date(date).toLocaleString();
+  formatDateTimeStr(date: Date | string | unknown): string {
+    return formatDateTime(date);
   }
 
   private async showToast(message: string, color: 'success' | 'danger' | 'warning' | 'medium'): Promise<void> {

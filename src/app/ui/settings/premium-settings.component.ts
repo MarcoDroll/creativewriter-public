@@ -43,6 +43,7 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
   message = '';
   messageType: 'success' | 'error' | '' = '';
   portraitModel: PortraitModel = 'flux';
+  hasAuthToken = false;
 
   @Output() settingsChange = new EventEmitter<void>();
 
@@ -64,11 +65,13 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
     const settings = this.settingsService.getSettings();
     this.email = settings.premium?.email || '';
     this.portraitModel = settings.portraitModel?.selectedModel || 'flux';
+    this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
 
     // Subscribe to premium status
     this.subscriptions.add(
       this.subscriptionService.isPremiumObservable.subscribe(isPremium => {
         this.isPremium = isPremium;
+        this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
         this.updateStatusFromCache();
       })
     );
@@ -91,7 +94,8 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
    * Check if user is returning from Stripe portal and attempt to claim verification
    *
    * Flow 1 (Legacy - direct code): URL contains ?verify=<code>
-   * Flow 2 (login_page): URL contains ?tab=premium and email is set, poll for verification
+   * Flow 2 (login_page): URL contains ?tab=premium, email set, no auth token - poll for verification
+   * Flow 3 (direct session): URL contains ?tab=premium, has auth token - just refresh status
    *
    * The login_page flow works like this:
    * 1. User goes to Stripe login_page, enters email, receives OTP
@@ -114,6 +118,7 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
       try {
         const isActive = await this.subscriptionService.exchangeVerificationCode(verifyCode);
         this.updateStatusFromCache();
+        this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
 
         if (isActive) {
           this.message = 'Subscription verified successfully!';
@@ -133,11 +138,17 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Flow 2: Check if we should try to claim portal verification
-    // This happens when user returns from Stripe's login_page
-    // We attempt to claim if: we're on premium tab, email is set, and not already premium
-    if (tab === 'premium' && this.email && !this.isPremium) {
-      await this.attemptClaimVerification();
+    // Flow 2 & 3: Return from portal (either login_page or direct session)
+    if (tab === 'premium') {
+      if (this.subscriptionService.hasValidAuthToken()) {
+        // Flow 3: Direct session return - just refresh status (changes may have been made in portal)
+        await this.subscriptionService.verifySubscription();
+        this.updateStatusFromCache();
+        this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
+      } else if (this.email) {
+        // Flow 2: Login_page return - need to claim verification
+        await this.attemptClaimVerification();
+      }
     }
   }
 
@@ -163,6 +174,7 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
 
         if (claimed) {
           this.updateStatusFromCache();
+          this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
           this.message = 'Subscription verified successfully!';
           this.messageType = 'success';
           this.verificationPending = false;
@@ -249,17 +261,27 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Save email before redirecting
-    await this.subscriptionService.setEmail(this.email);
-
     try {
-      // Get portal URL and redirect
-      const portalUrl = await this.subscriptionService.initiatePortalVerification(this.email);
+      let portalUrl: string | null = null;
+
+      // Try direct session first if we have valid auth token
+      // This provides better UX (no "Abmelden" button, just "Back to Creative Writer")
+      if (this.subscriptionService.hasValidAuthToken()) {
+        portalUrl = await this.subscriptionService.createDirectPortalSession();
+      }
+
+      // Fallback to login_page flow (first-time or direct session failed)
+      if (!portalUrl) {
+        // Save email before redirecting to login_page flow
+        await this.subscriptionService.setEmail(this.email);
+        portalUrl = await this.subscriptionService.initiatePortalVerification(this.email);
+      }
+
       window.location.href = portalUrl;
     } catch (error) {
       this.message = error instanceof Error
         ? error.message
-        : 'Failed to initiate verification. Please check your email and try again.';
+        : 'Failed to open subscription portal. Please try again.';
       this.messageType = 'error';
     }
   }

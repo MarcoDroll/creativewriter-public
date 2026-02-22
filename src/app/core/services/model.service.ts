@@ -9,11 +9,16 @@ import {
   OpenRouterModel,
   ReplicateModel
 } from '../models/model.interface';
-import { supportsReasoning, REASONING_SUFFIX } from '../models/reasoning.config';
+import { supportsReasoning, REASONING_SUFFIX, BETA_SUFFIX, ANTHROPIC_TOKENIZER, isBetaVariant, isReasoningVariant } from '../models/model-variants.config';
 import { SettingsService } from './settings.service';
 import { OllamaApiService, OllamaModelsResponse } from './ollama-api.service';
 import { ClaudeApiService, ClaudeModel } from './claude-api.service';
 import { OpenAICompatibleApiService, OpenAICompatibleModelsResponse } from './openai-compatible-api.service';
+
+export interface OpenRouterProviderInfo {
+  name: string;
+  slug: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -35,9 +40,11 @@ export class ModelService {
   private ollamaModelsSubject = new BehaviorSubject<ModelOption[]>([]);
   private claudeModelsSubject = new BehaviorSubject<ModelOption[]>([]);
   private openAICompatibleModelsSubject = new BehaviorSubject<ModelOption[]>([]);
+  private openRouterProvidersSubject = new BehaviorSubject<OpenRouterProviderInfo[]>([]);
   private loadingSubject = new BehaviorSubject<boolean>(false);
 
   public openRouterModels$ = this.openRouterModelsSubject.asObservable();
+  public openRouterProviders$ = this.openRouterProvidersSubject.asObservable();
   public replicateModels$ = this.replicateModelsSubject.asObservable();
   public geminiModels$ = this.geminiModelsSubject.asObservable();
   public ollamaModels$ = this.ollamaModelsSubject.asObservable();
@@ -69,6 +76,37 @@ export class ModelService {
         catchError(error => {
           console.error('Failed to load OpenRouter models:', error);
           this.loadingSubject.next(false);
+          return of([]);
+        })
+      );
+  }
+
+  loadOpenRouterProviders(): Observable<OpenRouterProviderInfo[]> {
+    const settings = this.settingsService.getSettings();
+
+    if (!settings.openRouter.enabled || !settings.openRouter.apiKey) {
+      return of([]);
+    }
+
+    // Return cached providers if already loaded
+    const cached = this.openRouterProvidersSubject.value;
+    if (cached.length > 0) {
+      return of(cached);
+    }
+
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${settings.openRouter.apiKey}`,
+      'Content-Type': 'application/json'
+    });
+
+    return this.http.get<{ data: { id: string; name: string }[] }>(`${this.OPENROUTER_API_URL}/providers`, { headers })
+      .pipe(
+        map(response => (response.data || []).map(p => ({ name: p.name, slug: p.id }))),
+        tap(providers => {
+          this.openRouterProvidersSubject.next(providers);
+        }),
+        catchError(error => {
+          console.error('Failed to load OpenRouter providers:', error);
           return of([]);
         })
       );
@@ -257,7 +295,8 @@ export class ModelService {
         contextLength: model.context_length || 0,
         provider: 'openrouter' as const,
         supportsReasoning: hasReasoning,
-        isReasoningVariant: false
+        isReasoningVariant: false,
+        isModerated: model.top_provider?.is_moderated ?? false
       };
     });
 
@@ -276,8 +315,51 @@ export class ModelService {
         baseModelId: model.id
       }));
 
-    // Combine base models with reasoning variants
-    const allModels = [...baseModels, ...reasoningVariants];
+    // Generate beta (self-moderated) variants for moderated Anthropic models
+    // Beta variants bypass OpenRouter's moderation, resulting in faster responses
+    const betaVariants: ModelOption[] = models
+      .filter(model =>
+        model.architecture?.tokenizer === ANTHROPIC_TOKENIZER &&  // Anthropic models only
+        model.top_provider?.is_moderated === true &&              // Has moderation to bypass
+        !isBetaVariant(model.id) && !isReasoningVariant(model.id) // Not already a variant
+      )
+      .map(model => {
+        const baseModel = baseModels.find(m => m.id === model.id);
+        if (!baseModel) return null;
+        return {
+          ...baseModel,
+          id: `${model.id}${BETA_SUFFIX}`,
+          label: `${baseModel.label} (Self-moderated)`,
+          description: baseModel.description
+            ? `${baseModel.description} - Self-moderated: faster, no OpenRouter moderation.`
+            : 'Self-moderated version with reduced latency.',
+          isBetaVariant: true,
+          baseModelId: model.id
+        } as ModelOption;
+      })
+      .filter((model): model is ModelOption => model !== null);
+
+    // Generate combined beta + reasoning variants for models that support both
+    const betaReasoningVariants: ModelOption[] = betaVariants
+      .filter(model => {
+        // Find original base model to check if it supports reasoning
+        const originalBase = baseModels.find(m => m.id === model.baseModelId);
+        return originalBase?.supportsReasoning === true;
+      })
+      .map(model => ({
+        ...model,
+        id: `${model.id}${REASONING_SUFFIX}`,  // e.g., anthropic/claude-3.5-sonnet:beta:reasoning
+        label: `${model.label.replace(' (Self-moderated)', '')} (Self-mod + Reasoning)`,
+        description: model.description
+          ? `${model.description.replace(' - Self-moderated: faster, no OpenRouter moderation.', '')} - Self-moderated with extended reasoning.`
+          : 'Self-moderated version with extended reasoning mode.',
+        isReasoningVariant: true,
+        isBetaVariant: true  // Keep both flags
+        // baseModelId remains pointing to original base (e.g., anthropic/claude-3.5-sonnet)
+      }));
+
+    // Combine base models with all variant types
+    const allModels = [...baseModels, ...reasoningVariants, ...betaVariants, ...betaReasoningVariants];
 
     return allModels.sort((a, b) => {
       // Sort by popularity/brand first, then alphabetically
@@ -291,13 +373,20 @@ export class ModelService {
         return 10;
       };
 
-      // Get base model ID for sorting (reasoning variants stay with their base)
+      // Get base model ID for sorting (variants stay with their base)
       const baseIdA = a.baseModelId || a.id;
       const baseIdB = b.baseModelId || b.id;
 
-      // If same base model, put reasoning variant after base
+      // If same base model, order: base → reasoning → beta → combined
       if (baseIdA === baseIdB) {
-        return a.isReasoningVariant ? 1 : -1;
+        const getVariantOrder = (model: ModelOption) => {
+          if (!model.isReasoningVariant && !model.isBetaVariant) return 0; // Base model
+          if (model.isReasoningVariant && !model.isBetaVariant) return 1;  // Reasoning only
+          if (!model.isReasoningVariant && model.isBetaVariant) return 2;  // Beta only
+          if (model.isReasoningVariant && model.isBetaVariant) return 3;   // Combined
+          return 4;
+        };
+        return getVariantOrder(a) - getVariantOrder(b);
       }
 
       const scoreA = getPopularityScore(a.label);

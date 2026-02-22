@@ -182,44 +182,44 @@ import { SyncedCustomBackgroundService, CustomBackground } from '../../shared/se
     }
 
     ion-card {
-      --background: linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(20, 20, 20, 0.6) 100%);
+      --background: var(--cw-gradient-glass);
       --color: var(--cw-text-secondary);
       border: 1px solid var(--cw-border-subtle);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
     }
 
     ion-card-title {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
       color: var(--cw-color-primary-light);
     }
 
     .upload-area {
       border: 2px dashed var(--cw-border-accent);
-      border-radius: 12px;
-      padding: 2rem;
+      border-radius: var(--cw-radius-lg);
+      padding: var(--cw-space-2xl);
       text-align: center;
       cursor: pointer;
-      transition: all 0.3s ease;
-      background: linear-gradient(135deg, rgba(30, 30, 30, 0.4) 0%, rgba(20, 20, 20, 0.4) 100%);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      margin-bottom: 1rem;
+      transition: all var(--cw-transition-normal);
+      background: var(--cw-bg-input);
+      backdrop-filter: blur(var(--cw-blur-sm));
+      -webkit-backdrop-filter: blur(var(--cw-blur-sm));
+      margin-bottom: var(--cw-space-lg);
     }
 
     .upload-area:hover,
     .upload-area.dragover {
       border-color: var(--cw-color-primary-light);
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 180, 248, 0.1) 100%);
+      background: var(--cw-gradient-primary-subtle);
     }
 
     .upload-content {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
       color: var(--cw-text-muted);
     }
 
@@ -241,13 +241,13 @@ import { SyncedCustomBackgroundService, CustomBackground } from '../../shared/se
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1rem;
+      gap: var(--cw-space-lg);
       color: var(--cw-text-secondary);
     }
 
     .file-preview {
       display: flex;
-      gap: 1rem;
+      gap: var(--cw-space-lg);
       align-items: flex-start;
     }
 
@@ -255,7 +255,7 @@ import { SyncedCustomBackgroundService, CustomBackground } from '../../shared/se
       flex-shrink: 0;
       width: 150px;
       height: 100px;
-      border-radius: 8px;
+      border-radius: var(--cw-radius-md);
       overflow: hidden;
       border: 1px solid var(--cw-border-subtle);
     }
@@ -278,18 +278,18 @@ import { SyncedCustomBackgroundService, CustomBackground } from '../../shared/se
     }
 
     .upload-actions {
-      padding: 1rem 0;
+      padding: var(--cw-space-lg) 0;
     }
 
     .upload-success {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 1rem;
-      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      border-radius: 8px;
-      margin-top: 1rem;
+      gap: var(--cw-space-sm);
+      padding: var(--cw-space-lg);
+      background: var(--cw-bg-success-subtle);
+      border: 1px solid var(--cw-border-success);
+      border-radius: var(--cw-radius-md);
+      margin-top: var(--cw-space-lg);
       color: var(--cw-text-secondary);
     }
 
@@ -298,27 +298,27 @@ import { SyncedCustomBackgroundService, CustomBackground } from '../../shared/se
     }
 
     .upload-error {
-      padding: 1rem;
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 8px;
-      margin-top: 1rem;
+      padding: var(--cw-space-lg);
+      background: var(--cw-bg-danger-subtle);
+      border: 1px solid var(--cw-border-danger);
+      border-radius: var(--cw-radius-md);
+      margin-top: var(--cw-space-lg);
     }
 
     .storage-info {
-      margin-top: 1rem;
+      margin-top: var(--cw-space-lg);
     }
 
     .storage-stats {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 0.5rem;
+      margin-bottom: var(--cw-space-sm);
     }
 
     .storage-stats p {
-      margin: 0.25rem 0;
-      font-size: 0.9rem;
+      margin: var(--cw-space-xs) 0;
+      font-size: var(--cw-font-size-sm);
       color: var(--cw-text-muted);
     }
 
@@ -335,7 +335,7 @@ import { SyncedCustomBackgroundService, CustomBackground } from '../../shared/se
       .storage-stats {
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: var(--cw-space-sm);
       }
     }
   `]

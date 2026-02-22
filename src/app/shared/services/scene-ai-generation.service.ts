@@ -33,6 +33,7 @@ export interface StagingNotesGenerationOptions {
   storyLanguage: string;
   beatId?: string; // If provided, only use content before this beat
   model?: string;
+  protagonistName?: string; // Name from Codex for protagonist/narrator
 }
 
 export interface GenerationResult {
@@ -160,8 +161,9 @@ export class SceneAIGenerationService implements OnDestroy {
         const codexPromptContext = [sceneTitle || '', customInstructionRaw.trim()].filter(Boolean).join('\n');
         const codexContext = await this.codexContextService.buildCodexXml(
           storyId,
-          cleanedContent,
           codexPromptContext,
+          '',
+          cleanedContent,
           1000,
           true // skipRelevanceFiltering - include ALL codex entries for summaries
         );
@@ -296,7 +298,7 @@ export class SceneAIGenerationService implements OnDestroy {
   }
 
   async generateStagingNotes(options: StagingNotesGenerationOptions): Promise<GenerationResult> {
-    const { sceneId, storyLanguage, model, beatId } = options;
+    const { sceneId, storyLanguage, model, beatId, protagonistName } = options;
     let { sceneContent } = options;
 
     // If beatId is provided, get only content BEFORE the beat
@@ -344,7 +346,8 @@ export class SceneAIGenerationService implements OnDestroy {
       const prompt = await this.buildStagingNotesPrompt({
         sceneContent: cleanedContent,
         languageInstruction,
-        settings
+        settings,
+        protagonistName
       });
 
       // Get provider and model
@@ -381,8 +384,9 @@ export class SceneAIGenerationService implements OnDestroy {
     sceneContent: string;
     languageInstruction: string;
     settings: ReturnType<SettingsService['getSettings']>;
+    protagonistName?: string;
   }): Promise<string> {
-    const { sceneContent, languageInstruction, settings } = options;
+    const { sceneContent, languageInstruction, settings, protagonistName } = options;
     const stagingSettings = settings.stagingNotesGeneration;
 
     const customInstructionRaw = stagingSettings.customInstruction ?? '';
@@ -390,11 +394,16 @@ export class SceneAIGenerationService implements OnDestroy {
       ? `    <customInstruction>${this.escapeXml(customInstructionRaw)}</customInstruction>`
       : '';
 
+    const protagonistInstruction = protagonistName
+      ? `The protagonist/narrator is named: ${protagonistName}`
+      : '';
+
     if (stagingSettings.useCustomPrompt && stagingSettings.customPrompt) {
       return stagingSettings.customPrompt
         .replace(/{sceneContent}/g, sceneContent)
         .replace(/{languageInstruction}/g, languageInstruction)
-        .replace(/{customInstruction}/g, customInstructionXml);
+        .replace(/{customInstruction}/g, customInstructionXml)
+        .replace(/{protagonistName}/g, protagonistInstruction);
     }
 
     // Use default template
@@ -402,7 +411,8 @@ export class SceneAIGenerationService implements OnDestroy {
     return template
       .replace(/\{sceneContent\}/g, sceneContent)
       .replace(/\{languageInstruction\}/g, `<languageRequirement>${this.escapeXml(languageInstruction)}</languageRequirement>`)
-      .replace(/\{customInstruction\}/g, customInstructionXml);
+      .replace(/\{customInstruction\}/g, customInstructionXml)
+      .replace(/\{protagonistName\}/g, protagonistInstruction);
   }
 
   private async buildSummaryPrompt(options: {

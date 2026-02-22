@@ -352,7 +352,7 @@ ion-toolbar {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
   border-color: rgba(255, 107, 107, 0.6);
-  -webkit-backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
   transition: all 0.3s ease;
 }
 
@@ -542,8 +542,8 @@ ion-toolbar {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 8px;
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(var(--cw-blur-lg));
+  -webkit-backdrop-filter: blur(var(--cw-blur-lg));
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
   min-width: 160px;
 }
@@ -621,8 +621,8 @@ ion-toolbar {
   overflow: hidden;
   box-shadow: var(--cw-shadow-sm);
   border: 1px solid var(--cw-border-subtle);
-  backdrop-filter: blur(2px) saturate(120%);
-  -webkit-backdrop-filter: blur(2px) saturate(120%);
+  backdrop-filter: blur(var(--cw-blur-xs)) saturate(120%);
+  -webkit-backdrop-filter: blur(var(--cw-blur-xs)) saturate(120%);
 }
 
 .story-card:not(.reordering-enabled):hover {
@@ -904,5 +904,24 @@ ion-card-content {
     ion-spinner {
       margin-right: 0.5rem;
     }
+  }
+}
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .story-card,
+  .fab-menu,
+  .story-info,
+  .empty-state,
+  .loading-container,
+  .no-stories,
+  ion-chip,
+  ion-searchbar {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
   }
 }

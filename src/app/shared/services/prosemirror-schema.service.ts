@@ -35,6 +35,7 @@ export class ProseMirrorSchemaService {
           alt: { default: '' },
           title: { default: null },
           imageId: { default: null },
+          storyId: { default: null },  // Required for per-story image storage
           width: { default: null },
           height: { default: null }
         },
@@ -48,8 +49,9 @@ export class ProseMirrorSchemaService {
             alt: dom.getAttribute('alt') || '',
             title: dom.getAttribute('title') || null,
             imageId: dom.getAttribute('data-image-id') || null,
-            width: dom.getAttribute('width') || null,
-            height: dom.getAttribute('height') || null
+            storyId: dom.getAttribute('data-story-id') || null,
+            width: dom.getAttribute('width') ? (parseInt(dom.getAttribute('width')!, 10) || null) : null,
+            height: dom.getAttribute('height') ? (parseInt(dom.getAttribute('height')!, 10) || null) : null
           })
         }],
         toDOM: (node: ProseMirrorNode) => {
@@ -76,6 +78,10 @@ export class ProseMirrorSchemaService {
           if (node.attrs['imageId']) {
             attrs['data-image-id'] = node.attrs['imageId'];
             attrs['class'] = 'image-id-' + node.attrs['imageId'];
+          }
+
+          if (node.attrs['storyId']) {
+            attrs['data-story-id'] = node.attrs['storyId'];
           }
 
           if (node.attrs['width']) {

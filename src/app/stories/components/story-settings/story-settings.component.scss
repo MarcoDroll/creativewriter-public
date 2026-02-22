@@ -220,8 +220,8 @@ ion-input:focus {
   --padding-end: 16px;
   --padding-top: 16px;
   --padding-bottom: 16px;
-  backdrop-filter: blur(5px) !important;
-  -webkit-backdrop-filter: blur(5px) !important;
+  backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 8px;
   font-family: 'Courier New', monospace;
@@ -314,7 +314,7 @@ ion-radio-group ion-item {
   margin: 1rem 0;
   padding: 1rem;
   background: rgba(30, 30, 30, 0.3);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(var(--cw-blur-sm));
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -1027,4 +1027,39 @@ ion-radio-group ion-item {
 
 .advanced-mode {
   // Inherits existing styles from ai-system-tab
+}
+
+// Shared indicator badge (All Types)
+.shared-badge {
+  font-size: 10px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  --background: rgba(138, 180, 248, 0.2);
+  --color: var(--cw-color-primary-light);
+
+  ion-icon {
+    font-size: 12px;
+  }
+}
+
+// Per-type indicator badge (e.g., "Scene Beat Only")
+.per-type-badge {
+  font-size: 10px;
+  padding: 4px 8px;
+  --background: rgba(255, 196, 87, 0.2);
+  --color: var(--ion-color-warning);
+}
+
+@media (max-width: 480px) {
+  .shared-badge,
+  .per-type-badge {
+    font-size: 9px;
+    padding: 3px 6px;
+
+    ion-icon {
+      display: none;
+    }
+  }
 }

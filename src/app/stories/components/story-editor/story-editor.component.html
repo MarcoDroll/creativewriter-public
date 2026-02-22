@@ -1,4 +1,4 @@
-    <ion-split-pane contentId="main-content" when="lg">
+    <ion-split-pane contentId="main-content" when="false">
       <!-- Side Menu -->
       <ion-menu contentId="main-content" menuId="story-menu" side="start" type="push">
         <app-story-structure 
@@ -195,7 +195,8 @@
       </app-slash-command-dropdown>
       
       <app-image-upload-dialog
-        *ngIf="showImageDialog"
+        *ngIf="showImageDialog && story"
+        [storyId]="story.id"
         (imageInserted)="onImageInserted($event)"
         (cancelled)="hideImageDialog()">
       </app-image-upload-dialog>
@@ -215,6 +216,7 @@
       
       <app-video-modal
         [isVisible]="showVideoModal"
+        [storyId]="story?.id || null"
         [imageId]="currentImageId"
         (closed)="hideVideoModal()"
         (videoAssociated)="onVideoAssociated($event)">
@@ -230,7 +232,8 @@
       <app-story-media-gallery
         [isOpen]="showMediaGallery"
         [story]="story"
-        (closed)="closeMediaGallery()">
+        (closed)="closeMediaGallery()"
+        (jumpToImage)="onJumpToImageInEditor($event)">
       </app-story-media-gallery>
 
       <app-beat-navigation-panel

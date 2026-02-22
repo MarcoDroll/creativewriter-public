@@ -22,8 +22,9 @@ import { CodexService } from '../../services/codex.service';
 import { Codex, CodexCategory, CodexEntry, STORY_ROLES, CustomField, StoryRole, PortraitGalleryItem } from '../../models/codex.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { CodexTransferModalComponent } from '../codex-transfer-modal/codex-transfer-modal.component';
-import { PortraitService } from '../../../shared/services/portrait.service';
+import { PortraitService, PortraitStyle } from '../../../shared/services/portrait.service';
 import { DialogService } from '../../../core/services/dialog.service';
+import { KeyboardService } from '../../../core/services/keyboard.service';
 
 @Component({
   selector: 'app-codex',
@@ -48,6 +49,7 @@ export class CodexComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   portraitService = inject(PortraitService);
   private dialogService = inject(DialogService);
+  private keyboardService = inject(KeyboardService);
   private subscriptions = new Subscription();
 
   storyId = signal<string>('');
@@ -65,6 +67,17 @@ export class CodexComponent implements OnInit, OnDestroy {
   // Portrait generation state
   isGeneratingPortrait = signal<boolean>(false);
   uploadingImage = signal<boolean>(false);
+
+  // Portrait style options
+  portraitStyles: { value: PortraitStyle; label: string }[] = [
+    { value: 'photorealistic', label: 'Photorealistic' },
+    { value: 'digital-illustration', label: 'Digital Illustration' },
+    { value: 'anime', label: 'Anime' },
+    { value: 'oil-painting', label: 'Oil Painting' },
+    { value: 'watercolor', label: 'Watercolor' },
+    { value: 'comic-book', label: 'Comic Book' }
+  ];
+  selectedPortraitStyle: PortraitStyle = 'photorealistic';
 
   // Form data
   newCategory = { title: '', icon: '', description: '' };
@@ -88,6 +101,22 @@ export class CodexComponent implements OnInit, OnDestroy {
       checkmarkCircle, closeCircle, imagesOutline
     });
     this.initializeHeaderActions();
+
+    // Restore portrait style from localStorage
+    try {
+      const saved = localStorage.getItem('codex-portrait-style');
+      if (saved && this.portraitStyles.some(s => s.value === saved)) {
+        this.selectedPortraitStyle = saved as PortraitStyle;
+      }
+    } catch { /* ignore */ }
+  }
+
+  onPortraitStyleChange(style: PortraitStyle) {
+    if (!style || !this.portraitStyles.some(s => s.value === style)) return;
+    this.selectedPortraitStyle = style;
+    try {
+      localStorage.setItem('codex-portrait-style', style);
+    } catch { /* ignore */ }
   }
 
   getDefaultIcon(): string {
@@ -167,6 +196,7 @@ export class CodexComponent implements OnInit, OnDestroy {
       await this.codexService.addCategory(storyId, this.newCategory);
       this.newCategory = { title: '', icon: '', description: '' };
       this.showAddCategoryModal.set(false);
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error adding category:', error);
     }
@@ -193,6 +223,7 @@ export class CodexComponent implements OnInit, OnDestroy {
           const codex = this.codex();
           this.selectedCategoryId.set(codex?.categories[0]?.id || null);
         }
+        this.cdr.detectChanges();
       } catch (error) {
         console.error('Error deleting category:', error);
       }
@@ -243,6 +274,7 @@ export class CodexComponent implements OnInit, OnDestroy {
       
       // Directly open the edit dialog for the new entry
       this.selectEntry(createdEntry);
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error creating entry:', error);
     }
@@ -274,6 +306,7 @@ export class CodexComponent implements OnInit, OnDestroy {
 
       await this.codexService.updateEntry(storyId, entry.categoryId, entry.id, updatedEntry);
       this.closeEntryModal();
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error saving entry:', error);
     }
@@ -293,6 +326,7 @@ export class CodexComponent implements OnInit, OnDestroy {
       try {
         await this.codexService.deleteEntry(storyId, entry.categoryId, entry.id);
         this.closeEntryModal();
+        this.cdr.detectChanges();
       } catch (error) {
         console.error('Error deleting entry:', error);
       }
@@ -510,6 +544,16 @@ export class CodexComponent implements OnInit, OnDestroy {
       console.error('Error reading help card preference:', error);
     }
 
+    // Subscribe to keyboard visibility for scroll-into-view on Android
+    this.subscriptions.add(
+      this.keyboardService.keyboardVisible$.subscribe(visible => {
+        if (visible) {
+          setTimeout(() => this.scrollFocusedTextareaIntoView(), 350);
+          this.cdr.markForCheck();
+        }
+      })
+    );
+
     this.subscriptions.add(
       this.route.params.subscribe(params => {
         const storyId = params['id'];
@@ -549,9 +593,6 @@ export class CodexComponent implements OnInit, OnDestroy {
     if (activePortrait) {
       return `data:image/jpeg;base64,${activePortrait}`;
     }
-    if (entry.imageUrl) {
-      return entry.imageUrl;
-    }
     return null;
   }
 
@@ -560,7 +601,7 @@ export class CodexComponent implements OnInit, OnDestroy {
    */
   getActivePortraitBase64(): string | null {
     if (!this.editingEntry.portraitGallery || this.editingEntry.portraitGallery.length === 0) {
-      return this.editingEntry.portraitBase64 || null;
+      return null;
     }
 
     const activeId = this.editingEntry.activePortraitId;
@@ -591,20 +632,13 @@ export class CodexComponent implements OnInit, OnDestroy {
 
     this.editingEntry.activePortraitId = portraitId;
 
-    // Also update legacy portraitBase64 for backwards compatibility
-    const selectedPortrait = this.editingEntry.portraitGallery?.find(p => p.id === portraitId);
-    if (selectedPortrait) {
-      this.editingEntry.portraitBase64 = selectedPortrait.base64;
-    }
-
     // Save immediately
     await this.codexService.updateEntry(
       this.storyId(),
       entry.categoryId,
       entry.id,
       {
-        activePortraitId: portraitId,
-        portraitBase64: selectedPortrait?.base64
+        activePortraitId: portraitId
       }
     );
 
@@ -628,7 +662,6 @@ export class CodexComponent implements OnInit, OnDestroy {
     if (this.editingEntry.activePortraitId === portraitId) {
       const newActive = this.editingEntry.portraitGallery[0];
       this.editingEntry.activePortraitId = newActive?.id;
-      this.editingEntry.portraitBase64 = newActive?.base64;
     }
 
     // Save
@@ -638,8 +671,7 @@ export class CodexComponent implements OnInit, OnDestroy {
       entry.id,
       {
         portraitGallery: this.editingEntry.portraitGallery,
-        activePortraitId: this.editingEntry.activePortraitId,
-        portraitBase64: this.editingEntry.portraitBase64
+        activePortraitId: this.editingEntry.activePortraitId
       }
     );
 
@@ -672,7 +704,6 @@ export class CodexComponent implements OnInit, OnDestroy {
     // Add to gallery and set as active
     this.editingEntry.portraitGallery.push(newPortrait);
     this.editingEntry.activePortraitId = newPortrait.id;
-    this.editingEntry.portraitBase64 = base64;
   }
 
   /**
@@ -712,7 +743,8 @@ export class CodexComponent implements OnInit, OnDestroy {
         content: entry.content,
         physicalAppearance,
         backstory,
-        personality
+        personality,
+        style: this.selectedPortraitStyle
       });
 
       // Add to gallery
@@ -725,8 +757,7 @@ export class CodexComponent implements OnInit, OnDestroy {
         entry.id,
         {
           portraitGallery: this.editingEntry.portraitGallery,
-          activePortraitId: this.editingEntry.activePortraitId,
-          portraitBase64: imageBase64
+          activePortraitId: this.editingEntry.activePortraitId
         }
       );
 
@@ -788,8 +819,7 @@ export class CodexComponent implements OnInit, OnDestroy {
             entry.id,
             {
               portraitGallery: this.editingEntry.portraitGallery,
-              activePortraitId: this.editingEntry.activePortraitId,
-              portraitBase64: compressed
+              activePortraitId: this.editingEntry.activePortraitId
             }
           );
 
@@ -818,38 +848,6 @@ export class CodexComponent implements OnInit, OnDestroy {
     input.value = '';
   }
 
-  /**
-   * Remove all portraits from entry (clear gallery)
-   */
-  async removePortrait() {
-    const entry = this.selectedEntry();
-    if (!entry) return;
-
-    try {
-      await this.codexService.updateEntry(
-        this.storyId(),
-        entry.categoryId,
-        entry.id,
-        {
-          portraitGallery: [],
-          activePortraitId: undefined,
-          portraitBase64: undefined,
-          imageUrl: undefined
-        }
-      );
-
-      this.editingEntry.portraitGallery = [];
-      this.editingEntry.activePortraitId = undefined;
-      this.editingEntry.portraitBase64 = undefined;
-      this.editingEntry.imageUrl = undefined;
-      this.cdr.markForCheck();
-
-      await this.showToast('All portraits removed.', 'success');
-    } catch (error) {
-      console.error('Failed to remove portraits:', error);
-      await this.showToast('Failed to remove portraits.', 'danger');
-    }
-  }
 
   /**
    * Show toast notification
@@ -862,5 +860,54 @@ export class CodexComponent implements OnInit, OnDestroy {
       position: 'bottom'
     });
     await toast.present();
+  }
+
+  /**
+   * Scroll focused textarea into view when keyboard appears.
+   * Follows the scene-chat pattern for Android keyboard handling.
+   */
+  private scrollFocusedTextareaIntoView(): void {
+    const activeElement = document.activeElement;
+    if (!activeElement) return;
+
+    const isTextInput = activeElement.tagName === 'TEXTAREA' ||
+                        activeElement.closest('ion-textarea') ||
+                        activeElement.closest('ion-input') ||
+                        activeElement.tagName === 'INPUT';
+
+    if (isTextInput) {
+      activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ============================================
+  // trackBy functions for mobile performance
+  // ============================================
+  trackByCategoryId(index: number, category: CodexCategory): string {
+    return category.id;
+  }
+
+  trackByEntryId(index: number, entry: CodexEntry): string {
+    return entry.id;
+  }
+
+  trackByTag(index: number, tag: string): string {
+    return tag;
+  }
+
+  trackByPortraitId(index: number, portrait: PortraitGalleryItem): string {
+    return portrait.id;
+  }
+
+  trackByRoleValue(index: number, role: { value: StoryRole; label: string }): string {
+    return role.value;
+  }
+
+  trackByStyleValue(index: number, style: { value: PortraitStyle; label: string }): string {
+    return style.value;
+  }
+
+  trackByFieldIndex(index: number, _field: CustomField): number {
+    return index;
   }
 }

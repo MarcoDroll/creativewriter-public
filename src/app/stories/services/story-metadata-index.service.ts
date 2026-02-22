@@ -279,6 +279,16 @@ export class StoryMetadataIndexService {
         return false;
       }
 
+      // Compare cover image thumbnail (efficient check for large base64 strings)
+      const thumbA = storyA.coverImageThumbnail;
+      const thumbB = storyB.coverImageThumbnail;
+      if (thumbA !== thumbB) {
+        // Quick exit: if direct comparison fails (including undefined vs defined), not equal
+        // The !== already handles: both undefined (equal), one undefined (not equal),
+        // different lengths (not equal), different content (not equal)
+        return false;
+      }
+
       // Compare updatedAt timestamps (important for showing last edit time)
       const aUpdated = storyA.updatedAt instanceof Date ? storyA.updatedAt.getTime() : new Date(storyA.updatedAt).getTime();
       const bUpdated = storyB.updatedAt instanceof Date ? storyB.updatedAt.getTime() : new Date(storyB.updatedAt).getTime();
@@ -398,8 +408,12 @@ export class StoryMetadataIndexService {
         const isNewStory = existingIndex < 0;
 
         if (existingIndex >= 0) {
-          // Update existing entry
-          index.stories[existingIndex] = metadata;
+          // Update existing entry, preserving order (order is managed separately via updateStoryOrder)
+          const existingOrder = index.stories[existingIndex].order;
+          index.stories[existingIndex] = {
+            ...metadata,
+            order: existingOrder
+          };
         } else {
           // Add new entry
           index.stories.push(metadata);
@@ -505,6 +519,93 @@ export class StoryMetadataIndexService {
         console.error('Error removing story metadata:', error);
         // Don't throw - gracefully degrade
         return;
+      }
+    }
+  }
+
+  /**
+   * Update story order in the metadata index only
+   *
+   * This method updates the order field for stories based on their position
+   * in the provided array. This is more efficient than updating each story
+   * document individually (1 document update vs N).
+   *
+   * @param orderedIds Array of story IDs in the desired order
+   */
+  async updateStoryOrder(orderedIds: string[]): Promise<void> {
+    const db = await this.getDb();
+
+    // Retry up to 3 times for conflict resolution
+    const maxRetries = 3;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // On retry, clear cache to get fresh _rev from database
+        if (attempt > 0) {
+          this.setCache(null);
+        }
+
+        const index = await this.getMetadataIndex();
+        const originalIndex = { ...index, stories: [...index.stories] };
+
+        // Update order for each story based on position in orderedIds
+        for (let i = 0; i < orderedIds.length; i++) {
+          const storyId = orderedIds[i];
+          const storyIndex = index.stories.findIndex(s => s.id === storyId);
+          if (storyIndex >= 0) {
+            index.stories[storyIndex] = {
+              ...index.stories[storyIndex],
+              order: i
+            };
+          }
+        }
+
+        index.lastUpdated = new Date();
+
+        // Check if content actually changed before saving
+        if (this.indexContentEqual(originalIndex, index)) {
+          console.debug('[MetadataIndex] Story order unchanged, skipping save');
+          return;
+        }
+
+        // Save to local database
+        const localDoc = await db.get('story-metadata-index').catch(() => null);
+        const localIndex = {
+          ...index,
+          _id: 'story-metadata-index',
+          _rev: localDoc ? (localDoc as { _rev: string })._rev : undefined
+        };
+        const result = await db.put(localIndex);
+        index._rev = result.rev;
+        this.setCache(index);
+
+        console.info(`[MetadataIndex] Updated story order in local index (${orderedIds.length} stories)`);
+
+        // Explicitly push to remote for immediate sync
+        // Don't rely on live sync for explicit user actions
+        try {
+          await this.databaseService.pushDocuments(['story-metadata-index']);
+          console.info('[MetadataIndex] Pushed story order to remote');
+        } catch (pushError) {
+          // Log but don't throw - local save succeeded, sync will catch up
+          console.warn('[MetadataIndex] Failed to push story order to remote:', pushError);
+        }
+
+        return; // Success - exit retry loop
+
+      } catch (error) {
+        const pouchError = error as { status?: number; name?: string };
+
+        // If conflict, retry with fresh data
+        if (pouchError.status === 409 || pouchError.name === 'conflict') {
+          if (attempt < maxRetries - 1) {
+            console.warn(`[MetadataIndex] Conflict on updateStoryOrder attempt ${attempt + 1}, retrying...`);
+            continue;
+          }
+          console.error('[MetadataIndex] Conflict after max retries');
+        }
+
+        console.error('Error updating story order:', error);
+        throw error; // Re-throw to let caller handle
       }
     }
   }
@@ -654,7 +755,7 @@ export class StoryMetadataIndexService {
       wordCount: this.storyStatsService.calculateTotalStoryWordCount(story),
       createdAt: story.createdAt,
       updatedAt: story.updatedAt,
-      order: story.order,
+      // Note: order is managed separately via updateStoryOrder(), not copied from story
       lastModifiedBy: story.lastModifiedBy
     };
   }

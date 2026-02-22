@@ -485,7 +485,8 @@ export class CodexTransferModalComponent implements OnInit {
               title: entryTitle,
               content: entry.content,
               tags: entry.tags ? [...entry.tags] : undefined,
-              imageUrl: entry.imageUrl,
+              portraitGallery: entry.portraitGallery ? entry.portraitGallery.map(p => ({ ...p })) : undefined,
+              activePortraitId: entry.activePortraitId,
               metadata: entry.metadata ? { ...entry.metadata } : undefined,
               storyRole: entry.storyRole,
               alwaysInclude: entry.alwaysInclude

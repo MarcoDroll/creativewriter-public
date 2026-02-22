@@ -38,6 +38,7 @@ export class BeatRewriteModalComponent implements OnInit {
   @Input() beatId!: string;
   @Input() currentInstruction?: string;
   @Input() hasOriginalText = false;
+  @Input() mode: 'rewrite' | 'polish' = 'rewrite';
 
   instruction = '';
 
@@ -53,7 +54,7 @@ export class BeatRewriteModalComponent implements OnInit {
   }
 
   async rewriteCurrent(): Promise<void> {
-    if (!this.instruction.trim()) return;
+    if (this.mode !== 'polish' && !this.instruction.trim()) return;
     await this.modalController.dismiss({
       action: 'rewrite-current',
       instruction: this.instruction.trim()
@@ -61,7 +62,7 @@ export class BeatRewriteModalComponent implements OnInit {
   }
 
   async rewriteOriginal(): Promise<void> {
-    if (!this.instruction.trim()) return;
+    if (this.mode !== 'polish' && !this.instruction.trim()) return;
     await this.modalController.dismiss({
       action: 'rewrite-original',
       instruction: this.instruction.trim()

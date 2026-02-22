@@ -10,6 +10,10 @@
             <ion-icon name="create-outline"></ion-icon>
             <ion-label>Rewrite</ion-label>
           </ion-chip>
+          <ion-chip *ngIf="beatData.lastAction === 'polish'" color="tertiary" class="polish-indicator">
+            <ion-icon name="color-palette-outline"></ion-icon>
+            <ion-label>Polished</ion-label>
+          </ion-chip>
           <div class="beat-actions">
             <button
               class="cw-btn-glass-primary collapse-btn"
@@ -49,8 +53,8 @@
               <button
                 class="cw-btn-glass-danger"
                 (click)="deleteContentAfterBeat(); $event.stopPropagation()"
-                title="Delete text until next beat or scene end"
-                aria-label="Delete text until next beat or scene end">
+                title="Delete generated content"
+                aria-label="Delete generated content">
                 <ion-icon name="trash-outline" aria-hidden="true"></ion-icon>
               </button>
               <button
@@ -91,15 +95,25 @@
           <div class="staging-notes-header" (click)="toggleStagingNotes()" (keydown.enter)="toggleStagingNotes()" tabindex="0" role="button" [attr.aria-expanded]="isStagingNotesExpanded">
             <ion-icon [name]="isStagingNotesExpanded ? 'chevron-up' : 'chevron-down'" class="collapse-icon"></ion-icon>
             <span class="staging-notes-label">Staging Notes</span>
+            <!-- Generate button (shown when idle) -->
             <button
+              *ngIf="!isGeneratingStagingNotes"
               class="cw-btn-glass-primary staging-notes-generate-btn"
               (click)="generateStagingNotes(); $event.stopPropagation()"
               (keydown.enter)="generateStagingNotes(); $event.stopPropagation()"
-              [disabled]="isGeneratingStagingNotes"
               title="Generate staging notes from scene content"
-              tabindex="0">
-              <ion-icon *ngIf="!isGeneratingStagingNotes" name="sparkles-outline"></ion-icon>
-              <ion-icon *ngIf="isGeneratingStagingNotes" name="sync-outline" class="spinning"></ion-icon>
+              aria-label="Generate staging notes from scene content">
+              <ion-icon name="sparkles-outline" aria-hidden="true"></ion-icon>
+            </button>
+            <!-- Cancel button (shown when generating) -->
+            <button
+              *ngIf="isGeneratingStagingNotes"
+              class="cw-btn-glass-danger staging-notes-generate-btn"
+              (click)="cancelStagingNotesGeneration(); $event.stopPropagation()"
+              (keydown.enter)="cancelStagingNotesGeneration(); $event.stopPropagation()"
+              title="Cancel staging notes generation"
+              aria-label="Cancel staging notes generation">
+              <ion-icon name="stop-outline" aria-hidden="true"></ion-icon>
             </button>
             <ion-icon name="information-circle-outline"
                       class="info-icon"
@@ -281,7 +295,7 @@
             </button>
             <!-- Regenerate button - always regenerates from original prompt -->
             <button
-              *ngIf="beatData.generatedContent && !beatData.isGenerating"
+              *ngIf="hasContentAfterBeat && !beatData.isGenerating"
               class="cw-btn-glass-success"
               (click)="regenerateFromPrompt(); $event.stopPropagation()"
               title="Regenerate from beat prompt"
@@ -289,7 +303,7 @@
               <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
             </button>
             <button
-              *ngIf="beatData.generatedContent && !beatData.isGenerating"
+              *ngIf="hasContentAfterBeat && !beatData.isGenerating"
               class="cw-btn-glass-primary"
               (click)="rewriteContent(); $event.stopPropagation()"
               title="Rewrite with custom prompt"

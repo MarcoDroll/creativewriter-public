@@ -61,8 +61,7 @@
 
     &.accordion-expanded {
       border-color: var(--cw-border-accent);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
-                  0 0 30px rgba(139, 180, 248, 0.1);
+      box-shadow: var(--cw-shadow-lg), var(--cw-shadow-primary-glow);
     }
   }
 
@@ -114,14 +113,14 @@
 // ============================================
 
 .database-info {
-  --background: rgba(71, 118, 230, 0.1);
+  --background: var(--cw-bg-info-subtle);
   --border-radius: var(--cw-radius-md);
   margin-bottom: 1rem;
   border: 1px solid var(--cw-border-accent);
 
   &.warning {
-    --background: rgba(255, 193, 7, 0.1);
-    border-color: rgba(255, 193, 7, 0.3);
+    --background: var(--cw-bg-warning-subtle);
+    border-color: var(--cw-border-warning);
   }
 
   ion-label {
@@ -212,7 +211,7 @@
 .progress-info {
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: rgba(71, 118, 230, 0.1);
+  background: var(--cw-bg-info-subtle);
   border-radius: var(--cw-radius-md);
   border: 1px solid var(--cw-border-accent);
 
@@ -233,13 +232,13 @@
   gap: 0.75rem;
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--cw-bg-success-subtle);
+  border: 1px solid var(--cw-border-success);
   border-radius: var(--cw-radius-md);
 
   &.warning {
-    background: rgba(255, 193, 7, 0.1);
-    border-color: rgba(255, 193, 7, 0.3);
+    background: var(--cw-bg-warning-subtle);
+    border-color: var(--cw-border-warning);
   }
 
   ion-icon {
@@ -279,8 +278,8 @@
   gap: 0.75rem;
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(255, 193, 7, 0.08);
-  border: 1px solid rgba(255, 193, 7, 0.2);
+  background: var(--cw-bg-warning-subtle);
+  border: 1px solid var(--cw-border-warning);
   border-radius: var(--cw-radius-md);
 
   > ion-icon {

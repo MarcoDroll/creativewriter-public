@@ -22,8 +22,8 @@ export interface BeatVersion {
   /** AI model used (e.g., 'claude-opus-4', 'gpt-4-turbo') */
   model: string;
 
-  /** Beat type: 'story' (full context) or 'scene' (minimal context) */
-  beatType: 'story' | 'scene';
+  /** Beat type: 'story' (full context), 'scene' (minimal context), or 'envision' (creative expansion) */
+  beatType: 'story' | 'scene' | 'envision';
 
   /** Target word count for generation */
   wordCount: number;
@@ -46,8 +46,8 @@ export interface BeatVersion {
   /** Whether story outline was included in context */
   includeStoryOutline?: boolean;
 
-  /** Action type: 'generate' (new), 'regenerate' (redo), or 'rewrite' (modified existing) */
-  action?: 'generate' | 'regenerate' | 'rewrite';
+  /** Action type: 'generate' (new), 'regenerate' (redo), 'rewrite' (modified existing), or 'polish' (expression refinement) */
+  action?: 'generate' | 'regenerate' | 'rewrite' | 'polish';
 
   /** For rewrite actions: the original text that was rewritten */
   existingText?: string;

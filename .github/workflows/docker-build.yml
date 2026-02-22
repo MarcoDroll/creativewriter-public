@@ -60,6 +60,9 @@ jobs:
           - file: Dockerfile.snapshot-service
             suffix: "-snapshot-service"
             needs_version: false
+          - file: Dockerfile.generation-service
+            suffix: "-generation"
+            needs_version: false
         platform:
           - name: linux/amd64
             runner: ubuntu-latest
@@ -167,6 +170,8 @@ jobs:
             artifact_name: "-couchdb"
           - suffix: "-snapshot-service"
             artifact_name: "-snapshot-service"
+          - suffix: "-generation"
+            artifact_name: "-generation"
 
     steps:
       - name: Download AMD64 digest
@@ -266,6 +271,7 @@ jobs:
           echo "| Nginx | \`$VERSION\`, \`stable\`, \`latest\` | \`docker pull $REGISTRY/$REPO-nginx:latest\` |" >> $GITHUB_STEP_SUMMARY
           echo "| CouchDB | \`$VERSION\`, \`stable\`, \`latest\` | \`docker pull $REGISTRY/$REPO-couchdb:latest\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Snapshot Service | \`$VERSION\`, \`stable\`, \`latest\` | \`docker pull $REGISTRY/$REPO-snapshot-service:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Generation Service | \`$VERSION\`, \`stable\`, \`latest\` | \`docker pull $REGISTRY/$REPO-generation:latest\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🔧 Features" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Multi-platform builds (AMD64, ARM64)" >> $GITHUB_STEP_SUMMARY

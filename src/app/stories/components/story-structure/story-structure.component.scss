@@ -53,13 +53,6 @@
   box-shadow: var(--cw-shadow-md);
 }
 
-/* Hide close button on desktop since menu is always visible */
-@media (min-width: 1024px) {
-  .close-button {
-    display: none;
-  }
-}
-
 .structure-content {
   --background: transparent !important;
   background: transparent !important;
@@ -189,6 +182,18 @@
   text-overflow: ellipsis;
 }
 
+/* Desktop: Two-line titles with fixed height */
+@media (min-width: 1024px) {
+  .chapter-title {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
 .scenes-list {
   background: transparent;
   padding: var(--cw-space-sm);
@@ -267,6 +272,18 @@
 
 .scene-item.active-scene .scene-title-display {
   color: inherit;
+}
+
+/* Desktop: Two-line titles with fixed height */
+@media (min-width: 1024px) {
+  .scene-title-display {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 }
 
 .ai-title-btn {
@@ -836,5 +853,25 @@ ion-select:focus-visible {
 
   .scene-title-display {
     font-size: 0.85rem;
+  }
+}
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .structure-container,
+  .chapter-card,
+  .scene-item,
+  .add-chapter-btn,
+  .chapter-header,
+  ion-chip,
+  .summary-section,
+  .ai-title-btn,
+  ion-searchbar {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
   }
 }

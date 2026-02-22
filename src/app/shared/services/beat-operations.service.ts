@@ -217,6 +217,36 @@ export class BeatOperationsService {
   }
 
   /**
+   * Get the text content only up to the beat end marker (generated content only)
+   * Falls back to getTextAfterBeat if no marker exists (backward compatibility)
+   */
+  getGeneratedTextOnly(editorView: EditorView | null, beatId: string): string | null {
+    if (!editorView) return null;
+
+    const beatPos = this.findBeatNodePosition(editorView, beatId);
+    if (beatPos === null) return null;
+
+    const { state } = editorView;
+    const beatNode = state.doc.nodeAt(beatPos);
+    if (!beatNode) return null;
+
+    const contentStartPos = beatPos + beatNode.nodeSize;
+    const markerPos = this.findBeatEndMarkerPosition(editorView, beatId);
+
+    // If no marker, fall back to next beat behavior (legacy documents)
+    if (markerPos === null) {
+      console.debug(`[BeatOperations] No end marker found for beat ${beatId}, using legacy text extraction`);
+      return this.getTextAfterBeat(editorView, beatId);
+    }
+
+    if (markerPos <= contentStartPos) {
+      return '';
+    }
+
+    return state.doc.textBetween(contentStartPos, markerPos, '\n\n', '\n');
+  }
+
+  /**
    * Get the text content between a beat and the next beat (or end of scene)
    */
   getTextAfterBeat(editorView: EditorView | null, beatId: string): string | null {
@@ -293,8 +323,9 @@ export class BeatOperationsService {
     // Handle delete after beat action
     if (event.action === 'deleteAfter') {
       // Save content to history BEFORE deleting so it can be recovered
+      // Use getGeneratedTextOnly to only save what will actually be deleted
       if (event.storyId) {
-        const contentToDelete = this.getTextAfterBeat(editorView, event.beatId);
+        const contentToDelete = this.getGeneratedTextOnly(editorView, event.beatId);
         if (contentToDelete && contentToDelete.trim().length > 0) {
           const beatPos = this.findBeatNodePosition(editorView, event.beatId);
           const beatNode = beatPos !== null ? editorView.state.doc.nodeAt(beatPos) : null;
@@ -314,7 +345,8 @@ export class BeatOperationsService {
           });
         }
       }
-      this.deleteContentAfterBeat(editorView, event.beatId, getHTMLContent);
+      // Delete only up to the end marker (preserves user content after marker)
+      this.deleteGeneratedContentOnly(editorView, event.beatId, getHTMLContent);
       return;
     }
 
@@ -350,6 +382,11 @@ export class BeatOperationsService {
 
     // Handle rewrite action - delete old content before rewriting
     if (event.action === 'rewrite' && event.existingText) {
+      this.deleteContentAfterBeat(editorView, event.beatId, getHTMLContent);
+    }
+
+    // Handle polish action - delete old content before polishing
+    if (event.action === 'polish' && event.existingText) {
       this.deleteContentAfterBeat(editorView, event.beatId, getHTMLContent);
     }
 
@@ -418,7 +455,7 @@ export class BeatOperationsService {
       beatPosition: beatNodePosition,
       beatType: event.beatType,
       customContext: event.customContext,
-      action: event.action === 'rewrite' ? 'rewrite' : (event.action === 'regenerate' ? 'regenerate' : 'generate'),
+      action: event.action === 'rewrite' ? 'rewrite' : event.action === 'polish' ? 'polish' : (event.action === 'regenerate' ? 'regenerate' : 'generate'),
       existingText: event.existingText,
       textAfterBeat: textAfterBeatForBridging,
       stagingNotes: event.stagingNotes,
@@ -490,7 +527,8 @@ export class BeatOperationsService {
     const previousVersionId = beatNode.attrs['currentVersionId'] || '';
     const previousModel = beatNode.attrs['model'] || '';
     const previousStagingNotes = beatNode.attrs['stagingNotes'] || '';
-    const previousBeatType = (beatNode.attrs['beatType'] || 'story') as 'story' | 'scene';
+    const previousGeneratedContent = beatNode.attrs['generatedContent'] || '';
+    const previousBeatType = (beatNode.attrs['beatType'] || 'story') as 'story' | 'scene' | 'envision';
 
     // 2b. Save current content to history BEFORE switching (if there's content to save)
     if (previousContent && previousContent.trim().length > 0) {
@@ -542,7 +580,8 @@ export class BeatOperationsService {
       const beatNodeUpdate: Record<string, unknown> = {
         currentVersionId: versionId,
         hasHistory: true,
-        stagingNotes: version.stagingNotes || undefined
+        stagingNotes: version.stagingNotes || undefined,
+        generatedContent: version.content
       };
       if (version.action !== 'rewrite') {
         beatNodeUpdate['prompt'] = version.prompt;
@@ -588,7 +627,8 @@ export class BeatOperationsService {
           currentVersionId: previousVersionId || undefined,
           hasHistory: true,
           model: previousModel || undefined,
-          stagingNotes: previousStagingNotes || undefined
+          stagingNotes: previousStagingNotes || undefined,
+          generatedContent: previousGeneratedContent
         });
 
         console.info('[BeatOperations] Rollback completed successfully');
@@ -925,11 +965,11 @@ export class BeatOperationsService {
     beatId: string,
     storyId: string,
     content: string,
-    beatType: 'story' | 'scene',
+    beatType: 'story' | 'scene' | 'envision',
     metadata?: {
       prompt?: string;
       model?: string;
-      action?: 'generate' | 'regenerate' | 'rewrite';
+      action?: 'generate' | 'regenerate' | 'rewrite' | 'polish';
       rewriteInstruction?: string;
       stagingNotes?: string;
       wordCount?: number;

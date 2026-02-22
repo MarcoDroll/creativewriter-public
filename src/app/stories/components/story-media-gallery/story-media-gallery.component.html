@@ -35,7 +35,7 @@
             size="6"
             size-md="4"
             size-lg="3"
-            *ngFor="let item of mediaItems"
+            *ngFor="let item of mediaItems; trackBy: trackByImageId"
             class="media-col">
             <ion-card
               class="media-card"
@@ -45,12 +45,37 @@
                 <img
                   [src]="item.imageSrc"
                   [alt]="item.imageAlt || 'Story media'"
+                  loading="lazy"
                   class="media-image" />
                 <div *ngIf="item.hasVideo" class="video-indicator">
                   <ion-icon name="videocam-outline"></ion-icon>
                 </div>
+                <button
+                  class="jump-button"
+                  (click)="onJumpToImage(item.imageId, $event)"
+                  aria-label="Jump to image in story"
+                  title="Jump to image in story">
+                  <ion-icon name="locate-outline"></ion-icon>
+                </button>
               </div>
             </ion-card>
+          </ion-col>
+        </ion-row>
+
+        <!-- Load More Button -->
+        <ion-row *ngIf="hasMoreImages" class="load-more-row">
+          <ion-col class="ion-text-center">
+            <ion-button
+              fill="outline"
+              [disabled]="isLoadingMore"
+              (click)="loadMoreImages()">
+              <ion-spinner *ngIf="isLoadingMore" name="crescent" slot="start"></ion-spinner>
+              <span *ngIf="!isLoadingMore">Load More</span>
+              <span *ngIf="isLoadingMore">Loading...</span>
+            </ion-button>
+            <p class="image-count">
+              Showing {{ mediaItems.length }} of {{ totalImagesCount }} images
+            </p>
           </ion-col>
         </ion-row>
       </ion-grid>

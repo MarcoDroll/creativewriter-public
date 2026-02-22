@@ -1,12 +1,12 @@
 import { Injectable, OnDestroy, inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { Observable, ReplaySubject, Subject, Subscription, bufferTime, catchError, filter, from, map, of, switchMap, tap } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription, bufferTime, catchError, filter, from, map, of, switchMap, take, tap } from 'rxjs';
 import { BeatAI, BeatAIGenerationEvent } from '../../stories/models/beat-ai.interface';
 import {
   Story, NarrativePerspective, StoryTense,
   DEFAULT_BEAT_TEMPLATE_SECTIONS, DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS
 } from '../../stories/models/story.interface';
-import { sectionsToTemplate, sceneBeatSectionsToTemplate, mergeBeatSections, mergeSceneBeatSections } from '../utils/template-migration';
+import { sectionsToTemplate, sceneBeatSectionsToTemplate, mergeBeatSections, mergeSceneBeatSections, mergeEnvisionBeatSections } from '../utils/template-migration';
 import { OpenRouterApiService } from '../../core/services/openrouter-api.service';
 import { GoogleGeminiApiService } from '../../core/services/google-gemini-api.service';
 import { OllamaApiService } from '../../core/services/ollama-api.service';
@@ -15,11 +15,13 @@ import { OpenAICompatibleApiService } from '../../core/services/openai-compatibl
 import { SettingsService } from '../../core/services/settings.service';
 import { AIProviderValidationService } from '../../core/services/ai-provider-validation.service';
 import { StoryService } from '../../stories/services/story.service';
-import { CodexService } from '../../stories/services/codex.service';
 import { PromptManagerService } from './prompt-manager.service';
-import { CodexRelevanceService, CodexEntry as CodexRelevanceEntry } from '../../core/services/codex-relevance.service';
-import { CodexEntry, CustomField } from '../../stories/models/codex.interface';
+import { CodexEntry } from '../../stories/models/codex.interface';
+import { CodexContextService } from './codex-context.service';
 import { DatabaseService } from '../../core/services/database.service';
+import { ServerGenerationService } from '../../core/services/server-generation.service';
+import { PendingJobsService } from '../../core/services/pending-jobs.service';
+import { ServerProviderType } from '../../core/models/generation.interface';
 
 type ProviderType = 'ollama' | 'claude' | 'gemini' | 'openrouter' | 'openaiCompatible';
 
@@ -54,13 +56,14 @@ export class BeatAIService implements OnDestroy {
   private readonly openAICompatibleApi = inject(OpenAICompatibleApiService);
   private readonly settingsService = inject(SettingsService);
   private readonly storyService = inject(StoryService);
-  private readonly codexService = inject(CodexService);
   private readonly promptManager = inject(PromptManagerService);
-  private readonly codexRelevanceService = inject(CodexRelevanceService);
+  private readonly codexContextService = inject(CodexContextService);
   private readonly document = inject(DOCUMENT);
   private readonly aiProviderValidation = inject(AIProviderValidationService);
   private readonly databaseService = inject(DatabaseService);
-  
+  private readonly serverGeneration = inject(ServerGenerationService);
+  private readonly pendingJobsService = inject(PendingJobsService);
+
   private generationSubject = new Subject<BeatAIGenerationEvent>();
   public generation$ = this.generationSubject.asObservable();
   private activeGenerations = new Map<string, string>(); // beatId -> requestId
@@ -70,12 +73,58 @@ export class BeatAIService implements OnDestroy {
   private entityDecodeBuffers = new Map<string, string>();
   private generationContexts = new Map<string, GenerationContext>();
   private pendingVisibilityFallbacks = new Set<string>();
+  private pendingJobsSubscription = new Subscription();
 
   constructor() {
     const doc = this.document;
     if (doc && typeof doc.addEventListener === 'function') {
       doc.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
+
+    // Initialize from pending jobs (handles page refresh scenario)
+    this.initializeFromPendingJobs();
+  }
+
+  /**
+   * Initialize streaming state from pending server jobs.
+   * Called on service construction to restore generation status after page refresh.
+   */
+  private initializeFromPendingJobs(): void {
+    // Subscribe to streaming events from resumed server jobs
+    this.pendingJobsSubscription.add(
+      this.pendingJobsService.streamingEvent$.subscribe(event => {
+        // Forward to UI
+        this.generationSubject.next(event);
+
+        // Track as active if not already
+        if (!this.activeGenerations.has(event.beatId) && !event.isComplete) {
+          this.activeGenerations.set(event.beatId, `resumed_${event.beatId}`);
+          this.isStreamingSubject.next(true);
+        }
+
+        // Clean up on completion
+        if (event.isComplete) {
+          this.activeGenerations.delete(event.beatId);
+          if (this.activeGenerations.size === 0) {
+            this.isStreamingSubject.next(false);
+          }
+        }
+      })
+    );
+
+    // Check for active jobs on init to set initial streaming state
+    this.pendingJobsSubscription.add(
+      this.pendingJobsService.pendingJobs$.pipe(take(1)).subscribe(jobs => {
+        const activeJobs = jobs.filter(j => j.status === 'pending' || j.status === 'processing');
+        if (activeJobs.length > 0) {
+          console.log('[BeatAI] Detected active server jobs on init:', activeJobs.map(j => j.beatId));
+          activeJobs.forEach(job => {
+            this.activeGenerations.set(job.beatId, `resumed_${job.id}`);
+          });
+          this.isStreamingSubject.next(true);
+        }
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -83,7 +132,139 @@ export class BeatAIService implements OnDestroy {
     if (doc && typeof doc.removeEventListener === 'function') {
       doc.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
+    this.pendingJobsSubscription.unsubscribe();
     this.cleanupAllContexts();
+  }
+
+  /**
+   * Map internal ProviderType to ServerProviderType for server-side generation
+   */
+  private mapToServerProvider(provider: ProviderType): ServerProviderType | null {
+    const mapping: Record<ProviderType, ServerProviderType> = {
+      'claude': 'claude',
+      'gemini': 'gemini',
+      'openrouter': 'openrouter',
+      'ollama': 'ollama',
+      'openaiCompatible': 'openai-compat'
+    };
+    return mapping[provider] || null;
+  }
+
+  /**
+   * Get the API key for a specific provider
+   */
+  private getApiKeyForProvider(provider: ProviderType, settings: ReturnType<SettingsService['getSettings']>): string {
+    switch (provider) {
+      case 'claude':
+        return settings.claude.apiKey || '';
+      case 'gemini':
+        return settings.googleGemini.apiKey || '';
+      case 'openrouter':
+        return settings.openRouter.apiKey || '';
+      case 'ollama':
+        return 'ollama'; // Ollama doesn't use API keys
+      case 'openaiCompatible':
+        return settings.openAICompatible.apiKey || 'local';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get the provider URL for providers that need it (Ollama, OpenAI-compatible)
+   */
+  private getProviderUrl(provider: ProviderType, settings: ReturnType<SettingsService['getSettings']>): string | undefined {
+    switch (provider) {
+      case 'ollama':
+        return settings.ollama.baseUrl || undefined;
+      case 'openaiCompatible':
+        return settings.openAICompatible.baseUrl || undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Execute server-side generation for a beat
+   * Returns Observable that emits accumulated content as chunks arrive
+   */
+  private executeServerSideGeneration(
+    enhancedPrompt: string,
+    beatId: string,
+    provider: ProviderType,
+    actualModelId: string,
+    maxTokens: number,
+    settings: ReturnType<SettingsService['getSettings']>,
+    options: {
+      storyId?: string;
+      chapterId?: string;
+      sceneId?: string;
+      temperature?: number;
+    }
+  ): Observable<string> {
+    const serverProvider = this.mapToServerProvider(provider);
+    if (!serverProvider) {
+      console.error('[BeatAI] Cannot map provider to server provider:', provider);
+      return this.generateFallbackContent(enhancedPrompt, beatId);
+    }
+
+    const apiKey = this.getApiKeyForProvider(provider, settings);
+    const providerUrl = this.getProviderUrl(provider, settings);
+
+    let accumulatedContent = '';
+
+    return this.serverGeneration.generateWithStream({
+      prompt: enhancedPrompt,
+      provider: serverProvider,
+      model: actualModelId,
+      maxTokens,
+      temperature: options.temperature,
+      apiKey,
+      providerUrl,
+      beatId,
+      storyId: options.storyId || '',
+      chapterId: options.chapterId,
+      sceneId: options.sceneId
+    }).pipe(
+      tap(event => {
+        if (event.type === 'chunk' && event.text) {
+          accumulatedContent += event.text;
+          this.generationSubject.next({
+            beatId,
+            chunk: event.text,
+            isComplete: false
+          });
+        } else if (event.type === 'complete') {
+          this.generationSubject.next({
+            beatId,
+            chunk: '',
+            isComplete: true
+          });
+          this.activeGenerations.delete(beatId);
+          if (this.activeGenerations.size === 0) {
+            this.isStreamingSubject.next(false);
+            this.databaseService.resumeSync();
+          }
+        }
+      }),
+      filter(event => event.type === 'complete'),
+      map(() => accumulatedContent),
+      catchError(error => {
+        console.error('[BeatAI] Server-side generation error:', error);
+        this.generationSubject.next({
+          beatId,
+          chunk: '',
+          isComplete: true
+        });
+        this.activeGenerations.delete(beatId);
+        if (this.activeGenerations.size === 0) {
+          this.isStreamingSubject.next(false);
+          this.databaseService.resumeSync();
+        }
+        // Fallback to client-side generation
+        return this.generateFallbackContent(enhancedPrompt, beatId);
+      })
+    );
   }
 
   private handleVisibilityChange = (): void => {
@@ -423,13 +604,13 @@ export class BeatAIService implements OnDestroy {
     chapterId?: string;
     sceneId?: string;
     beatPosition?: number;
-    beatType?: 'story' | 'scene';
+    beatType?: 'story' | 'scene' | 'envision';
     customContext?: {
       selectedScenes: string[];
       includeStoryOutline: boolean;
       selectedSceneContexts: { sceneId: string; chapterId: string; content: string; }[];
     };
-    action?: 'generate' | 'regenerate' | 'rewrite';
+    action?: 'generate' | 'regenerate' | 'rewrite' | 'polish';
     existingText?: string;
     textAfterBeat?: string; // Text that follows this beat position (for scene beat bridging)
     stagingNotes?: string; // Meta-context for physical/positional consistency
@@ -469,6 +650,28 @@ export class BeatAIService implements OnDestroy {
         const maxTokens = Math.max(calculatedTokens, 3000);
         // Use provider directly as it's already validated
         const resolvedProvider: ProviderType = provider;
+
+        // Check if server-side generation is enabled
+        if (settings.serverGeneration?.enabled) {
+          console.log('[BeatAI] Using server-side generation for beat:', beatId);
+          this.activeGenerations.set(beatId, `server_${beatId}`);
+          return this.executeServerSideGeneration(
+            enhancedPrompt,
+            beatId,
+            resolvedProvider,
+            actualModelId || '',
+            maxTokens,
+            settings,
+            {
+              storyId: options.storyId,
+              chapterId: options.chapterId,
+              sceneId: options.sceneId,
+              temperature: options.temperature
+            }
+          );
+        }
+
+        // Client-side generation (existing code)
         const requestId = this.createProviderRequestId(resolvedProvider);
 
         this.activeGenerations.set(beatId, requestId);
@@ -1133,13 +1336,13 @@ export class BeatAIService implements OnDestroy {
     chapterId?: string;
     sceneId?: string;
     wordCount?: number;
-    beatType?: 'story' | 'scene';
+    beatType?: 'story' | 'scene' | 'envision';
     customContext?: {
       selectedScenes: string[];
       includeStoryOutline: boolean;
       selectedSceneContexts: { sceneId: string; chapterId: string; content: string; }[];
     };
-    action?: 'generate' | 'regenerate' | 'rewrite';
+    action?: 'generate' | 'regenerate' | 'rewrite' | 'polish';
     existingText?: string;
     textAfterBeat?: string; // Text that follows this beat position (for scene beat bridging)
     stagingNotes?: string; // Meta-context for physical/positional consistency
@@ -1157,12 +1360,9 @@ export class BeatAIService implements OnDestroy {
         // Set current story in prompt manager
         return from(this.promptManager.setCurrentStory(story.id)).pipe(
           switchMap(async () => {
-            // Get codex entries in XML format
-            const allCodexEntries = this.codexService.getAllCodexEntries(options.storyId!);
-            
             // Get scene context - either from custom context or default behavior
             let sceneContext = '';
-            
+
             if (options.customContext && options.customContext.selectedScenes.length > 0) {
               // Check if we'll be using a modified story outline
               if (options.customContext.includeStoryOutline) {
@@ -1170,7 +1370,7 @@ export class BeatAIService implements OnDestroy {
                 const currentSceneSelected = options.customContext.selectedSceneContexts.some(
                   ctx => ctx.sceneId === options.sceneId
                 );
-                
+
                 if (currentSceneSelected) {
                   // Current scene is selected and will be included via sceneFullText
                   // Get its content from our selected scenes
@@ -1180,7 +1380,7 @@ export class BeatAIService implements OnDestroy {
                   sceneContext = currentScene ? currentScene.content : '';
                 } else {
                   // Current scene not explicitly selected, get default content
-                  sceneContext = options.sceneId 
+                  sceneContext = options.sceneId
                     ? await this.promptManager.getCurrentOrPreviousSceneText(options.sceneId, beatId)
                     : '';
                 }
@@ -1190,50 +1390,19 @@ export class BeatAIService implements OnDestroy {
               }
             } else {
               // Default behavior: get current scene text
-              sceneContext = options.sceneId 
+              sceneContext = options.sceneId
                 ? await this.promptManager.getCurrentOrPreviousSceneText(options.sceneId, beatId)
                 : '';
             }
-            
-            // Convert to relevance service format and filter
-            const convertedEntries = this.convertCodexEntriesToRelevanceFormat(allCodexEntries);
-            const relevantEntries = await this.codexRelevanceService.getRelevantEntries(
-              convertedEntries,
-              sceneContext,
-              userPrompt,
-              1000 // Max tokens for codex
-            ).toPromise() || [];
-            
-            // Convert back to original format for XML generation
-            const filteredCodexEntries = this.filterCodexEntriesByRelevance(
-              allCodexEntries,
-              relevantEntries
+
+            // Get codex entries via CodexContextService
+            const codexResult = await this.codexContextService.buildCodexXml(
+              options.storyId!, userPrompt, options.stagingNotes || '', sceneContext
             );
-            
-            // Always include all Notes entries (check multiple possible names)
-            const notizenKeywords = ['notizen', 'notes', 'note'];
-            const notizenCategory = allCodexEntries.find(cat => 
-              notizenKeywords.some(keyword => 
-                cat.category.toLowerCase().includes(keyword)
-              )
-            );
-            
-            if (notizenCategory && notizenCategory.entries.length > 0) {
-              // Check if this category already exists in filtered entries
-              const existingNotesIndex = filteredCodexEntries.findIndex(cat => 
-                cat.category === notizenCategory.category
-              );
-              if (existingNotesIndex >= 0) {
-                // Replace with full Notes category (ensure all entries are included)
-                filteredCodexEntries[existingNotesIndex] = notizenCategory;
-              } else {
-                // Add full Notes category
-                filteredCodexEntries.push(notizenCategory);
-              }
-            }
-        
+            const codexText = codexResult.xml;
+
             // Find protagonist for point of view from Codex
-            const protagonist = this.findProtagonist(filteredCodexEntries);
+            const protagonist = this.findProtagonist(codexResult.categories);
             const pointOfViewText = this.generatePointOfViewText(
               story.settings?.narrativePerspective,
               protagonist
@@ -1241,63 +1410,6 @@ export class BeatAIService implements OnDestroy {
 
             // Generate tense text
             const tenseText = this.generateTenseText(story.settings?.tense);
-
-
-        // Fields to exclude from prompt context (internal/import metadata)
-        const excludedMetadataFields = new Set([
-          'storyRole', 'customFields', 'aliases',
-          'originalid', 'alwaysincludeincontext', 'noautoinclude', 'originaltype'
-        ]);
-
-        const codexText = filteredCodexEntries.length > 0
-          ? filteredCodexEntries.map(categoryData => {
-              const categoryType = this.getCategoryXmlType(categoryData.category);
-
-              return categoryData.entries.map((entry: CodexEntry) => {
-                let entryXml = `<${categoryType} name="${this.escapeXml(entry.title)}"`;
-
-                // Add aliases if present
-                if (entry.metadata?.['aliases']) {
-                  entryXml += ` aliases="${this.escapeXml(entry.metadata['aliases'])}"`;
-                }
-
-                // Add story role for characters
-                if (entry.metadata?.['storyRole'] && categoryData.category === 'Characters') {
-                  entryXml += ` storyRole="${this.escapeXml(entry.metadata['storyRole'])}"`;
-                }
-
-                entryXml += '>\n';
-
-                // Main description
-                if (entry.content) {
-                  entryXml += `  <description>${this.escapeXml(entry.content)}</description>\n`;
-                }
-
-                // Custom fields
-                const customFields = entry.metadata?.['customFields'] || [];
-                if (Array.isArray(customFields)) {
-                  customFields.forEach((field: CustomField) => {
-                    const fieldName = this.sanitizeXmlTagName(field.name);
-                    entryXml += `  <${fieldName}>${this.escapeXml(field.value)}</${fieldName}>\n`;
-                  });
-                }
-
-                // Additional metadata fields
-                if (entry.metadata) {
-                  Object.entries(entry.metadata)
-                    .filter(([key]) => !excludedMetadataFields.has(key))
-                    .filter(([, value]) => value !== null && value !== undefined && value !== '')
-                    .forEach(([key, value]) => {
-                      const tagName = this.sanitizeXmlTagName(key);
-                      entryXml += `  <${tagName}>${this.escapeXml(String(value))}</${tagName}>\n`;
-                    });
-                }
-
-                entryXml += `</${categoryType}>`;
-                return entryXml;
-              }).join('\n');
-            }).join('\n')
-          : '';
 
 
         // Get story so far in XML format
@@ -1330,7 +1442,13 @@ export class BeatAIService implements OnDestroy {
 
         // Build the prompt - for rewrites, include the existing text
         let finalPrompt = userPrompt;
-        if (options.action === 'rewrite' && options.existingText) {
+        if (options.action === 'polish' && options.existingText) {
+          finalPrompt = `TEXT TO POLISH:\n${options.existingText}`;
+          if (userPrompt.trim()) {
+            finalPrompt += `\n\nADDITIONAL GUIDANCE:\n${userPrompt}`;
+          }
+          finalPrompt += `\n\nPolish the expression, wording, tone, and voice of the above text. Do NOT change the plot, events, dialogue content, or story progression. Only refine HOW things are expressed, not WHAT happens. Output only the polished text.`;
+        } else if (options.action === 'rewrite' && options.existingText) {
           finalPrompt = `EXISTING TEXT TO REWRITE:
 ${options.existingText}
 
@@ -1342,6 +1460,12 @@ Please rewrite the above text according to the instructions. Only output the rew
 
         // Build rules text if rules exist
         const rulesText = this.buildRulesText(story.settings?.beatRules);
+
+        // Strip heavy context for polish - we only need style/codex, not full story
+        if (options.action === 'polish') {
+          storySoFar = '';
+          sceneContext = '';
+        }
 
         // Build template placeholders
         const placeholdersRaw = {
@@ -1379,8 +1503,35 @@ Please rewrite the above text according to the instructions. Only output the rew
         let processedTemplate: string;
         console.log('[BeatAI] Using section-based template, beatType:', options.beatType, 'action:', options.action);
 
+        // For polish actions, use lightweight polish-specific template sections
+        if (options.action === 'polish') {
+          const polishSections = {
+            ...DEFAULT_BEAT_TEMPLATE_SECTIONS,
+            userMessagePreamble: 'You are polishing the expression and wording of a piece of story content.',
+            objective: `Polish ONLY the expression, wording, tone, and voice of the text provided in <beat_requirements>.
+Do NOT change the plot, events, dialogue content, character actions, or story progression.
+Only refine HOW things are expressed — not WHAT happens.
+Use the style instructions and codex voice data to guide your refinement.`,
+            narrativeParameters: `<point_of_view>{pointOfView}</point_of_view>
+<tense>Match the tense of the original text</tense>
+<length>Preserve the approximate length of the original text</length>`,
+            beatRequirements: '{prompt}',
+            styleGuidance: `- Closely follow the author's style instructions (system message) for tone and voice
+- Use codex entries to ensure character voice consistency
+- Enhance prose quality: tighten phrasing, vary sentence structure, strengthen word choices
+- Preserve the author's intended meaning and narrative flow`,
+            constraints: `- Do NOT add, remove, or reorder scenes, events, or dialogue beats
+- Do NOT change character actions or decisions
+- Do NOT introduce new information or story elements
+- Preserve the original paragraph structure and approximate length
+- Output only the polished text, no commentary`,
+            generatePrompt: 'Output the polished text now:'
+          };
+          processedTemplate = sectionsToTemplate(polishSections);
+          console.log('[BeatAI] Built template for polish action');
+        }
         // For rewrite actions, use rewrite-specific template sections
-        if (options.action === 'rewrite') {
+        else if (options.action === 'rewrite') {
           const rewriteSections = {
             ...DEFAULT_BEAT_TEMPLATE_SECTIONS,
             userMessagePreamble: 'You are rewriting a specific piece of story content. Here is the context:',
@@ -1415,6 +1566,14 @@ Preserve all aspects of the original text that are not addressed by the instruct
             options.textAfterBeat
           );
           console.log('[BeatAI] Built template from scene beat sections, textAfterBeat:', options.textAfterBeat ? 'present' : 'none');
+        } else if (options.beatType === 'envision') {
+          // Use envision beat sections - smart merge that prefers non-empty values over defaults
+          // Envision beats use the same interface as story beats (BeatTemplateSections)
+          const envisionSections = mergeEnvisionBeatSections(
+            story.settings?.envisionBeatTemplateSections
+          );
+          processedTemplate = sectionsToTemplate(envisionSections);
+          console.log('[BeatAI] Built template from envision beat sections');
         } else {
           // Use story beat sections - smart merge that prefers non-empty values over defaults
           const beatSections = mergeBeatSections(
@@ -1578,7 +1737,7 @@ ${bridgingSection}
     return template;
   }
 
-  createNewBeat(beatType: 'story' | 'scene' = 'story'): BeatAI {
+  createNewBeat(beatType: 'story' | 'scene' | 'envision' = 'story'): BeatAI {
     return {
       id: this.generateId(),
       prompt: '',
@@ -1603,7 +1762,7 @@ ${bridgingSection}
     chapterId?: string;
     sceneId?: string;
     wordCount?: number;
-    beatType?: 'story' | 'scene';
+    beatType?: 'story' | 'scene' | 'envision';
     customContext?: {
       selectedScenes: string[];
       includeStoryOutline: boolean;
@@ -1650,16 +1809,6 @@ ${bridgingSection}
     return this.activeGenerations.has(beatId);
   }
 
-  private getCategoryXmlType(category: string): string {
-    const mapping: Record<string, string> = {
-      'Characters': 'character',
-      'Locations': 'location',
-      'Objects': 'item',
-      'Notes': 'other'
-    };
-    return mapping[category] || 'other';
-  }
-
   private escapeXml(text: string | unknown): string {
     // Ensure the input is a string
     const str = String(text || '');
@@ -1676,15 +1825,6 @@ ${bridgingSection}
       return '';
     }
     return rules.trim();
-  }
-
-  private sanitizeXmlTagName(name: string | unknown): string {
-    // Convert to camelCase and remove invalid characters
-    const str = String(name || '');
-    return str
-      .toLowerCase()
-      .replace(/[^a-z0-9]+(.)/g, (_, chr) => chr.toUpperCase())
-      .replace(/[^a-zA-Z0-9]/g, '');
   }
 
   private findProtagonist(codexEntries: { category: string; entries: CodexEntry[]; icon?: string }[]): string | null {
@@ -1734,83 +1874,6 @@ ${bridgingSection}
     };
 
     return tenseMap[effectiveTense];
-  }
-
-  private convertCodexEntriesToRelevanceFormat(codexEntries: { category: string; entries: CodexEntry[]; icon?: string }[]): CodexRelevanceEntry[] {
-    const converted: CodexRelevanceEntry[] = [];
-    
-    for (const categoryData of codexEntries) {
-      const categoryMap: Record<string, 'character' | 'location' | 'object' | 'lore' | 'other'> = {
-        'Characters': 'character',
-        'Locations': 'location',
-        'Objects': 'object',
-        'Notes': 'other',
-        'Lore': 'lore'
-      };
-      
-      const category = categoryMap[categoryData.category] || 'other';
-      
-      for (const entry of categoryData.entries) {
-        // Extract aliases from metadata
-        const aliases: string[] = [];
-        if (entry.metadata?.['aliases']) {
-          const aliasValue = entry.metadata['aliases'];
-          if (typeof aliasValue === 'string' && aliasValue) {
-            aliases.push(...aliasValue.split(',').map((a: string) => a.trim()).filter((a: string) => a));
-          }
-        }
-        
-        // Extract keywords from tags - these are crucial for relevance matching
-        // Create a copy of tags to avoid mutating the original array
-        const keywords: string[] = entry.tags ? [...entry.tags] : [];
-        
-        // Also extract important words from the title as additional keywords
-        const titleWords = entry.title.split(/\s+/)
-          .filter(word => word.length > 3)
-          .map(word => word.toLowerCase());
-        keywords.push(...titleWords);
-        
-        // Determine importance based on story role or category
-        let importance: 'major' | 'minor' | 'background' = 'minor';
-        if (entry.metadata?.['storyRole']) {
-          const role = entry.metadata['storyRole'];
-          if (role === 'Protagonist' || role === 'Antagonist') {
-            importance = 'major';
-          } else if (role === 'Hintergrundcharakter') {
-            importance = 'background';
-          }
-        }
-        
-        converted.push({
-          id: entry.id,
-          title: entry.title,
-          category: category,
-          content: entry.content || '',
-          aliases: aliases,
-          keywords: keywords,
-          importance: importance,
-          globalInclude: !!(entry.metadata?.['globalInclude']) || entry.alwaysInclude || false,
-          lastMentioned: entry.metadata?.['lastMentioned'] as number | undefined,
-          mentionCount: entry.metadata?.['mentionCount'] as number | undefined
-        });
-      }
-    }
-    
-    return converted;
-  }
-
-  private filterCodexEntriesByRelevance(
-    allCodexEntries: { category: string; entries: CodexEntry[]; icon?: string }[], 
-    relevantEntries: CodexRelevanceEntry[]
-  ): { category: string; entries: CodexEntry[]; icon?: string }[] {
-    const relevantIds = new Set(relevantEntries.map(e => e.id));
-    
-    return allCodexEntries.map(categoryData => {
-      return {
-        ...categoryData,
-        entries: categoryData.entries.filter((entry: CodexEntry) => relevantIds.has(entry.id))
-      };
-    }).filter(categoryData => categoryData.entries.length > 0);
   }
 
   private removeDuplicateCharacterAnalyses(content: string): string {

@@ -21,6 +21,7 @@ import {
   SCENE_FROM_OUTLINE_TEMPLATE_SECTION_META,
   DEFAULT_BEAT_TEMPLATE_SECTIONS,
   DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS,
+  DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS,
   DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS
 } from '../../models/story.interface';
 import { validateSectionPlaceholders } from '../../../shared/utils/template-migration';
@@ -38,13 +39,16 @@ import { validateSectionPlaceholders } from '../../../shared/utils/template-migr
 })
 export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
   /** Current beat type being edited */
-  @Input() beatType: 'story' | 'scene' | 'sceneFromOutline' = 'story';
+  @Input() beatType: 'story' | 'scene' | 'envision' | 'sceneFromOutline' = 'story';
 
   /** Story beat template sections */
   @Input() sections: BeatTemplateSections = { ...DEFAULT_BEAT_TEMPLATE_SECTIONS };
 
   /** Scene beat template sections */
   @Input() sceneSections: SceneBeatTemplateSections = { ...DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS };
+
+  /** Envision beat template sections */
+  @Input() envisionSections: BeatTemplateSections = { ...DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS };
 
   /** Scene from outline template sections */
   @Input() sceneFromOutlineSections: SceneFromOutlineTemplateSections = { ...DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS };
@@ -54,6 +58,9 @@ export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
 
   /** Emitted when scene beat sections change */
   @Output() sceneSectionsChange = new EventEmitter<SceneBeatTemplateSections>();
+
+  /** Emitted when envision beat sections change */
+  @Output() envisionSectionsChange = new EventEmitter<BeatTemplateSections>();
 
   /** Emitted when scene from outline sections change */
   @Output() sceneFromOutlineSectionsChange = new EventEmitter<SceneFromOutlineTemplateSections>();
@@ -90,6 +97,9 @@ export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
       this.sectionMeta = SCENE_FROM_OUTLINE_TEMPLATE_SECTION_META;
     } else if (this.beatType === 'scene') {
       this.sectionMeta = SCENE_BEAT_TEMPLATE_SECTION_META;
+    } else if (this.beatType === 'envision') {
+      // Envision beats use the same structure as story beats
+      this.sectionMeta = BEAT_TEMPLATE_SECTION_META;
     } else {
       this.sectionMeta = BEAT_TEMPLATE_SECTION_META;
     }
@@ -100,6 +110,7 @@ export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
    */
   get currentSections(): BeatTemplateSections | SceneBeatTemplateSections | SceneFromOutlineTemplateSections {
     if (this.beatType === 'sceneFromOutline') return this.sceneFromOutlineSections;
+    if (this.beatType === 'envision') return this.envisionSections;
     return this.beatType === 'scene' ? this.sceneSections : this.sections;
   }
 
@@ -123,6 +134,10 @@ export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
       const updated = { ...this.sceneSections, [key]: value };
       this.sceneSections = updated;
       this.sceneSectionsChange.emit(updated);
+    } else if (this.beatType === 'envision') {
+      const updated = { ...this.envisionSections, [key]: value };
+      this.envisionSections = updated;
+      this.envisionSectionsChange.emit(updated);
     } else {
       const updated = { ...this.sections, [key]: value };
       this.sections = updated;
@@ -164,6 +179,8 @@ export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
       defaults = DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS as unknown as Record<string, string>;
     } else if (this.beatType === 'scene') {
       defaults = DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS as unknown as Record<string, string>;
+    } else if (this.beatType === 'envision') {
+      defaults = DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS as unknown as Record<string, string>;
     } else {
       defaults = DEFAULT_BEAT_TEMPLATE_SECTIONS as unknown as Record<string, string>;
     }
@@ -181,6 +198,9 @@ export class BeatTemplateSectionsComponent implements OnInit, OnChanges {
     } else if (this.beatType === 'scene') {
       this.sceneSections = { ...DEFAULT_SCENE_BEAT_TEMPLATE_SECTIONS };
       this.sceneSectionsChange.emit(this.sceneSections);
+    } else if (this.beatType === 'envision') {
+      this.envisionSections = { ...DEFAULT_ENVISION_BEAT_TEMPLATE_SECTIONS };
+      this.envisionSectionsChange.emit(this.envisionSections);
     } else {
       this.sections = { ...DEFAULT_BEAT_TEMPLATE_SECTIONS };
       this.sectionsChange.emit(this.sections);

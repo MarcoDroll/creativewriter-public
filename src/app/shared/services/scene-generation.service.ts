@@ -1,5 +1,6 @@
-import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { Injectable, inject, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
+import { takeUntil, tap, finalize } from 'rxjs/operators';
 import { SettingsService } from '../../core/services/settings.service';
 import { PromptManagerService } from './prompt-manager.service';
 import { StoryService } from '../../stories/services/story.service';
@@ -10,8 +11,10 @@ import { OllamaApiService, OllamaResponse, OllamaChatResponse } from '../../core
 import { ClaudeApiService, ClaudeResponse } from '../../core/services/claude-api.service';
 import { OpenAICompatibleApiService, OpenAICompatibleResponse } from '../../core/services/openai-compatible-api.service';
 import { AIProviderValidationService } from '../../core/services/ai-provider-validation.service';
+import { DatabaseService } from '../../core/services/database.service';
 import { Story, DEFAULT_STORY_SETTINGS, StorySettings, DEFAULT_SCENE_FROM_OUTLINE_TEMPLATE_SECTIONS } from '../../stories/models/story.interface';
 import { sceneFromOutlineSectionsToTemplate, mergeSceneFromOutlineSections } from '../utils/template-migration';
+import { batchStreamingChunks } from '../utils/streaming.utils';
 
 export interface SceneFromOutlineOptions {
   storyId: string;
@@ -34,8 +37,21 @@ export interface SceneGenerationProgress {
   error?: string;
 }
 
+/**
+ * Event emitted during scene streaming generation.
+ * Used to stream AI-generated content into the editor in real-time.
+ */
+export interface SceneStreamingEvent {
+  sceneId: string;
+  storyId: string;
+  chapterId: string;
+  chunk: string;
+  isComplete: boolean;
+  error?: string;
+}
+
 @Injectable({ providedIn: 'root' })
-export class SceneGenerationService {
+export class SceneGenerationService implements OnDestroy {
   private settingsService = inject(SettingsService);
   private promptManager = inject(PromptManagerService);
   private storyService = inject(StoryService);
@@ -46,10 +62,47 @@ export class SceneGenerationService {
   private claude = inject(ClaudeApiService);
   private openAICompatible = inject(OpenAICompatibleApiService);
   private aiProviderValidation = inject(AIProviderValidationService);
+  private databaseService = inject(DatabaseService);
 
   // Progress tracking for background generation
   private progressSubject = new BehaviorSubject<SceneGenerationProgress>({ isGenerating: false });
   public progress$ = this.progressSubject.asObservable();
+
+  // Streaming events for real-time content updates
+  private streamingSubject = new Subject<SceneStreamingEvent>();
+  public streaming$ = this.streamingSubject.asObservable();
+
+  // Streaming state (similar to BeatAIService pattern)
+  private isStreamingSubject = new BehaviorSubject<boolean>(false);
+  public isStreaming$ = this.isStreamingSubject.asObservable();
+
+  // Cancellation support for active streaming operations
+  private activeStreamingCancellations = new Map<string, Subject<void>>();
+
+  ngOnDestroy(): void {
+    this.streamingSubject.complete();
+    this.isStreamingSubject.complete();
+    this.progressSubject.complete();
+    this.activeStreamingCancellations.forEach(s => {
+      s.next();
+      s.complete();
+    });
+    this.activeStreamingCancellations.clear();
+  }
+
+  /**
+   * Cancel an active streaming generation for a specific scene.
+   * @param sceneId The scene ID to cancel generation for
+   */
+  cancelStreaming(sceneId: string): void {
+    const cancel$ = this.activeStreamingCancellations.get(sceneId);
+    if (cancel$) {
+      cancel$.next();
+      cancel$.complete();
+      this.activeStreamingCancellations.delete(sceneId);
+      console.info(`[SceneGeneration] Cancelled streaming for scene: ${sceneId}`);
+    }
+  }
 
   /**
    * Generate a scene from an outline using a single API call.
@@ -131,6 +184,196 @@ export class SceneGenerationService {
       const errorMessage = error instanceof Error ? error.message : 'Generation failed';
       this.progressSubject.next({ isGenerating: false, error: errorMessage });
       throw error;
+    }
+  }
+
+  /**
+   * Generate a scene from an outline using streaming.
+   * Content is streamed in real-time via the streaming$ observable.
+   * The editor can subscribe to receive chunks as they arrive.
+   *
+   * @param options Scene generation options
+   */
+  async generateFromOutlineStreaming(options: SceneFromOutlineOptions): Promise<void> {
+    const { storyId, chapterId, sceneId } = options;
+
+    // Set up cancellation
+    const cancel$ = new Subject<void>();
+    this.activeStreamingCancellations.set(sceneId, cancel$);
+
+    // Update state
+    this.isStreamingSubject.next(true);
+    this.progressSubject.next({
+      isGenerating: true,
+      sceneId,
+      storyId
+    });
+
+    // Pause database sync during streaming to prevent conflicts
+    this.databaseService.pauseSync();
+
+    try {
+      // Ensure prompt manager watches current story
+      await this.promptManager.setCurrentStory(storyId);
+      const story = await this.storyService.getStory(storyId);
+      if (!story) throw new Error('Story not found');
+
+      // Build prompt messages
+      const { systemMessage, messages } = await this.buildInitialBeatMessages(story, options);
+      const { provider, modelId } = this.splitProvider(options.model);
+      const temperature = options.temperature ?? this.getDefaultTemperature(provider);
+
+      // Validate provider
+      const settings = this.settingsService.getSettings();
+      if (!this.aiProviderValidation.isProviderAvailable(provider, settings)) {
+        throw new Error(`AI provider '${provider}' is not configured or not available. Please configure it in settings.`);
+      }
+
+      // Calculate token limits
+      const targetWords = Math.max(200, Math.min(5000, options.wordCount || 600));
+      const calculatedTokens = Math.ceil(targetWords * 1.5) + 2000;
+      const maxTokens = Math.max(3000, Math.min(calculatedTokens, 100000));
+      const promptForLogging = this.messagesToPrompt(systemMessage, messages.filter(m => m.role !== 'system'));
+      const requestId = this.generateRequestId();
+
+      // Accumulate chunks for saving (array is more memory-efficient than string concat)
+      const chunks: string[] = [];
+
+      // Get the streaming observable from the provider
+      const stream$ = this.getProviderStream(
+        provider,
+        modelId,
+        promptForLogging,
+        systemMessage,
+        messages,
+        maxTokens,
+        temperature,
+        requestId
+      );
+
+      // Subscribe to the stream with batching for smoother DOM updates
+      stream$.pipe(
+        batchStreamingChunks(100, 10), // 100ms buffer, max 10 chunks
+        takeUntil(cancel$),
+        tap(chunk => {
+          chunks.push(chunk);
+          this.streamingSubject.next({
+            sceneId,
+            storyId,
+            chapterId,
+            chunk,
+            isComplete: false
+          });
+        }),
+        finalize(() => {
+          // Cleanup on complete, error, or cancel
+          this.isStreamingSubject.next(false);
+          this.databaseService.resumeSync();
+          this.activeStreamingCancellations.delete(sceneId);
+          this.progressSubject.next({ isGenerating: false });
+        })
+      ).subscribe({
+        complete: async () => {
+          // Convert accumulated text to HTML and save
+          // plainTextToHtml now correctly splits on single \n (matching ProseMirror's behavior)
+          const fullContent = chunks.join('');
+          const html = this.plainTextToHtml(fullContent);
+
+          try {
+            await this.storyService.updateScene(storyId, chapterId, sceneId, { content: html });
+            this.streamingSubject.next({
+              sceneId,
+              storyId,
+              chapterId,
+              chunk: '',
+              isComplete: true
+            });
+          } catch (saveError) {
+            const errorMessage = saveError instanceof Error ? saveError.message : 'Failed to save content';
+            console.error('[SceneGeneration] Failed to save streamed content:', saveError);
+            this.streamingSubject.next({
+              sceneId,
+              storyId,
+              chapterId,
+              chunk: '',
+              isComplete: true,
+              error: errorMessage
+            });
+          }
+        },
+        error: (err) => {
+          // Handle streaming error
+          const errorMessage = err instanceof Error ? err.message : 'Streaming failed';
+          console.error('[SceneGeneration] Streaming error:', errorMessage);
+
+          this.streamingSubject.next({
+            sceneId,
+            storyId,
+            chapterId,
+            chunk: '',
+            isComplete: true,
+            error: errorMessage
+          });
+
+          this.progressSubject.next({ isGenerating: false, error: errorMessage });
+        }
+      });
+
+    } catch (error) {
+      // Handle setup errors (before streaming starts)
+      const errorMessage = error instanceof Error ? error.message : 'Generation failed';
+      console.error('[SceneGeneration] Setup error:', errorMessage);
+
+      this.streamingSubject.next({
+        sceneId,
+        storyId,
+        chapterId,
+        chunk: '',
+        isComplete: true,
+        error: errorMessage
+      });
+
+      this.isStreamingSubject.next(false);
+      this.databaseService.resumeSync();
+      this.activeStreamingCancellations.delete(sceneId);
+      this.progressSubject.next({ isGenerating: false, error: errorMessage });
+    }
+  }
+
+  /**
+   * Get a streaming observable from the appropriate provider.
+   */
+  private getProviderStream(
+    provider: string,
+    modelId: string,
+    promptForLogging: string,
+    systemMessage: string,
+    messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
+    maxTokens: number,
+    temperature: number,
+    requestId: string
+  ): Observable<string> {
+    const streamOptions = {
+      model: modelId,
+      maxTokens,
+      temperature,
+      requestId,
+      messages: [{ role: 'system' as const, content: systemMessage }, ...messages]
+    };
+
+    switch (provider) {
+      case 'gemini':
+        return this.gemini.generateTextStream(promptForLogging, streamOptions);
+      case 'openrouter':
+        return this.openRouter.generateTextStream(promptForLogging, streamOptions);
+      case 'claude':
+        return this.claude.generateTextStream(promptForLogging, streamOptions);
+      case 'ollama':
+        return this.ollama.generateTextStream(promptForLogging, streamOptions);
+      case 'openaiCompatible':
+        return this.openAICompatible.generateTextStream(promptForLogging, streamOptions);
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
     }
   }
 
@@ -527,7 +770,9 @@ export class SceneGenerationService {
     if (!text) return '';
     // Normalize line breaks
     const normalized = text.replace(/\r\n?/g, '\n').trim();
-    const parts = normalized.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    // Split on any newline(s) - AI models typically use single \n for paragraph breaks
+    // This matches ProseMirror's behavior which creates paragraph nodes on single \n
+    const parts = normalized.split(/\n+/).map(p => p.trim()).filter(Boolean);
     if (parts.length === 0) return '';
     return parts.map(p => `<p>${this.escapeHtml(p)}</p>`).join('\n');
   }

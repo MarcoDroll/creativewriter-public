@@ -1,7 +1,12 @@
 /**
- * Configuration for models that support reasoning/thinking mode.
- * These models can produce extended reasoning before generating output.
+ * Configuration for model variants (reasoning and beta/self-moderated).
+ * - Reasoning variants: Models that can produce extended reasoning before generating output
+ * - Beta variants: Anthropic models with OpenRouter moderation bypassed (faster responses)
  */
+
+// ============================================================================
+// REASONING VARIANTS
+// ============================================================================
 
 /**
  * Patterns for model IDs that support reasoning mode.
@@ -63,13 +68,28 @@ export function isReasoningVariant(modelId: string): boolean {
 }
 
 /**
- * Get the base model ID by stripping the :reasoning suffix.
+ * Get the base model ID by stripping variant suffixes.
+ * For combined variants like :beta:reasoning, strips :reasoning first to get :beta,
+ * which is what we want to send to OpenRouter (the :beta suffix is a real API suffix).
+ *
+ * @param modelId - The model ID potentially with suffixes
+ * @param stripAll - If true, strips ALL suffixes to get the original base model ID
  */
-export function getBaseModelId(modelId: string): string {
-  if (isReasoningVariant(modelId)) {
-    return modelId.slice(0, -REASONING_SUFFIX.length);
+export function getBaseModelId(modelId: string, stripAll = false): string {
+  let baseId = modelId;
+
+  // Always strip :reasoning first (it's our internal marker)
+  if (baseId.endsWith(REASONING_SUFFIX)) {
+    baseId = baseId.slice(0, -REASONING_SUFFIX.length);
   }
-  return modelId;
+
+  // Only strip :beta if stripAll is requested (for getting true base model)
+  // Otherwise preserve :beta as it's a real API suffix
+  if (stripAll && baseId.endsWith(BETA_SUFFIX)) {
+    baseId = baseId.slice(0, -BETA_SUFFIX.length);
+  }
+
+  return baseId;
 }
 
 /**
@@ -117,3 +137,27 @@ export function calculateReasoningBudget(outputTokens: number): number {
     Math.min(scaledBudget, REASONING_CONSTRAINTS.MAX_TOKENS)
   );
 }
+
+// ============================================================================
+// BETA (SELF-MODERATED) VARIANTS
+// ============================================================================
+
+/**
+ * Suffix used to identify beta (self-moderated) variant model IDs.
+ * Beta variants bypass OpenRouter's moderation, resulting in faster responses.
+ * The model may still self-moderate based on its training.
+ */
+export const BETA_SUFFIX = ':beta';
+
+/**
+ * Check if a model ID is a beta variant (contains :beta).
+ * Uses includes() to also detect combined variants like :beta:reasoning.
+ */
+export function isBetaVariant(modelId: string): boolean {
+  return modelId.includes(BETA_SUFFIX);
+}
+
+/**
+ * Tokenizer value that indicates an Anthropic model in OpenRouter API response.
+ */
+export const ANTHROPIC_TOKENIZER = 'Claude';

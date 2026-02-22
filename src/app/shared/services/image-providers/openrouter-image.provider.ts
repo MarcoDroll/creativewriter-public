@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SettingsService } from '../../../core/services/settings.service';
+import { buildOpenRouterProviderPrefs } from '../../../core/models/settings.interface';
 import {
   IImageProvider,
   ImageProvider,
@@ -95,11 +96,16 @@ export class OpenRouterImageProvider implements IImageProvider {
       throw new Error(`Model ${request.modelId} not found`);
     }
 
+    const settings = this.settingsService.getSettings();
+
+    const providerPrefs = buildOpenRouterProviderPrefs(settings.openRouter);
+
     // Build request body
     const body: Record<string, unknown> = {
       model: request.modelId,
       modalities: ['image', 'text'],
-      messages: [{ role: 'user', content: request.prompt }]
+      messages: [{ role: 'user', content: request.prompt }],
+      ...(providerPrefs && { provider: providerPrefs })
     };
 
     // Add image_config for models that support it (Gemini models)

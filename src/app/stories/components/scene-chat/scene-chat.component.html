@@ -39,15 +39,23 @@
   </ng-template>
   
   <ion-content class="chat-content" [scrollEvents]="true">
-    <div class="context-chips" *ngIf="selectedScenes.length > 0 || includeStoryOutline">
+    <div class="context-chips" *ngIf="selectedScenes.length > 0 || includeStoryOutline || includeCodexContext">
       <ion-chip *ngIf="includeStoryOutline" color="success">
         <ion-label>Story Overview</ion-label>
-        <ion-icon 
-          name="close-outline" 
+        <ion-icon
+          name="close-outline"
           (click)="includeStoryOutline = false">
         </ion-icon>
       </ion-chip>
-      <ion-chip *ngFor="let scene of selectedScenes" [color]="scene.sceneId === activeSceneId ? 'primary' : 'medium'">
+      <ion-chip *ngIf="includeCodexContext" color="tertiary">
+        <ion-icon name="library-outline"></ion-icon>
+        <ion-label>Codex</ion-label>
+        <ion-icon
+          name="close-outline"
+          (click)="includeCodexContext = false">
+        </ion-icon>
+      </ion-chip>
+      <ion-chip *ngFor="let scene of selectedScenes; trackBy: trackBySceneId" [color]="scene.sceneId === activeSceneId ? 'primary' : 'medium'">
         <ion-label>{{ scene.chapterTitle }} - {{ scene.sceneTitle }}</ion-label>
         <ion-icon 
           name="close-outline" 
@@ -57,7 +65,7 @@
     </div>
 
     <div class="chat-messages" #scrollContainer>
-      <div *ngFor="let message of messages" 
+      <div *ngFor="let message of messages; trackBy: trackByMessageTimestamp"
            class="message" 
            [class.user-message]="message.role === 'user'"
            [class.assistant-message]="message.role === 'assistant'">
@@ -133,7 +141,7 @@
     </div>
   </ion-content>
   
-  <ion-footer class="chat-footer" [class.keyboard-visible]="keyboardVisible">
+  <ion-footer class="chat-footer">
     <div class="input-container">
       <ion-button *ngIf="isEditing"
                   (click)="cancelEdit()"
@@ -151,8 +159,6 @@
         [autoGrow]="true"
         [rows]="1"
         (keydown.enter)="onEnterKey($any($event))"
-        (ionFocus)="onInputFocus()"
-        (ionBlur)="onInputBlur()"
         class="message-input">
       </ion-textarea>
       <ion-button
@@ -211,7 +217,7 @@
           </ion-button>
         </div>
         <ion-list>
-          <ion-item *ngFor="let entry of codexReviewEntries">
+          <ion-item *ngFor="let entry of codexReviewEntries; trackBy: trackByEntryName">
             <ion-checkbox 
               slot="start" 
               [(ngModel)]="entry.selected" 
@@ -225,13 +231,13 @@
               </div>
               <div class="codex-entry-description" [innerHTML]="formatMessage(entry.description || 'No description provided.')"></div>
               <div class="codex-entry-fields" *ngIf="getFieldNamesForReview(entry).length > 0">
-                <div class="codex-entry-field" *ngFor="let fieldName of getFieldNamesForReview(entry)">
+                <div class="codex-entry-field" *ngFor="let fieldName of getFieldNamesForReview(entry); trackBy: trackByFieldName">
                   <span class="field-name">{{ fieldName }}:</span>
                   <span class="field-value" [innerHTML]="formatMessage(entry.fields[fieldName])"></span>
                 </div>
               </div>
               <div class="codex-entry-tags" *ngIf="entry.tags.length > 0">
-                <ion-chip *ngFor="let tag of entry.tags" color="medium">{{ tag }}</ion-chip>
+                <ion-chip *ngFor="let tag of entry.tags; trackBy: trackByTag" color="medium">{{ tag }}</ion-chip>
               </div>
             </ion-label>
           </ion-item>
@@ -274,7 +280,7 @@
     </ion-header>
     <ion-content>
       <ion-list>
-        <ion-item *ngFor="let h of histories" (click)="selectHistory(h)" [button]="true">
+        <ion-item *ngFor="let h of histories; trackBy: trackByHistoryId" (click)="selectHistory(h)" [button]="true">
           <ion-icon name="time-outline" slot="start"></ion-icon>
           <ion-label>
             <h3>{{ getHistoryTitle(h) }}</h3>
@@ -311,12 +317,12 @@
       </ion-searchbar>
       
       <ion-list>
-        <div *ngFor="let chapter of story?.chapters">
+        <div *ngFor="let chapter of story?.chapters; trackBy: trackByChapterId">
           <ion-item-divider>
             <ion-label>C{{ chapter.chapterNumber || chapter.order }}:{{ chapter.title }}</ion-label>
           </ion-item-divider>
           <ion-item 
-            *ngFor="let scene of getFilteredScenes(chapter)" 
+            *ngFor="let scene of getFilteredScenes(chapter); trackBy: trackBySceneId"
             [button]="true"
             (click)="toggleSceneSelection(chapter.id, scene.id)">
             <ion-checkbox 
@@ -350,7 +356,7 @@
     <ion-content>
       <ion-list>
         <ion-item 
-          *ngFor="let preset of presetPrompts" 
+          *ngFor="let preset of presetPrompts; trackBy: trackByPresetId"
           [button]="true"
           (click)="usePresetPrompt(preset)">
           <ion-icon [name]="preset.icon" slot="start" [color]="getPresetColor(preset.extractionType)"></ion-icon>

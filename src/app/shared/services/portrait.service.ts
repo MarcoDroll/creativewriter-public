@@ -1,10 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { ModalController } from '@ionic/angular/standalone';
 import { SubscriptionService } from '../../core/services/subscription.service';
+import { PremiumAccessService } from '../../core/services/premium-access.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { AIRequestLoggerService } from '../../core/services/ai-request-logger.service';
 import { PremiumUpsellDialogComponent } from '../../ui/components/premium-upsell-dialog/premium-upsell-dialog.component';
 import { environment } from '../../../environments/environment';
+
+// KEEP IN SYNC with backend/src/index.ts PortraitStyle
+export type PortraitStyle = 'photorealistic' | 'digital-illustration' | 'anime' | 'oil-painting' | 'watercolor' | 'comic-book';
 
 export interface CharacterInfo {
   title: string;
@@ -12,6 +16,7 @@ export interface CharacterInfo {
   physicalAppearance?: string;
   backstory?: string;
   personality?: string;
+  style?: PortraitStyle;
 }
 
 export interface GeneratePortraitResponse {
@@ -26,6 +31,7 @@ export interface GeneratePortraitResponse {
 })
 export class PortraitService {
   private subscriptionService = inject(SubscriptionService);
+  private premiumAccessService = inject(PremiumAccessService);
   private settingsService = inject(SettingsService);
   private modalController = inject(ModalController);
   private aiLogger = inject(AIRequestLoggerService);
@@ -50,15 +56,44 @@ export class PortraitService {
 
   /**
    * Check if user has premium access for portrait generation
-   * Shows upsell dialog if not premium
+   * Shows upsell dialog if not premium or verification dialog if auth token is missing
    */
   async checkPremiumAccess(): Promise<boolean> {
-    const isPremium = await this.subscriptionService.checkSubscription();
-    if (isPremium) {
+    const result = await this.premiumAccessService.checkAccess();
+
+    if (result.hasAccess) {
       return true;
     }
-    await this.showUpsellDialog();
+
+    // Handle UI based on reason
+    if (result.reason === 'verification_needed') {
+      await this.showVerificationNeededDialog();
+    } else {
+      await this.showUpsellDialog();
+    }
     return false;
+  }
+
+  /**
+   * Show dialog explaining that email verification is needed
+   * For users who are premium but haven't completed portal verification
+   */
+  async showVerificationNeededDialog(): Promise<void> {
+    const modal = await this.modalController.create({
+      component: PremiumUpsellDialogComponent,
+      componentProps: {
+        featureName: 'Email Verification Required',
+        description: 'You have an active premium subscription, but need to verify your email to use premium features. Please complete the verification process in Settings.',
+        benefits: [
+          'Your subscription is active',
+          'One-time email verification via Stripe',
+          'Secure access to all premium features',
+          'Go to Settings → Premium to verify'
+        ]
+      },
+      cssClass: 'premium-upsell-modal'
+    });
+    await modal.present();
   }
 
   /**
@@ -135,7 +170,8 @@ export class PortraitService {
           backstory: characterInfo.backstory,
           personality: characterInfo.personality,
           openRouterApiKey: settings.openRouter.apiKey,
-          model: portraitModel
+          model: portraitModel,
+          style: characterInfo.style
         })
       });
 

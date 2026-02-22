@@ -7,13 +7,13 @@ export interface BeatAI {
   createdAt: Date;
   updatedAt: Date;
   wordCount?: number;
-  beatType?: 'story' | 'scene'; // Default is 'story' for backwards compatibility
+  beatType?: 'story' | 'scene' | 'envision'; // Default is 'story' for backwards compatibility
   model?: string; // AI model used for generation
   selectedScenes?: { sceneId: string; chapterId: string; }[]; // Persisted selected scene contexts
   includeStoryOutline?: boolean; // Persisted story outline setting
   currentVersionId?: string; // ID of the currently active version in history
   hasHistory?: boolean; // Quick flag to check if version history exists
-  lastAction?: 'generate' | 'rewrite'; // Track the last action performed on this beat
+  lastAction?: 'generate' | 'rewrite' | 'polish'; // Track the last action performed on this beat
   rewriteContext?: { // Context for rewrite operations to enable proper regeneration
     originalText: string; // The text that was rewritten
     instruction: string; // The user's rewrite instruction
@@ -31,13 +31,13 @@ export interface BeatAIPromptEvent {
   beatId: string;
   prompt?: string;
   rewriteInstruction?: string;  // Rewrite instruction for AI (rewrite action only)
-  action: 'generate' | 'deleteAfter' | 'regenerate' | 'rewrite';
+  action: 'generate' | 'deleteAfter' | 'regenerate' | 'rewrite' | 'polish';
   wordCount?: number;
   model?: string;
   storyId?: string;
   chapterId?: string;
   sceneId?: string;
-  beatType?: 'story' | 'scene';
+  beatType?: 'story' | 'scene' | 'envision';
   customContext?: {
     selectedScenes: string[];
     includeStoryOutline: boolean;

@@ -8,7 +8,6 @@ export interface SlashCommand {
 
 export enum SlashCommandAction {
   INSERT_BEAT = 'insert_beat',
-  INSERT_SCENE_BEAT = 'insert_scene_beat',
   INSERT_IMAGE = 'insert_image'
 }
 

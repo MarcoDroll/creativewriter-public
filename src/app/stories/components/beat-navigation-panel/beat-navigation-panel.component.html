@@ -40,7 +40,7 @@
     <div class="panel-body">
       <div class="beat-list">
         <div
-          *ngFor="let beat of beats; let i = index"
+          *ngFor="let beat of beats; let i = index; trackBy: trackByBeatId"
           class="beat-item"
           (click)="selectBeat(beat.beatId); $event.stopPropagation()"
           (keydown.enter)="selectBeat(beat.beatId); $event.stopPropagation()"

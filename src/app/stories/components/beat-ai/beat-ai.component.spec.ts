@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CUSTOM_ELEMENTS_SCHEMA, ChangeDetectorRef } from '@angular/core';
-import { PopoverController, ModalController, AlertController } from '@ionic/angular/standalone';
+import { PopoverController, ModalController, AlertController, ActionSheetController } from '@ionic/angular/standalone';
 import { of } from 'rxjs';
 import { BeatAIComponent } from './beat-ai.component';
 import { ModelService } from '../../../core/services/model.service';
@@ -21,6 +21,7 @@ describe('BeatAIComponent', () => {
   let mockModalController: jasmine.SpyObj<ModalController>;
   let mockPopoverController: jasmine.SpyObj<PopoverController>;
   let mockAlertController: jasmine.SpyObj<AlertController>;
+  let mockActionSheetController: jasmine.SpyObj<ActionSheetController>;
   let mockModelService: jasmine.SpyObj<ModelService>;
   let mockSettingsService: jasmine.SpyObj<SettingsService>;
   let mockBeatAIService: jasmine.SpyObj<BeatAIService>;
@@ -53,6 +54,7 @@ describe('BeatAIComponent', () => {
     mockModalController = jasmine.createSpyObj('ModalController', ['create', 'dismiss']);
     mockPopoverController = jasmine.createSpyObj('PopoverController', ['create', 'dismiss']);
     mockAlertController = jasmine.createSpyObj('AlertController', ['create']);
+    mockActionSheetController = jasmine.createSpyObj('ActionSheetController', ['create']);
     mockModelService = jasmine.createSpyObj('ModelService', ['getCombinedModels']);
     mockSettingsService = jasmine.createSpyObj('SettingsService', ['getSettings']);
     mockBeatAIService = jasmine.createSpyObj('BeatAIService', ['stopGeneration', 'previewPrompt']);
@@ -67,7 +69,7 @@ describe('BeatAIComponent', () => {
     mockTokenCounter = jasmine.createSpyObj('TokenCounterService', ['countTokens']);
     mockModalService = jasmine.createSpyObj('BeatAIModalService', ['openModal', 'closeModal', 'show']);
     mockChangeDetectorRef = jasmine.createSpyObj('ChangeDetectorRef', ['detectChanges', 'markForCheck']);
-    mockPremiumRewriteService = jasmine.createSpyObj('PremiumRewriteService', ['rewriteContent']);
+    mockPremiumRewriteService = jasmine.createSpyObj('PremiumRewriteService', ['rewriteContent', 'checkAndGateAccess']);
     mockSceneAIGenerationService = jasmine.createSpyObj('SceneAIGenerationService', ['generateStagingNotes', 'isGeneratingStagingNotes']);
     mockStoryService = jasmine.createSpyObj('StoryService', ['getStory']);
 
@@ -99,6 +101,7 @@ describe('BeatAIComponent', () => {
         { provide: ModalController, useValue: mockModalController },
         { provide: PopoverController, useValue: mockPopoverController },
         { provide: AlertController, useValue: mockAlertController },
+        { provide: ActionSheetController, useValue: mockActionSheetController },
         { provide: ModelService, useValue: mockModelService },
         { provide: SettingsService, useValue: mockSettingsService },
         { provide: BeatAIService, useValue: mockBeatAIService },
@@ -336,6 +339,80 @@ describe('BeatAIComponent', () => {
       expect(component.beatData.lastAction).toBe('generate');
       expect(component.beatData.rewriteContext).toBeUndefined();
       expect(component.regenerateContent).toHaveBeenCalled();
+    });
+  });
+
+  describe('rewriteContent (ActionSheet split button)', () => {
+    let mockActionSheet: jasmine.SpyObj<HTMLIonActionSheetElement>;
+
+    beforeEach(() => {
+      mockActionSheet = jasmine.createSpyObj('ActionSheet', ['present']);
+      mockActionSheet.present.and.returnValue(Promise.resolve());
+      mockActionSheetController.create.and.returnValue(Promise.resolve(mockActionSheet));
+    });
+
+    it('should not proceed if premium gate blocks access', async () => {
+      mockPremiumRewriteService.checkAndGateAccess.and.returnValue(Promise.resolve(false));
+
+      await component.rewriteContent();
+
+      expect(mockActionSheetController.create).not.toHaveBeenCalled();
+    });
+
+    it('should show no content alert when there is no text after beat', async () => {
+      mockPremiumRewriteService.checkAndGateAccess.and.returnValue(Promise.resolve(true));
+      mockProseMirrorService.getTextAfterBeat.and.returnValue('');
+
+      const mockAlert = jasmine.createSpyObj('Alert', ['present']);
+      mockAlert.present.and.returnValue(Promise.resolve());
+      mockAlertController.create.and.returnValue(Promise.resolve(mockAlert));
+
+      await component.rewriteContent();
+
+      expect(mockAlertController.create).toHaveBeenCalledWith(jasmine.objectContaining({
+        header: 'No Content'
+      }));
+      expect(mockActionSheetController.create).not.toHaveBeenCalled();
+    });
+
+    it('should open ActionSheet with rewrite and polish options', async () => {
+      mockPremiumRewriteService.checkAndGateAccess.and.returnValue(Promise.resolve(true));
+      mockProseMirrorService.getTextAfterBeat.and.returnValue('Some existing text');
+
+      await component.rewriteContent();
+
+      expect(mockActionSheetController.create).toHaveBeenCalledWith(jasmine.objectContaining({
+        header: 'Rewrite Options',
+        buttons: jasmine.arrayContaining([
+          jasmine.objectContaining({ text: 'Rewrite with custom prompt' }),
+          jasmine.objectContaining({ text: 'Polish expression & wording' }),
+          jasmine.objectContaining({ text: 'Cancel', role: 'cancel' })
+        ])
+      }));
+      expect(mockActionSheet.present).toHaveBeenCalled();
+    });
+  });
+
+  describe('regenerateContent with polish', () => {
+    it('should regenerate as polish when lastAction is polish', async () => {
+      component.beatData.lastAction = 'polish';
+      component.beatData.rewriteContext = { originalText: 'original text', instruction: 'more vivid' };
+      component.beatData.prompt = 'test prompt';
+      component.currentPrompt = 'test prompt';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).selectedModel = 'test-model';
+
+      mockProseMirrorService.getTextAfterBeat.and.returnValue('polished text');
+      spyOn(component.promptSubmit, 'emit');
+      spyOn(component.contentUpdate, 'emit');
+
+      await component.regenerateContent();
+
+      expect(component.promptSubmit.emit).toHaveBeenCalledWith(jasmine.objectContaining({
+        action: 'polish',
+        existingText: 'polished text',
+        rewriteInstruction: 'more vivid'
+      }));
     });
   });
 

@@ -79,7 +79,7 @@
                 <ion-card-content>
                   <ion-list>
                     <ion-item 
-                      *ngFor="let category of sortedCategories()" 
+                      *ngFor="let category of sortedCategories(); trackBy: trackByCategoryId"
                       button
                       [class.active-category]="selectedCategoryId() === category.id"
                       (click)="selectCategory(category.id)">
@@ -123,7 +123,7 @@
                   <ion-card-content>
                     <ion-grid>
                       <ion-row>
-                        <ion-col *ngFor="let entry of searchResults()" size="12" size-md="6" size-lg="4">
+                        <ion-col *ngFor="let entry of searchResults(); trackBy: trackByEntryId" size="12" size-md="6" size-lg="4">
                           <ion-card button (click)="selectEntry(entry)" class="entry-card">
                             <ion-card-header>
                               <div class="entry-header-with-thumbnail">
@@ -154,7 +154,7 @@
                                   <ion-icon name="person"></ion-icon>
                                   <ion-label>{{ entry.metadata?.['storyRole'] }}</ion-label>
                                 </ion-chip>
-                                <ion-chip *ngFor="let tag of entry.tags" color="medium">
+                                <ion-chip *ngFor="let tag of entry.tags; trackBy: trackByTag" color="medium">
                                   <ion-icon name="pricetag"></ion-icon>
                                   <ion-label>{{ tag }}</ion-label>
                                 </ion-chip>
@@ -189,7 +189,7 @@
                       <ion-grid>
                         <ion-row>
                           <ion-col 
-                            *ngFor="let entry of sortedEntries()" 
+                            *ngFor="let entry of sortedEntries(); trackBy: trackByEntryId"
                             size="12" 
                             size-md="6" 
                             size-lg="4">
@@ -220,7 +220,7 @@
                                     <ion-icon name="person"></ion-icon>
                                     <ion-label>{{ entry.metadata?.['storyRole'] }}</ion-label>
                                   </ion-chip>
-                                  <ion-chip *ngFor="let tag of entry.tags" color="medium">
+                                  <ion-chip *ngFor="let tag of entry.tags; trackBy: trackByTag" color="medium">
                                     <ion-icon name="pricetag"></ion-icon>
                                     <ion-label>{{ tag }}</ion-label>
                                   </ion-chip>
@@ -296,11 +296,11 @@
                     </ion-input>
                   </ion-item>
                   <ion-note class="tag-help-text">
-                    Tags for identification in Beat-AI (e.g. Combat, Romance, Conflict)
+                    Keywords that auto-include this entry when they appear in your beat prompt or scene text (e.g. Combat, Romance, Conflict). Tags must be at least 4 characters.
                   </ion-note>
                   <div class="tags-container" *ngIf="editingEntry.tags?.length">
                     <ion-chip 
-                      *ngFor="let tag of editingEntry.tags" 
+                      *ngFor="let tag of editingEntry.tags; trackBy: trackByTag"
                       (click)="removeTag(tag)"
                       color="primary"
                       class="tag-chip">
@@ -318,7 +318,7 @@
                 <!-- Portrait Gallery (horizontal thumbnail strip) -->
                 <div class="portrait-gallery" *ngIf="editingEntry.portraitGallery?.length">
                   <div
-                    *ngFor="let portrait of editingEntry.portraitGallery"
+                    *ngFor="let portrait of editingEntry.portraitGallery; trackBy: trackByPortraitId"
                     class="gallery-thumbnail"
                     [class.active]="portrait.id === editingEntry.activePortraitId"
                     (click)="selectPortrait(portrait.id)"
@@ -350,13 +350,13 @@
                   <img
                     [src]="'data:image/jpeg;base64,' + getActivePortraitBase64()"
                     alt="Active Portrait">
-                  <ion-button fill="clear" color="danger" size="small" (click)="removePortrait()" class="remove-portrait-btn" title="Clear all portraits">
+                  <ion-button fill="clear" color="danger" size="small" (click)="editingEntry.activePortraitId && removeGalleryPortrait(editingEntry.activePortraitId)" class="remove-portrait-btn" title="Remove this portrait">
                     <ion-icon name="trash" slot="icon-only"></ion-icon>
                   </ion-button>
                 </div>
 
                 <!-- Empty State -->
-                <div class="portrait-empty" *ngIf="!editingEntry.portraitGallery?.length && !editingEntry.portraitBase64">
+                <div class="portrait-empty" *ngIf="!editingEntry.portraitGallery?.length">
                   <ion-icon name="person-outline" class="empty-portrait-icon"></ion-icon>
                   <p>No portraits yet</p>
                 </div>
@@ -370,17 +370,30 @@
 
                 <!-- Portrait Actions -->
                 <div class="portrait-actions">
-                  <!-- Generate Button (Characters Only, Premium) -->
-                  <ion-button
-                    *ngIf="isCharacterEntry()"
-                    fill="outline"
-                    size="small"
-                    [disabled]="!canGeneratePortrait() || isGeneratingPortrait()"
-                    (click)="generatePortrait()">
-                    <ion-icon name="sparkles" slot="start"></ion-icon>
-                    {{ isGeneratingPortrait() ? 'Generating...' : 'Generate Portrait' }}
-                    <ion-spinner *ngIf="isGeneratingPortrait()" name="crescent" slot="end" style="margin-left: 8px;"></ion-spinner>
-                  </ion-button>
+                  <!-- Style Selector + Generate Button (Characters Only, Premium) -->
+                  <div class="portrait-generate-row" *ngIf="isCharacterEntry()">
+                    <ion-select
+                      class="portrait-style-select"
+                      [value]="selectedPortraitStyle"
+                      (ionChange)="onPortraitStyleChange($event.detail.value)"
+                      interface="popover"
+                      placeholder="Style">
+                      <ion-select-option
+                        *ngFor="let style of portraitStyles; trackBy: trackByStyleValue"
+                        [value]="style.value">
+                        {{ style.label }}
+                      </ion-select-option>
+                    </ion-select>
+                    <ion-button
+                      fill="outline"
+                      size="small"
+                      [disabled]="!canGeneratePortrait() || isGeneratingPortrait()"
+                      (click)="generatePortrait()">
+                      <ion-icon name="sparkles" slot="start"></ion-icon>
+                      {{ isGeneratingPortrait() ? 'Generating...' : 'Generate Portrait' }}
+                      <ion-spinner *ngIf="isGeneratingPortrait()" name="crescent" slot="end" style="margin-left: 8px;"></ion-spinner>
+                    </ion-button>
+                  </div>
 
                   <!-- Upload Button (All Users, All Entry Types) -->
                   <ion-button fill="outline" size="small" (click)="fileInput.click()" [disabled]="uploadingImage()">
@@ -418,7 +431,7 @@
                       class="role-select">
                       <ion-select-option value="">No Role</ion-select-option>
                       <ion-select-option 
-                        *ngFor="let role of storyRoles" 
+                        *ngFor="let role of storyRoles; trackBy: trackByRoleValue"
                         [value]="role.value">
                         {{ role.label }}
                       </ion-select-option>
@@ -448,22 +461,11 @@
                 
               <!-- Custom Fields Section -->
               <div class="form-section">
-                <div class="section-header">
-                  <h3 class="section-title">Custom Fields</h3>
-                  <ion-button 
-                    size="small" 
-                    fill="outline" 
-                    color="primary"
-                    [disabled]="!newCustomFieldName.trim()"
-                    (click)="addCustomField()">
-                    <ion-icon name="add" slot="start"></ion-icon>
-                    Add Field
-                  </ion-button>
-                </div>
+                <h3 class="section-title">Custom Fields</h3>
                   
                 <!-- Existing custom fields -->
                 <div class="custom-fields-container">
-                  <div *ngFor="let field of editingEntry.customFields" class="custom-field-item">
+                  <div *ngFor="let field of editingEntry.customFields; trackBy: trackByFieldIndex" class="custom-field-item">
                     <div class="custom-field-header">
                       <ion-item lines="none" class="form-item field-name-item">
                         <ion-label position="stacked">Field Name</ion-label>
@@ -497,21 +499,38 @@
                   <div class="new-custom-field">
                     <ion-item lines="none" class="form-item">
                       <ion-label position="stacked">New Field Name</ion-label>
-                      <ion-input 
-                        [(ngModel)]="newCustomFieldName" 
+                      <ion-input
+                        [(ngModel)]="newCustomFieldName"
                         placeholder="Enter field name...">
                       </ion-input>
                     </ion-item>
                     <ion-item lines="none" class="form-item">
                       <ion-label position="stacked">Field Value</ion-label>
-                    <ion-textarea 
-                      [(ngModel)]="newCustomFieldValue" 
+                    <ion-textarea
+                      [(ngModel)]="newCustomFieldValue"
                       placeholder="Enter field value..."
                       rows="3"
                       [autoGrow]="true"
                       class="scrollable-textarea">
                     </ion-textarea>
                     </ion-item>
+
+                    <!-- Inline add button and helper text -->
+                    <div class="custom-field-actions">
+                      <ion-button
+                        size="small"
+                        fill="outline"
+                        color="primary"
+                        [disabled]="!newCustomFieldName.trim()"
+                        (click)="addCustomField()"
+                        aria-describedby="custom-field-helper">
+                        <ion-icon name="add" slot="start"></ion-icon>
+                        Add Field
+                      </ion-button>
+                      <ion-note id="custom-field-helper" class="helper-text">
+                        Enter a name and click Add Field. Save the entry to persist changes.
+                      </ion-note>
+                    </div>
                   </div>
                 </div>
               </div>

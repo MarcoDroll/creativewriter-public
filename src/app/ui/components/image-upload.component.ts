@@ -100,31 +100,31 @@ export interface ImageUploadResult {
   `,
   styles: [`
     .image-upload-card {
-      background: linear-gradient(135deg, rgba(20, 20, 20, 0.3) 0%, rgba(15, 15, 15, 0.3) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      backdrop-filter: blur(8px) saturate(120%);
-      -webkit-backdrop-filter: blur(8px) saturate(120%);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      transition: all 0.3s ease;
-      --color: #f8f9fa;
+      background: var(--cw-gradient-glass);
+      border: 1px solid var(--cw-border-subtle);
+      border-radius: var(--cw-radius-xl);
+      backdrop-filter: blur(var(--cw-blur-md)) saturate(120%);
+      -webkit-backdrop-filter: blur(var(--cw-blur-md)) saturate(120%);
+      box-shadow: var(--cw-shadow-md);
+      transition: all var(--cw-transition-slow);
+      --color: var(--cw-text-primary);
     }
 
     .image-upload-card:hover {
-      background: linear-gradient(135deg, rgba(25, 25, 25, 0.4) 0%, rgba(20, 20, 20, 0.4) 100%);
-      border-color: rgba(71, 118, 230, 0.3);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      background: var(--cw-gradient-glass-hover);
+      border-color: var(--cw-border-primary);
+      box-shadow: var(--cw-shadow-lg);
       transform: translateY(-2px);
     }
 
     .upload-area {
-      border: 2px dashed rgba(255, 255, 255, 0.3);
-      border-radius: 12px;
-      padding: 2rem;
+      border: 2px dashed var(--cw-border-default);
+      border-radius: var(--cw-radius-lg);
+      padding: var(--cw-space-2xl);
       text-align: center;
       cursor: pointer;
-      transition: all 0.3s ease;
-      background: rgba(30, 30, 30, 0.2);
+      transition: all var(--cw-transition-slow);
+      background: var(--cw-bg-hover);
       min-height: 200px;
       display: flex;
       align-items: center;
@@ -132,25 +132,25 @@ export interface ImageUploadResult {
     }
 
     .upload-area:hover {
-      border-color: rgba(71, 118, 230, 0.5);
-      background: rgba(30, 30, 30, 0.3);
+      border-color: var(--cw-border-primary);
+      background: var(--cw-bg-input);
     }
 
     .upload-area:focus {
       outline: none;
-      border-color: rgba(71, 118, 230, 0.7);
-      background: rgba(30, 30, 30, 0.3);
-      box-shadow: 0 0 0 2px rgba(71, 118, 230, 0.3);
+      border-color: var(--cw-color-primary);
+      background: var(--cw-bg-input);
+      box-shadow: 0 0 0 2px var(--cw-border-primary);
     }
 
     .upload-area.dragging {
-      border-color: #4776e6;
-      background: rgba(71, 118, 230, 0.1);
+      border-color: var(--cw-color-primary);
+      background: var(--cw-bg-info-subtle);
       transform: scale(1.02);
     }
 
     .upload-area.has-image {
-      padding: 1rem;
+      padding: var(--cw-space-lg);
       min-height: auto;
     }
 
@@ -158,37 +158,37 @@ export interface ImageUploadResult {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1rem;
+      gap: var(--cw-space-lg);
     }
 
     .upload-icon {
       font-size: 3rem;
-      color: rgba(71, 118, 230, 0.7);
-      margin-bottom: 0.5rem;
+      color: var(--cw-color-primary);
+      margin-bottom: var(--cw-space-sm);
     }
 
     .upload-prompt h3 {
-      color: #f8f9fa;
+      color: var(--cw-text-primary);
       margin: 0;
-      font-size: 1.2rem;
-      font-weight: 600;
+      font-size: var(--cw-font-size-lg);
+      font-weight: var(--cw-font-weight-semibold);
     }
 
     .upload-prompt p {
-      color: #adb5bd;
+      color: var(--cw-text-muted);
       margin: 0;
-      font-size: 0.95rem;
+      font-size: var(--cw-font-size-sm);
     }
 
     .upload-prompt ion-note {
-      color: #6c757d;
-      font-size: 0.85rem;
+      color: var(--cw-text-disabled);
+      font-size: var(--cw-font-size-xs);
     }
 
     .image-preview {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: var(--cw-space-lg);
       text-align: left;
       width: 100%;
     }
@@ -196,9 +196,9 @@ export interface ImageUploadResult {
     .preview-thumbnail {
       width: 80px;
       height: 80px;
-      border-radius: 8px;
+      border-radius: var(--cw-radius-md);
       overflow: hidden;
-      border: 2px solid rgba(255, 255, 255, 0.2);
+      border: 2px solid var(--cw-border-default);
       flex-shrink: 0;
     }
 
@@ -216,40 +216,40 @@ export interface ImageUploadResult {
     }
 
     .image-info h4 {
-      color: #f8f9fa;
-      margin: 0 0 0.25rem 0;
-      font-size: 1rem;
-      font-weight: 600;
+      color: var(--cw-text-primary);
+      margin: 0 0 var(--cw-space-xs) 0;
+      font-size: var(--cw-font-size-md);
+      font-weight: var(--cw-font-weight-semibold);
     }
 
     .image-info p {
-      color: #adb5bd;
+      color: var(--cw-text-muted);
       margin: 0;
-      font-size: 0.85rem;
+      font-size: var(--cw-font-size-xs);
     }
 
     .image-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
     }
 
     .error-item {
-      --background: rgba(220, 53, 69, 0.1);
-      --border-color: rgba(220, 53, 69, 0.3);
-      margin-top: 1rem;
-      border-radius: 8px;
+      --background: var(--cw-bg-danger-subtle);
+      --border-color: var(--cw-border-danger);
+      margin-top: var(--cw-space-lg);
+      border-radius: var(--cw-radius-md);
     }
 
     .success-item {
-      --background: rgba(25, 135, 84, 0.1);
-      --border-color: rgba(25, 135, 84, 0.3);
-      margin-top: 1rem;
-      border-radius: 8px;
+      --background: var(--cw-bg-success-subtle);
+      --border-color: var(--cw-border-success);
+      margin-top: var(--cw-space-lg);
+      border-radius: var(--cw-radius-md);
     }
 
     @media (max-width: 768px) {
       .upload-area {
-        padding: 1.5rem;
+        padding: var(--cw-space-xl);
         min-height: 150px;
       }
 
@@ -258,19 +258,19 @@ export interface ImageUploadResult {
       }
 
       .upload-prompt h3 {
-        font-size: 1.1rem;
+        font-size: var(--cw-font-size-md);
       }
 
       .image-preview {
         flex-direction: column;
         text-align: center;
-        gap: 0.75rem;
+        gap: var(--cw-space-md);
       }
 
       .image-info {
         width: 100%;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: var(--cw-space-sm);
       }
     }
   `]

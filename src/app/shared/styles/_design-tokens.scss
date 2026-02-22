@@ -17,16 +17,20 @@
 
   // --- Semantic Colors ---
   --cw-color-success: #51cf66;
+  --cw-color-success-light: #40c463;
   --cw-color-success-dark: #45b058;
   --cw-color-success-darker: #28a745;
   --cw-color-success-active: #1e7e34;
   --cw-color-warning: #ffc107;
   --cw-color-warning-dark: #e0a800;
   --cw-color-danger: #ff6b6b;
+  --cw-color-danger-light: #ff6b7a;
   --cw-color-danger-dark: #dc3545;
   --cw-color-danger-darker: #c82333;
   --cw-color-danger-active: #bd2130;
   --cw-color-info: #4dabf7;
+  --cw-color-info-dark: #0d6efd;
+  --cw-color-processing: #8a2be2;
 
   // ============================================
   // BACKGROUND COLORS
@@ -37,10 +41,17 @@
   --cw-bg-glass: rgba(15, 15, 25, 0.6);
   --cw-bg-input: rgba(30, 30, 30, 0.6);
   --cw-bg-hover: rgba(255, 255, 255, 0.05);
+  --cw-bg-active: rgba(255, 255, 255, 0.15);
+  --cw-bg-surface: rgba(25, 25, 30, 0.5);
   --cw-bg-primary-hover: rgba(71, 118, 230, 0.5);
   --cw-bg-info-subtle: rgba(77, 171, 247, 0.18);
   --cw-bg-warning-subtle: rgba(255, 193, 7, 0.1);
+  --cw-bg-success-subtle: rgba(81, 207, 102, 0.2);
+  --cw-bg-danger-subtle: rgba(220, 53, 69, 0.2);
+  --cw-bg-processing-subtle: rgba(138, 43, 226, 0.2);
   --cw-bg-dropdown: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(15, 15, 15, 0.95) 100%);
+  --cw-bg-modal-backdrop: rgba(0, 0, 0, 0.8);
+  --cw-bg-backdrop: #000;  // Pure black backdrop for cropper/viewer
 
   // Button backgrounds
   --cw-bg-button-ghost: rgba(255, 255, 255, 0.1);
@@ -58,6 +69,7 @@
 
   // Editor highlighting colors
   --cw-direct-speech-color: #7c3aed;  // Purple - for quoted dialogue text
+  --cw-thinking-color: #06b6d4;       // Cyan - for thinking text in asterisks
 
   // ============================================
   // BORDER COLORS
@@ -70,6 +82,9 @@
   --cw-border-primary: rgba(71, 118, 230, 0.5);
   --cw-border-info: rgba(77, 171, 247, 0.45);
   --cw-border-warning: rgba(255, 193, 7, 0.2);
+  --cw-border-success: rgba(81, 207, 102, 0.4);
+  --cw-border-danger: rgba(220, 53, 69, 0.4);
+  --cw-border-processing: rgba(138, 43, 226, 0.4);
 
   // ============================================
   // SPACING SCALE (4px base)
@@ -169,6 +184,7 @@
   // ============================================
   // BLUR VALUES
   // ============================================
+  --cw-blur-xs: 2px;
   --cw-blur-sm: 4px;
   --cw-blur-md: 8px;
   --cw-blur-lg: 15px;
@@ -332,5 +348,21 @@
 
   .alert-title {
     color: var(--cw-color-warning);
+  }
+}
+
+// ============================================
+// MOBILE PERFORMANCE OPTIMIZATIONS
+// ============================================
+// Reduce blur effects on mobile devices to improve scroll performance
+// and reduce GPU load from backdrop-filter operations
+
+@media (max-width: 480px) {
+  :root {
+    --cw-blur-xs: 1px;
+    --cw-blur-sm: 2px;
+    --cw-blur-md: 4px;
+    --cw-blur-lg: 6px;
+    --cw-blur-xl: 8px;
   }
 }

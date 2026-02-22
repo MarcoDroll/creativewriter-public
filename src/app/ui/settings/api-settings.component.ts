@@ -15,7 +15,7 @@ import { ModelOption } from '../../core/models/model.interface';
 import { OllamaApiService } from '../../core/services/ollama-api.service';
 import { ClaudeApiService } from '../../core/services/claude-api.service';
 import { OpenAICompatibleApiService } from '../../core/services/openai-compatible-api.service';
-import { ModelService } from '../../core/services/model.service';
+import { ModelService, OpenRouterProviderInfo } from '../../core/services/model.service';
 import { ProviderIconComponent } from '../../shared/components/provider-icon/provider-icon.component';
 import { getProviderIcon as getIcon, getProviderTooltip as getTooltip } from '../../core/provider-icons';
 
@@ -58,6 +58,8 @@ export class ApiSettingsComponent implements OnDestroy {
   claudeConnectionStatus: 'success' | 'error' | null = null;
   testingOpenAICompatibleConnection = false;
   openAICompatibleConnectionStatus: 'success' | 'error' | null = null;
+  openRouterProviders: OpenRouterProviderInfo[] = [];
+  loadingProviders = false;
 
   formatContextLength(length: number): string {
     if (length >= 1000000) {
@@ -84,6 +86,21 @@ export class ApiSettingsComponent implements OnDestroy {
   loadReplicateModels(): void {
     this.subscriptions.add(
       this.modelService.loadReplicateModels().subscribe()
+    );
+  }
+
+  loadOpenRouterProviders(): void {
+    this.loadingProviders = true;
+    this.subscriptions.add(
+      this.modelService.loadOpenRouterProviders().subscribe({
+        next: (providers) => {
+          this.openRouterProviders = providers;
+          this.loadingProviders = false;
+        },
+        error: () => {
+          this.loadingProviders = false;
+        }
+      })
     );
   }
 
@@ -219,6 +236,16 @@ export class ApiSettingsComponent implements OnDestroy {
     this.openAICompatibleConnectionStatus = null; // Reset connection status when URL changes
 
     // Auto-load models when URL is entered and provider is enabled
+    if (this.settings.openAICompatible.enabled && this.settings.openAICompatible.baseUrl) {
+      this.subscriptions.add(this.modelService.loadOpenAICompatibleModels().subscribe());
+    }
+  }
+
+  onOpenAICompatibleApiKeyChange(): void {
+    this.settingsChange.emit();
+    this.openAICompatibleConnectionStatus = null; // Reset connection status when API key changes
+
+    // Auto-reload models if enabled and base URL is set
     if (this.settings.openAICompatible.enabled && this.settings.openAICompatible.baseUrl) {
       this.subscriptions.add(this.modelService.loadOpenAICompatibleModels().subscribe());
     }

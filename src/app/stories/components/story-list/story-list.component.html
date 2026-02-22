@@ -6,10 +6,9 @@
   [burgerMenuFooterContent]="burgerMenuFooter"
   [rightActions]="rightActions"
   [showUserInfo]="!!currentUser"
-  [userGreeting]="currentUser ? '👋 ' + (currentUser.displayName || currentUser.username) : ''"
+  [userGreeting]="currentUser?.displayName || currentUser?.username || ''"
   (burgerMenuToggle)="onBurgerMenuToggle()">
-  
-  <app-generation-status slot="user-status" class="compact-generation-status"></app-generation-status>
+
   <app-sync-status
     slot="user-status"
     [showActions]="false"
@@ -64,6 +63,7 @@
   <div class="stories-grid" *ngIf="stories.length > 0; else noStories"
        [cdkDropListDisabled]="!reorderingEnabled"
        cdkDropList
+       cdkDropListOrientation="mixed"
        (cdkDropListDropped)="drop($event)">
     <ion-card class="story-card"
               *ngFor="let story of stories; trackBy: trackByStoryId"

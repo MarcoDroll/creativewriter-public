@@ -29,6 +29,14 @@ export interface ImageGenerationSettings {
   preferredProvider: ImageGenerationProvider;
 }
 
+export interface ServerGenerationSettings {
+  enabled: boolean;  // Whether to use server-side generation (prevents browser minimization issues)
+}
+
+export interface ResearchSettings {
+  skipConfirmation: boolean;  // Whether to skip the token usage confirmation dialog
+}
+
 export interface Settings {
   openRouter: OpenRouterSettings;
   replicate: ReplicateSettings;
@@ -42,6 +50,8 @@ export interface Settings {
   stagingNotesGeneration: StagingNotesGenerationSettings;
   sceneGenerationFromOutline: SceneGenerationFromOutlineSettings;
   imageGeneration: ImageGenerationSettings;
+  serverGeneration: ServerGenerationSettings;
+  research: ResearchSettings;
   selectedModel: string; // Global selected model (format: "provider:model_id")
   favoriteModels: string[]; // Legacy list of favorite model IDs for quick access (mirrors favoriteModelLists.beatInput)
   favoriteModelLists: FavoriteModelLists; // Structured favorite model lists by feature
@@ -69,6 +79,7 @@ export interface AppearanceSettings {
   textColor: string; // Hex color code for text in editor and beat AI
   backgroundImage: string; // Background image filename or 'none' for no background
   directSpeechColor: string | null; // Hex color code for direct speech (dialogue in quotes), or null to derive from textColor
+  thinkingColor: string | null; // Hex color code for thinking text (in asterisks *like this*), or null to derive from textColor
 }
 
 export interface OpenRouterSettings {
@@ -77,6 +88,32 @@ export interface OpenRouterSettings {
   temperature: number;
   topP: number;
   enabled: boolean;
+  zeroDataRetention: boolean;   // Only route to providers that don't store prompts
+  denyDataCollection: boolean;  // Block providers that may collect user data
+  ignoredProviders: string[];   // Provider slugs to exclude from routing
+}
+
+export interface OpenRouterProviderPrefs {
+  zdr?: boolean;
+  data_collection?: 'allow' | 'deny';
+  ignore?: string[];
+}
+
+/** Build the provider preferences object from OpenRouter settings. Returns undefined if empty. */
+export function buildOpenRouterProviderPrefs(
+  settings: OpenRouterSettings
+): OpenRouterProviderPrefs | undefined {
+  const prefs: OpenRouterProviderPrefs = {};
+  if (settings.zeroDataRetention) {
+    prefs.zdr = true;
+  }
+  if (settings.denyDataCollection) {
+    prefs.data_collection = 'deny';
+  }
+  if (settings.ignoredProviders?.length) {
+    prefs.ignore = settings.ignoredProviders;
+  }
+  return Object.keys(prefs).length > 0 ? prefs : undefined;
 }
 
 export interface ReplicateSettings {
@@ -121,6 +158,7 @@ export interface ClaudeSettings {
 
 export interface OpenAICompatibleSettings {
   baseUrl: string;
+  apiKey?: string;
   model: string;
   temperature: number;
   topP: number;
@@ -174,7 +212,10 @@ export const DEFAULT_SETTINGS: Settings = {
     model: '',
     temperature: 0.7,
     topP: 1.0,
-    enabled: false
+    enabled: false,
+    zeroDataRetention: true,
+    denyDataCollection: true,
+    ignoredProviders: []
   },
   replicate: {
     apiKey: '',
@@ -218,6 +259,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   openAICompatible: {
     baseUrl: 'http://localhost:1234',
+    apiKey: '',
     model: '',
     temperature: 0.7,
     topP: 1.0,
@@ -265,10 +307,17 @@ export const DEFAULT_SETTINGS: Settings = {
     defaultAspectRatio: '1:1',
     preferredProvider: 'openrouter'
   },
+  serverGeneration: {
+    enabled: false  // Disabled by default, user must opt-in
+  },
+  research: {
+    skipConfirmation: false  // Show confirmation dialog by default
+  },
   appearance: {
     textColor: '#e0e0e0', // Default light gray color for dark theme
     backgroundImage: 'none', // No background image by default
-    directSpeechColor: null // Derive from textColor by default
+    directSpeechColor: null, // Derive from textColor by default
+    thinkingColor: null // Derive from textColor by default (cyan shift)
   },
   premium: {
     email: '',

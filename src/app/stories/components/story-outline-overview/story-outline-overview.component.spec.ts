@@ -152,7 +152,7 @@ describe('StoryOutlineOverviewComponent', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
     }));
 
-    it('should expand all chapters by default (up to 10)', fakeAsync(() => {
+    it('should load story with many chapters', fakeAsync(() => {
       const manyChapters: Chapter[] = Array.from({ length: 15 }, (_, i) => ({
         ...mockChapter,
         id: `chapter-${i}`,
@@ -164,7 +164,8 @@ describe('StoryOutlineOverviewComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(component.expanded().size).toBe(10);
+      // Accordion expanded state is now managed by Ionic internally
+      expect(component.story()?.chapters.length).toBe(15);
     }));
   });
 
@@ -372,26 +373,7 @@ describe('StoryOutlineOverviewComponent', () => {
     }));
   });
 
-  describe('Accordion State', () => {
-    beforeEach(fakeAsync(() => {
-      fixture.detectChanges();
-      tick();
-    }));
-
-    it('should track expanded chapters', () => {
-      expect(component.expanded().has('chapter-1')).toBeTrue();
-    });
-
-    it('should handle accordion change event', () => {
-      const event = { detail: { value: ['chapter-2', 'chapter-3'] } } as CustomEvent;
-
-      component.onAccordionChange(event);
-
-      expect(component.expanded().has('chapter-2')).toBeTrue();
-      expect(component.expanded().has('chapter-3')).toBeTrue();
-      expect(component.expanded().has('chapter-1')).toBeFalse();
-    });
-  });
+  // Accordion state is now managed internally by Ionic's IonAccordionGroup
 
   describe('Word Count', () => {
     beforeEach(fakeAsync(() => {

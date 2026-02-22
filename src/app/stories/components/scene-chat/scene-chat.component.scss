@@ -39,13 +39,13 @@ ion-content::part(scroll) {
 }
 
 .context-chips {
-  padding: 8px 16px;
+  padding: var(--cw-space-sm) var(--cw-space-lg);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  background: rgba(45, 45, 45, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
+  gap: var(--cw-space-sm);
+  background: var(--cw-bg-elevated);
+  border-bottom: 1px solid var(--cw-border-subtle);
+  backdrop-filter: blur(var(--cw-blur-md));
 }
 
 .context-chips ion-chip {
@@ -82,7 +82,7 @@ ion-content::part(scroll) {
   align-items: center;
   justify-content: center;
   background: var(--ion-color-primary);
-  color: white;
+  color: var(--cw-text-primary);
 }
 
 .assistant-message .message-avatar ion-avatar {
@@ -90,19 +90,19 @@ ion-content::part(scroll) {
 }
 
 .message-content {
-  background: linear-gradient(135deg, rgba(42, 42, 42, 0.4) 0%, rgba(31, 31, 31, 0.4) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 12px 16px;
+  background: var(--cw-bg-glass);
+  border: 1px solid var(--cw-border-subtle);
+  border-radius: var(--cw-radius-xl);
+  padding: var(--cw-space-md) var(--cw-space-lg);
   max-width: 100%;
-  backdrop-filter: blur(8px);
-  color: #f8f9fa;
+  backdrop-filter: blur(var(--cw-blur-md));
+  color: var(--cw-text-primary);
 }
 
 .user-message .message-content {
-  background: linear-gradient(135deg, rgba(71, 118, 230, 0.6) 0%, rgba(143, 84, 233, 0.6) 100%);
-  border-color: rgba(71, 118, 230, 0.3);
-  color: white;
+  background: var(--cw-gradient-brand);
+  border-color: var(--cw-border-accent);
+  color: var(--cw-text-primary);
 }
 
 .message-text {
@@ -188,12 +188,12 @@ ion-content::part(scroll) {
 }
 
 .chat-footer {
-  background: rgba(45, 45, 45, 0.3);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 8px 16px;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px) + 48px);
+  background: var(--cw-bg-elevated);
+  backdrop-filter: blur(var(--cw-blur-lg));
+  -webkit-backdrop-filter: blur(var(--cw-blur-lg));
+  border-top: 1px solid var(--cw-border-subtle);
+  padding: var(--cw-space-sm) var(--cw-space-lg);
+  padding-bottom: calc(var(--cw-space-sm) + env(safe-area-inset-bottom, 0px) + 48px);
   position: fixed;
   bottom: 0;
   left: 0;
@@ -204,22 +204,22 @@ ion-content::part(scroll) {
 .input-container {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  background: linear-gradient(135deg, rgba(20, 20, 20, 0.2) 0%, rgba(15, 15, 15, 0.2) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 24px;
-  padding: 4px 4px 4px 16px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  gap: var(--cw-space-sm);
+  background: var(--cw-bg-glass);
+  border: 1px solid var(--cw-border-default);
+  border-radius: var(--cw-radius-2xl);
+  padding: var(--cw-space-xs) var(--cw-space-xs) var(--cw-space-xs) var(--cw-space-lg);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
 }
 
 .message-input {
   flex: 1;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
+  --padding-top: var(--cw-space-sm);
+  --padding-bottom: var(--cw-space-sm);
   --background: transparent;
-  --color: #f8f9fa;
-  --placeholder-color: #adb5bd;
+  --color: var(--cw-text-primary);
+  --placeholder-color: var(--cw-text-muted);
   min-height: 40px;
   max-height: 120px;
 }
@@ -244,15 +244,15 @@ ion-content::part(scroll) {
 }
 
 ion-searchbar {
-  --background: rgba(20, 20, 20, 0.4);
-  --color: #f8f9fa;
-  --placeholder-color: #adb5bd;
-  --icon-color: #8bb4f8;
-  --clear-button-color: #8bb4f8;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  --background: var(--cw-bg-input);
+  --color: var(--cw-text-primary);
+  --placeholder-color: var(--cw-text-muted);
+  --icon-color: var(--cw-color-primary-light);
+  --clear-button-color: var(--cw-color-primary-light);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
+  border: 1px solid var(--cw-border-default);
+  border-radius: var(--cw-radius-md);
 }
 
 ion-item-divider {
@@ -264,26 +264,26 @@ ion-modal {
 }
 
 ion-modal ion-content {
-  --background: rgba(0, 0, 0, 0.8);
+  --background: var(--cw-bg-modal-backdrop);
 }
 
 ion-modal ion-header {
-  backdrop-filter: blur(15px);
-  background: rgba(45, 45, 45, 0.85);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(var(--cw-blur-lg));
+  background: var(--cw-bg-elevated);
+  box-shadow: var(--cw-shadow-lg);
 }
 
 ion-modal ion-toolbar {
   --background: transparent;
-  --color: #f8f9fa;
+  --color: var(--cw-text-primary);
 }
 
 ion-modal ion-title {
-  background: linear-gradient(135deg, #f8f9fa 0%, #8bb4f8 100%);
+  background: var(--cw-gradient-text-accent);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  font-weight: 700;
+  font-weight: var(--cw-font-weight-bold);
   letter-spacing: 0.5px;
 }
 
@@ -293,13 +293,13 @@ ion-modal ion-list {
 }
 
 ion-modal ion-item {
-  --background: linear-gradient(135deg, rgba(20, 20, 20, 0.3) 0%, rgba(15, 15, 15, 0.3) 100%);
-  --color: #f8f9fa;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  margin: 8px 16px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  --background: var(--cw-bg-glass);
+  --color: var(--cw-text-primary);
+  border: 1px solid var(--cw-border-subtle);
+  border-radius: var(--cw-radius-lg);
+  margin: var(--cw-space-sm) var(--cw-space-lg);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
 }
 
 .codex-review-content {
@@ -331,9 +331,9 @@ ion-modal ion-item {
 }
 
 .codex-entry-header h3 {
-  font-size: 1rem;
+  font-size: var(--cw-font-size-md);
   margin: 0;
-  color: var(--ion-color-light, #f8f9fa);
+  color: var(--cw-text-primary);
 }
 
 .codex-entry-header ion-chip {
@@ -346,9 +346,9 @@ ion-modal ion-item {
 }
 
 .codex-entry-description {
-  font-size: 0.9rem;
-  color: rgba(248, 249, 250, 0.85);
-  line-height: 1.5;
+  font-size: var(--cw-font-size-sm);
+  color: var(--cw-text-secondary);
+  line-height: var(--cw-line-height-normal);
 }
 
 .codex-entry-tags {
@@ -361,10 +361,10 @@ ion-modal ion-item {
 .codex-entry-fields {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 10px;
-  font-size: 0.85rem;
-  color: rgba(248, 249, 250, 0.8);
+  gap: var(--cw-space-xs);
+  margin-top: var(--cw-space-md);
+  font-size: var(--cw-font-size-sm);
+  color: var(--cw-text-secondary);
 }
 
 .codex-entry-field {
@@ -374,8 +374,8 @@ ion-modal ion-item {
 }
 
 .codex-entry-field .field-name {
-  font-weight: 600;
-  color: var(--ion-color-primary, #8bb4f8);
+  font-weight: var(--cw-font-weight-semibold);
+  color: var(--cw-color-primary-light);
 }
 
 .codex-entry-tags ion-chip {
@@ -388,28 +388,28 @@ ion-modal ion-item {
 }
 
 .codex-review-empty {
-  padding: 32px 16px;
+  padding: var(--cw-space-2xl) var(--cw-space-lg);
   text-align: center;
-  color: rgba(248, 249, 250, 0.7);
+  color: var(--cw-text-muted);
 }
 
 .codex-review-footer {
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px) + 48px);
+  padding: var(--cw-space-lg);
+  padding-bottom: calc(var(--cw-space-lg) + env(safe-area-inset-bottom, 0px) + 48px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: rgba(20, 20, 20, 0.7);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  gap: var(--cw-space-md);
+  background: var(--cw-bg-glass);
+  border-top: 1px solid var(--cw-border-subtle);
 }
 
 .codex-review-meta {
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: rgba(248, 249, 250, 0.7);
+  gap: var(--cw-space-sm);
+  font-size: var(--cw-font-size-sm);
+  color: var(--cw-text-muted);
 }
 
 .codex-review-error {
@@ -418,20 +418,20 @@ ion-modal ion-item {
 }
 
 ion-modal ion-item:hover {
-  --background: linear-gradient(135deg, rgba(71, 118, 230, 0.3) 0%, rgba(139, 180, 248, 0.3) 100%);
-  border-color: rgba(71, 118, 230, 0.5);
+  --background: var(--cw-gradient-primary-subtle);
+  border-color: var(--cw-border-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(71, 118, 230, 0.3);
+  box-shadow: var(--cw-shadow-primary-glow);
 }
 
 ion-modal ion-item-divider {
-  --background: rgba(45, 45, 45, 0.8);
-  --color: #8bb4f8;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  font-weight: 600;
-  margin: 8px 16px;
-  border-radius: 8px;
+  --background: var(--cw-bg-elevated);
+  --color: var(--cw-color-primary-light);
+  backdrop-filter: blur(var(--cw-blur-md));
+  -webkit-backdrop-filter: blur(var(--cw-blur-md));
+  font-weight: var(--cw-font-weight-semibold);
+  margin: var(--cw-space-sm) var(--cw-space-lg);
+  border-radius: var(--cw-radius-md);
 }
 
 
@@ -442,28 +442,28 @@ ion-modal ion-item-divider {
 .model-select {
   --ng-select-height: 38px;
   --ng-select-value-font-size: 14px;
-  --ng-select-bg: rgba(45, 45, 45, 0.3) !important;
-  --ng-select-border-color: rgba(255, 255, 255, 0.15);
-  --ng-select-border-radius: 8px;
-  --ng-select-highlight: #8bb4f8;
-  --ng-select-dropdown-bg: rgba(45, 45, 45, 0.3) !important;
-  --ng-select-dropdown-border-color: rgba(255, 255, 255, 0.15);
+  --ng-select-bg: var(--cw-bg-elevated) !important;
+  --ng-select-border-color: var(--cw-border-default);
+  --ng-select-border-radius: var(--cw-radius-md);
+  --ng-select-highlight: var(--cw-color-primary-light);
+  --ng-select-dropdown-bg: var(--cw-bg-elevated) !important;
+  --ng-select-dropdown-border-color: var(--cw-border-default);
   --ng-select-option-bg: transparent;
-  --ng-select-option-hover-bg: rgba(71, 118, 230, 0.3);
-  --ng-select-option-selected-bg: rgba(71, 118, 230, 0.4);
-  --ng-select-color: #f8f9fa;
+  --ng-select-option-hover-bg: var(--cw-bg-primary-hover);
+  --ng-select-option-selected-bg: var(--cw-bg-primary-hover);
+  --ng-select-color: var(--cw-text-primary);
 }
 
 /* Aggressive ng-select styling overrides */
 ::ng-deep ng-select.model-select {
-  background: rgba(45, 45, 45, 0.3) !important;
+  background: var(--cw-bg-elevated) !important;
 }
 
 ::ng-deep ng-select.model-select .ng-select-container {
-  background-color: rgba(45, 45, 45, 0.3) !important;
-  background: rgba(45, 45, 45, 0.3) !important;
-  backdrop-filter: blur(15px) !important;
-  -webkit-backdrop-filter: blur(15px) !important;
+  background-color: var(--cw-bg-elevated) !important;
+  background: var(--cw-bg-elevated) !important;
+  backdrop-filter: blur(var(--cw-blur-lg)) !important;
+  -webkit-backdrop-filter: blur(var(--cw-blur-lg)) !important;
 }
 
 ::ng-deep ng-select.model-select .ng-select-container .ng-value-container {
@@ -479,11 +479,11 @@ ion-modal ion-item-divider {
 }
 
 ::ng-deep .ng-dropdown-panel {
-  background-color: rgba(45, 45, 45, 0.3) !important;
-  background: rgba(45, 45, 45, 0.3) !important;
-  backdrop-filter: blur(15px) !important;
-  -webkit-backdrop-filter: blur(15px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background-color: var(--cw-bg-elevated) !important;
+  background: var(--cw-bg-elevated) !important;
+  backdrop-filter: blur(var(--cw-blur-lg)) !important;
+  -webkit-backdrop-filter: blur(var(--cw-blur-lg)) !important;
+  border: 1px solid var(--cw-border-default) !important;
 }
 
 ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items {
@@ -495,7 +495,7 @@ ion-modal ion-item-divider {
 }
 
 ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-highlighted {
-  background: rgba(71, 118, 230, 0.3) !important;
+  background: var(--cw-bg-primary-hover) !important;
 }
 
 :host-context(.dark) .model-select {
@@ -518,15 +518,15 @@ ion-modal ion-item-divider {
 }
 
 .provider-icon-inline.gemini {
-  color: #4285f4;
+  color: var(--cw-color-info);
 }
 
 .provider-icon-inline.openrouter {
-  color: #6467f2;
+  color: var(--cw-color-secondary);
 }
 
 .provider-icon-inline.claude {
-  color: #C15F3C;
+  color: var(--cw-color-danger);
 }
 
 .model-label {
@@ -561,5 +561,40 @@ ion-modal ion-item-divider {
   .model-select {
     --ng-select-height: 36px;
     --ng-select-value-font-size: 13px;
+  }
+}
+
+// ============================================
+// Mobile Performance Optimizations
+// ============================================
+@media (max-width: 480px) {
+  // Reduce backdrop-filter complexity on small mobile devices
+  // to improve scroll performance
+  .chat-container,
+  .chat-messages,
+  .message-content,
+  .preset-prompts-card,
+  .chat-footer,
+  .context-pills,
+  ion-chip,
+  ion-searchbar,
+  // Additional elements with heavy blur effects
+  .context-chips,
+  .input-container,
+  ion-modal ion-header,
+  ion-modal ion-content,
+  ion-modal ion-item,
+  ion-modal ion-item-divider,
+  .codex-review-footer,
+  .model-select,
+  ::ng-deep ng-select.model-select,
+  ::ng-deep ng-select.model-select .ng-select-container {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
+  }
+
+  ::ng-deep .ng-dropdown-panel {
+    backdrop-filter: blur(var(--cw-blur-sm)) !important;
+    -webkit-backdrop-filter: blur(var(--cw-blur-sm)) !important;
   }
 }

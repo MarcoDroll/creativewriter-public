@@ -1,4 +1,10 @@
 {
+  "/api/snapshot": {
+    "target": "http://localhost:3003",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/api/gemini": {
     "target": "http://localhost:3002",
     "secure": false,

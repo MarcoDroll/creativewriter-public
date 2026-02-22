@@ -27,7 +27,7 @@
   }
 
   @if (!loading()) {
-    <ion-accordion-group [multiple]="true" [value]="expandedArray()" (ionChange)="onAccordionChange($event)">
+    <ion-accordion-group [multiple]="true">
       @for (chapter of filteredChapters(); track chapter.id) {
         <ion-accordion [value]="chapter.id">
           <ion-item slot="header" lines="full">

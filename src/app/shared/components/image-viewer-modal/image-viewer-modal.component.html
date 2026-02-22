@@ -17,7 +17,7 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="lightbox-content" [fullscreen]="true">
+    <ion-content class="lightbox-content" [scrollY]="false">
       <div class="image-wrapper" *ngIf="imageSrc">
         <ion-img [src]="imageSrc" [alt]="imageAlt || 'Story image'"></ion-img>
       </div>

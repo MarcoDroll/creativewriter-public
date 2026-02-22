@@ -188,8 +188,8 @@ ion-select {
   background: rgba(15, 15, 15, 0.3);
   border-radius: var(--cw-radius-sm);
   border: 1px solid rgba(139, 180, 248, 0.1);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(var(--cw-blur-sm));
+  -webkit-backdrop-filter: blur(var(--cw-blur-sm));
 
   &.disabled {
     opacity: 0.6;
@@ -214,6 +214,18 @@ ion-select {
   ion-icon {
     vertical-align: middle;
     margin-right: 4px;
+  }
+}
+
+.info-list {
+  color: var(--cw-text-secondary);
+  margin: 0.5rem 0 0 1.5rem;
+  padding: 0;
+  font-size: var(--cw-font-size-sm);
+
+  li {
+    margin-bottom: 0.25rem;
+    opacity: 0.85;
   }
 }
 
@@ -302,10 +314,41 @@ ion-select {
 }
 
 // ============================================
+// Provider Routing
+// ============================================
+
+.provider-routing-container {
+  padding: var(--cw-space-lg);
+  margin: 0.5rem 0;
+  background: var(--cw-bg-card);
+  border: 1px solid rgba(139, 180, 248, 0.15);
+  border-radius: var(--cw-radius-md);
+}
+
+.provider-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--cw-space-md);
+}
+
+.provider-option-name {
+  font-weight: var(--cw-font-weight-medium);
+  color: var(--cw-text-secondary);
+}
+
+.provider-option-slug {
+  font-size: var(--cw-font-size-sm);
+  color: var(--cw-text-disabled);
+  font-family: monospace;
+}
+
+// ============================================
 // Content Filter Section
 // ============================================
 
-.content-filter-section {
+.content-filter-section,
+.privacy-section {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--cw-border-accent);
@@ -319,6 +362,11 @@ ion-select {
     right: 20%;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(139, 180, 248, 0.4), transparent);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
   }
 }
 

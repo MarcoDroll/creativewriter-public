@@ -4,8 +4,8 @@
   background: linear-gradient(135deg, rgba(20, 20, 20, 0.3) 0%, rgba(15, 15, 15, 0.3) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 14px !important;
-  backdrop-filter: blur(8px) saturate(120%) !important;
-  -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+  backdrop-filter: blur(var(--cw-blur-md)) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(var(--cw-blur-md)) saturate(120%) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
   transition: all 0.25s ease;
   --background: transparent !important;

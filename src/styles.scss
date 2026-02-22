@@ -405,6 +405,15 @@ button:hover {
   border: 1px solid #404040 !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  min-width: 400px !important;
+
+  @media (max-width: 768px) {
+    min-width: unset !important;
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    left: 12px !important;
+    right: 12px !important;
+  }
 }
 
 .ng-dropdown-panel .ng-dropdown-panel-items {
@@ -492,8 +501,8 @@ button:hover {
   --color: #f8f9fa;
   
   .action-sheet-wrapper {
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(var(--cw-blur-lg));
+    -webkit-backdrop-filter: blur(var(--cw-blur-lg));
     background: rgba(25, 25, 25, 0.95);
     border-radius: 20px 20px 0 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -532,8 +541,8 @@ button:hover {
   
   ion-backdrop {
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(var(--cw-blur-md));
+    -webkit-backdrop-filter: blur(var(--cw-blur-md));
   }
 }
 
@@ -945,7 +954,7 @@ ion-card-content {
   // Ensure proper backdrop
   &::part(backdrop) {
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(var(--cw-blur-sm));
   }
 
   // Ensure footer is always visible
@@ -972,4 +981,23 @@ ion-card-content {
 /* Direct Speech Highlighting - quotes in dialogue */
 .direct-speech-highlight {
   color: var(--cw-direct-speech-color, #7c3aed);
+}
+
+/* Thinking Highlighting - internal thoughts in asterisks */
+.thinking-highlight {
+  color: var(--cw-thinking-color, #06b6d4);
+}
+
+/* Image resolution states for ResizableImageNodeView */
+.resizable-image-wrapper {
+  img.image-resolving {
+    opacity: 0.5;
+  }
+
+  img.image-not-found {
+    border: 2px dashed #ff6b6b;
+    min-height: 60px;
+    min-width: 100px;
+    background-color: rgba(255, 107, 107, 0.1);
+  }
 }

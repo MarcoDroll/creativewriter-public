@@ -23,6 +23,7 @@ export interface ChatHistoryDoc {
   messages: ChatHistoryMessage[];
   selectedScenes?: ChatHistoryContextSceneRef[];
   includeStoryOutline?: boolean;
+  includeCodexContext?: boolean;
   selectedModel?: string;
   createdAt: Date;
   updatedAt: Date;

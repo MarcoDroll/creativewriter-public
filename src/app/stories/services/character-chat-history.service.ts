@@ -8,6 +8,12 @@ export class CharacterChatHistoryService {
   private readonly databaseService = inject(DatabaseService);
   private db: PouchDB.Database | null = null;
 
+  // Sync push throttling — PouchDB live sync with filters doesn't push local changes
+  private pushTimeout: ReturnType<typeof setTimeout> | null = null;
+  private lastPushTime = 0;
+  private pendingDocIds = new Set<string>();
+  private readonly PUSH_THROTTLE_MS = 5000;
+
   private readonly DOC_PREFIX = 'character-chat_';
   private readonly MAX_HISTORIES_PER_CHARACTER = 5;
 
@@ -96,6 +102,7 @@ export class CharacterChatHistoryService {
     const toSave = this.serialize(doc);
     const putRes = await db.put(toSave);
     doc._rev = putRes.rev;
+    this.schedulePush(_id);
 
     // Enforce max histories per character
     await this.enforceLimit(params.storyId, params.characterId);
@@ -112,6 +119,7 @@ export class CharacterChatHistoryService {
     try {
       const doc = await db.get(_id);
       await db.remove(doc);
+      this.schedulePush(_id);
     } catch (e: unknown) {
       if (e && typeof e === 'object' && 'status' in e && (e as { status?: number }).status === 404) return;
       throw e as Error;
@@ -127,10 +135,41 @@ export class CharacterChatHistoryService {
       try {
         const raw = await db.get(d._id);
         await db.remove(raw);
+        this.schedulePush(d._id);
       } catch {
         void 0;
       }
     }
+  }
+
+  private schedulePush(docId: string): void {
+    this.pendingDocIds.add(docId);
+    const now = Date.now();
+    const timeSinceLastPush = now - this.lastPushTime;
+    if (timeSinceLastPush < this.PUSH_THROTTLE_MS) {
+      if (this.pushTimeout) {
+        clearTimeout(this.pushTimeout);
+      }
+      const delay = this.PUSH_THROTTLE_MS - timeSinceLastPush;
+      this.pushTimeout = setTimeout(() => this.executePush(), delay);
+      return;
+    }
+    this.executePush();
+  }
+
+  private executePush(): void {
+    const docIds = [...this.pendingDocIds];
+    this.pushTimeout = null;
+    this.pendingDocIds.clear();
+    this.lastPushTime = Date.now();
+    if (docIds.length === 0) return;
+    this.databaseService.pushDocuments(docIds).then(result => {
+      if (result.docsProcessed > 0) {
+        console.info(`[CharacterChatHistoryService] Pushed ${result.docsProcessed} docs`);
+      }
+    }).catch(err => {
+      console.warn('[CharacterChatHistoryService] Push failed (live sync will retry):', err);
+    });
   }
 
   private serialize(doc: CharacterChatHistoryDoc & Record<string, unknown>): Record<string, unknown> {

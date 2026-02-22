@@ -1,8 +1,9 @@
 import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { VideoService } from '../../shared/services/video.service';
-import { StoredVideo } from '../../shared/models/video.interface';
+import { StoryMediaService } from '../../shared/services/story-media.service';
+import { StoryImageService } from '../../shared/services/story-image.service';
+import { StoryVideoMeta } from '../../shared/models/story-media.interface';
 import { DialogService } from '../../core/services/dialog.service';
 
 @Component({
@@ -98,23 +99,23 @@ import { DialogService } from '../../core/services/dialog.service';
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.9);
+      background: var(--cw-bg-modal-backdrop);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 3000;
+      z-index: var(--cw-z-modal);
       outline: none;
     }
 
     .modal-content {
-      background: #2a2a2a;
-      border: 1px solid #404040;
-      border-radius: 12px;
+      background: var(--cw-bg-base);
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-lg);
       max-width: 90vw;
       max-height: 90vh;
       width: 800px;
       overflow-y: auto;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+      box-shadow: var(--cw-shadow-xl);
       outline: none;
     }
 
@@ -122,124 +123,123 @@ import { DialogService } from '../../core/services/dialog.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1.5rem;
-      border-bottom: 1px solid #404040;
+      padding: var(--cw-space-xl);
+      border-bottom: 1px solid var(--cw-border-input);
     }
 
     .modal-header h3 {
       margin: 0;
-      color: #e0e0e0;
-      font-size: 1.3rem;
+      color: var(--cw-text-secondary);
+      font-size: var(--cw-font-size-xl);
     }
 
     .close-btn {
       background: none;
       border: none;
-      color: #adb5bd;
-      font-size: 1.5rem;
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-xl);
       cursor: pointer;
-      padding: 0.5rem;
-      border-radius: 4px;
-      transition: all 0.2s;
+      padding: var(--cw-space-sm);
+      border-radius: var(--cw-radius-xs);
+      transition: all var(--cw-transition-normal);
     }
 
     .close-btn:hover {
-      background: #404040;
-      color: #fff;
+      background: var(--cw-border-input);
+      color: var(--cw-text-primary);
     }
 
     .video-section, .upload-section {
-      padding: 1.5rem;
+      padding: var(--cw-space-xl);
     }
 
     .video-player {
       width: 100%;
       max-height: 60vh;
-      border-radius: 8px;
+      border-radius: var(--cw-radius-md);
       background: #000;
     }
 
     .video-info {
-      margin: 1rem 0;
-      padding: 1rem;
-      background: #1a1a1a;
-      border-radius: 6px;
-      border: 1px solid #404040;
+      margin: var(--cw-space-lg) 0;
+      padding: var(--cw-space-lg);
+      background: var(--cw-bg-base);
+      border-radius: var(--cw-radius-sm);
+      border: 1px solid var(--cw-border-input);
     }
 
     .video-name {
-      margin: 0 0 0.5rem 0;
-      font-weight: 500;
-      color: #e0e0e0;
+      margin: 0 0 var(--cw-space-sm) 0;
+      font-weight: var(--cw-font-weight-medium);
+      color: var(--cw-text-secondary);
       word-break: break-word;
     }
 
     .video-size {
       margin: 0;
-      color: #adb5bd;
-      font-size: 0.9rem;
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-sm);
     }
 
     .video-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
       justify-content: center;
     }
 
     .replace-btn, .remove-btn {
-      padding: 0.5rem 1rem;
+      padding: var(--cw-space-sm) var(--cw-space-lg);
       border: none;
-      border-radius: 6px;
+      border-radius: var(--cw-radius-sm);
       cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.2s;
+      font-size: var(--cw-font-size-sm);
+      transition: all var(--cw-transition-normal);
+      color: var(--cw-text-primary);
     }
 
     .replace-btn {
-      background: #007bff;
-      color: white;
+      background: var(--cw-color-info);
     }
 
     .replace-btn:hover {
-      background: #0056b3;
+      background: var(--cw-color-info-dark);
     }
 
     .remove-btn {
-      background: #dc3545;
-      color: white;
+      background: var(--cw-color-danger-dark);
     }
 
     .remove-btn:hover {
-      background: #c82333;
+      background: var(--cw-color-danger-darker);
     }
 
     .upload-area {
-      border: 2px dashed #6c757d;
-      border-radius: 12px;
-      padding: 3rem;
+      border: 2px dashed var(--cw-text-disabled);
+      border-radius: var(--cw-radius-lg);
+      padding: var(--cw-space-3xl);
       text-align: center;
-      transition: all 0.3s;
-      background: #1a1a1a;
+      transition: all var(--cw-transition-slow);
+      background: var(--cw-bg-base);
     }
 
     .upload-area.dragover {
-      border-color: #28a745;
-      background: rgba(40, 167, 69, 0.1);
+      border-color: var(--cw-color-success-darker);
+      background: var(--cw-bg-success-subtle);
     }
 
     .upload-btn {
-      padding: 1rem 2rem;
-      background: #28a745;
-      color: white;
+      padding: var(--cw-space-lg) var(--cw-space-2xl);
+      background: var(--cw-color-success-darker);
+      color: var(--cw-text-primary);
       border: none;
-      border-radius: 8px;
+      border-radius: var(--cw-radius-md);
       cursor: pointer;
-      font-size: 1.1rem;
-      transition: all 0.2s;
+      font-size: var(--cw-font-size-lg);
+      transition: all var(--cw-transition-normal);
     }
 
     .upload-btn:hover:not(:disabled) {
-      background: #218838;
+      background: var(--cw-color-success-active);
       transform: translateY(-1px);
     }
 
@@ -250,16 +250,16 @@ import { DialogService } from '../../core/services/dialog.service';
     }
 
     .upload-hint {
-      margin: 1rem 0 0 0;
-      color: #adb5bd;
-      font-size: 0.95rem;
+      margin: var(--cw-space-lg) 0 0 0;
+      color: var(--cw-text-muted);
+      font-size: var(--cw-font-size-sm);
     }
 
     .preview-section {
       position: relative;
-      margin: 1.5rem 0;
-      border: 1px solid #404040;
-      border-radius: 8px;
+      margin: var(--cw-space-xl) 0;
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-md);
       overflow: hidden;
     }
 
@@ -271,41 +271,41 @@ import { DialogService } from '../../core/services/dialog.service';
 
     .remove-preview-btn {
       position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
+      top: var(--cw-space-sm);
+      right: var(--cw-space-sm);
       width: 2.5rem;
       height: 2.5rem;
-      background: rgba(220, 53, 69, 0.9);
-      color: white;
+      background: var(--cw-color-danger-dark);
+      color: var(--cw-text-primary);
       border: none;
-      border-radius: 50%;
+      border-radius: var(--cw-radius-full);
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: var(--cw-font-size-lg);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      transition: all var(--cw-transition-normal);
     }
 
     .remove-preview-btn:hover {
-      background: #dc3545;
+      background: var(--cw-color-danger);
       transform: scale(1.1);
     }
 
     .processing-indicator {
       text-align: center;
-      padding: 2rem;
-      color: #adb5bd;
+      padding: var(--cw-space-2xl);
+      color: var(--cw-text-muted);
     }
 
     .loading-spinner {
       width: 40px;
       height: 40px;
-      border: 4px solid #404040;
-      border-top: 4px solid #007bff;
-      border-radius: 50%;
+      border: 4px solid var(--cw-border-input);
+      border-top: 4px solid var(--cw-color-info);
+      border-radius: var(--cw-radius-full);
       animation: spin 1s linear infinite;
-      margin: 0 auto 1rem auto;
+      margin: 0 auto var(--cw-space-lg) auto;
     }
 
     @keyframes spin {
@@ -315,57 +315,56 @@ import { DialogService } from '../../core/services/dialog.service';
 
     .upload-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
       justify-content: center;
-      margin-top: 1rem;
+      margin-top: var(--cw-space-lg);
     }
 
     .cancel-upload-btn, .save-btn {
-      padding: 0.5rem 1.5rem;
+      padding: var(--cw-space-sm) var(--cw-space-xl);
       border: none;
-      border-radius: 6px;
+      border-radius: var(--cw-radius-sm);
       cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.2s;
+      font-size: var(--cw-font-size-sm);
+      transition: all var(--cw-transition-normal);
+      color: var(--cw-text-primary);
     }
 
     .cancel-upload-btn {
-      background: #6c757d;
-      color: white;
+      background: var(--cw-text-disabled);
     }
 
     .cancel-upload-btn:hover {
-      background: #5a6268;
+      background: var(--cw-border-input);
     }
 
     .save-btn {
-      background: #28a745;
-      color: white;
+      background: var(--cw-color-success-darker);
     }
 
     .save-btn:hover {
-      background: #218838;
+      background: var(--cw-color-success-active);
     }
 
     .modal-footer {
-      padding: 1rem 1.5rem;
-      border-top: 1px solid #404040;
+      padding: var(--cw-space-lg) var(--cw-space-xl);
+      border-top: 1px solid var(--cw-border-input);
       text-align: center;
     }
 
     .close-footer-btn {
-      padding: 0.5rem 1.5rem;
-      background: #6c757d;
-      color: white;
+      padding: var(--cw-space-sm) var(--cw-space-xl);
+      background: var(--cw-text-disabled);
+      color: var(--cw-text-primary);
       border: none;
-      border-radius: 6px;
+      border-radius: var(--cw-radius-sm);
       cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.2s;
+      font-size: var(--cw-font-size-sm);
+      transition: all var(--cw-transition-normal);
     }
 
     .close-footer-btn:hover {
-      background: #5a6268;
+      background: var(--cw-border-input);
     }
 
     @media (max-width: 768px) {
@@ -375,11 +374,11 @@ import { DialogService } from '../../core/services/dialog.service';
       }
 
       .modal-header, .video-section, .upload-section {
-        padding: 1rem;
+        padding: var(--cw-space-lg);
       }
 
       .upload-area {
-        padding: 2rem 1rem;
+        padding: var(--cw-space-2xl) var(--cw-space-lg);
       }
 
       .video-actions, .upload-actions {
@@ -394,6 +393,7 @@ import { DialogService } from '../../core/services/dialog.service';
 })
 export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
   @Input() isVisible = false;
+  @Input() storyId: string | null = null;
   @Input() imageId: string | null = null;
   @Output() closed = new EventEmitter<void>();
   @Output() videoAssociated = new EventEmitter<{ imageId: string; videoId: string }>();
@@ -401,13 +401,15 @@ export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
   @ViewChild('videoPlayer') videoPlayer?: ElementRef<HTMLVideoElement>;
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
 
-  private videoService = inject(VideoService);
+  private storyMediaService = inject(StoryMediaService);
+  private storyImageService = inject(StoryImageService);
   private cdr = inject(ChangeDetectorRef);
   private zone = inject(NgZone);
   private dialogService = inject(DialogService);
 
   // State
-  currentVideo: StoredVideo | null = null;
+  currentVideo: StoryVideoMeta | null = null;
+  currentVideoBlobUrl: string | null = null;
   hasVideo = false;
   isUploading = false;
   isProcessing = false;
@@ -419,7 +421,7 @@ export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
 
   // Computed properties
   get videoDataUrl(): string {
-    return this.currentVideo ? this.videoService.getVideoDataUrl(this.currentVideo) : '';
+    return this.currentVideoBlobUrl || '';
   }
 
   async ngOnInit(): Promise<void> {
@@ -457,19 +459,44 @@ export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private async loadVideoForImage(): Promise<void> {
-    if (!this.imageId) return;
+    if (!this.imageId || !this.storyId) return;
 
     try {
-      console.log('Loading video for image ID:', this.imageId);
-      const video = await this.videoService.getVideoForImage(this.imageId);
+      console.log('Loading video for image ID:', this.imageId, 'in story:', this.storyId);
+
+      // Get image metadata to find associated videoId
+      const imageMeta = await this.storyImageService.getImageMeta(this.storyId, this.imageId);
+
+      if (imageMeta?.videoId) {
+        // Get video metadata
+        const videoMeta = await this.storyMediaService.getVideoMeta(this.storyId, imageMeta.videoId);
+
+        if (videoMeta) {
+          // Get blob URL for playback
+          const blobUrl = await this.storyMediaService.getVideoBlobUrl(this.storyId, imageMeta.videoId);
+
+          this.applyChanges(() => {
+            this.currentVideo = videoMeta;
+            this.currentVideoBlobUrl = blobUrl;
+            this.hasVideo = true;
+          });
+          console.log('Found video for image:', videoMeta);
+          return;
+        }
+      }
+
+      // No video associated
       this.applyChanges(() => {
-        this.currentVideo = video;
-        this.hasVideo = !!video;
+        this.currentVideo = null;
+        this.currentVideoBlobUrl = null;
+        this.hasVideo = false;
       });
-      console.log('Found video for image:', !!this.currentVideo, this.currentVideo);
+      console.log('No video found for image');
     } catch (error) {
       console.error('Error loading video:', error);
       this.applyChanges(() => {
+        this.currentVideo = null;
+        this.currentVideoBlobUrl = null;
         this.hasVideo = false;
       });
     }
@@ -548,29 +575,29 @@ export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   async saveVideo(): Promise<void> {
-    if (!this.uploadedFile || !this.imageId) return;
+    if (!this.uploadedFile || !this.imageId || !this.storyId) return;
 
     this.applyChanges(() => {
       this.isProcessing = true;
     });
 
     try {
-      const videoId = await this.videoService.uploadVideo(this.uploadedFile);
-      const success = await this.videoService.associateImageWithVideo(this.imageId, videoId);
+      // Upload video to story's media storage
+      const result = await this.storyMediaService.addVideo(this.storyId, this.uploadedFile);
 
-      if (success) {
-        this.videoAssociated.emit({ imageId: this.imageId, videoId });
-        await this.loadVideoForImage();
-        this.applyChanges(() => {
-          this.cleanupUpload();
-          this.isUploading = false;
-        });
-      } else {
-        throw new Error('Error linking image and video');
-      }
+      // Associate the image with the video
+      await this.storyImageService.setVideoAssociation(this.storyId, this.imageId, result.meta.id);
+
+      this.videoAssociated.emit({ imageId: this.imageId, videoId: result.meta.id });
+      await this.loadVideoForImage();
+      this.applyChanges(() => {
+        this.cleanupUpload();
+        this.isUploading = false;
+      });
     } catch (error) {
       console.error('Error saving video:', error);
-      this.dialogService.showError({ header: 'Save Error', message: 'Error saving video. Please try again.' });
+      const message = error instanceof Error ? error.message : 'Error saving video. Please try again.';
+      this.dialogService.showError({ header: 'Save Error', message });
     } finally {
       this.applyChanges(() => {
         this.isProcessing = false;
@@ -592,26 +619,32 @@ export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   async removeVideo(): Promise<void> {
-    if (!this.imageId || !this.currentVideo) return;
+    if (!this.imageId || !this.storyId || !this.currentVideo) return;
 
     const confirmed = await this.dialogService.confirmDestructive({
       header: 'Remove Video',
-      message: 'Do you really want to remove the link between image and video?',
+      message: 'Do you really want to remove the link between image and video? The video will be deleted.',
       confirmText: 'Remove'
     });
     if (!confirmed) return;
 
     try {
-      await this.videoService.removeImageVideoAssociation(this.imageId);
+      // Remove video association from image
+      await this.storyImageService.setVideoAssociation(this.storyId, this.imageId, null);
+
+      // Also delete the video itself (it's only used by this image)
+      await this.storyMediaService.removeVideo(this.storyId, this.currentVideo.id);
+
       this.applyChanges(() => {
         this.currentVideo = null;
+        this.currentVideoBlobUrl = null;
         this.hasVideo = false;
       });
     } catch (error) {
-      console.error('Error removing association:', error);
+      console.error('Error removing video:', error);
       await this.dialogService.showError({
         header: 'Error',
-        message: 'Error removing video association. Please try again.'
+        message: 'Error removing video. Please try again.'
       });
     }
   }
@@ -657,6 +690,7 @@ export class VideoModalComponent implements OnInit, OnDestroy, OnChanges {
   private resetModalState(): void {
     this.applyChanges(() => {
       this.currentVideo = null;
+      this.currentVideoBlobUrl = null;
       this.hasVideo = false;
       this.isUploading = false;
       this.isProcessing = false;

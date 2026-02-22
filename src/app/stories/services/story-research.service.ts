@@ -8,6 +8,12 @@ export class StoryResearchService {
   private readonly databaseService = inject(DatabaseService);
   private db: PouchDB.Database | null = null;
 
+  // Sync push throttling — PouchDB live sync with filters doesn't push local changes
+  private pushTimeout: ReturnType<typeof setTimeout> | null = null;
+  private lastPushTime = 0;
+  private pendingDocIds = new Set<string>();
+  private readonly PUSH_THROTTLE_MS = 5000;
+
   private readonly DOC_PREFIX = 'story-research_';
   private readonly MAX_RESEARCHES_PER_STORY = 5;
 
@@ -54,6 +60,7 @@ export class StoryResearchService {
     try {
       const existing = await db.get(_id);
       await db.remove(existing);
+      this.schedulePush(_id);
     } catch (error) {
       if ((error as { status?: number }).status === 404) return;
       throw error;
@@ -106,10 +113,41 @@ export class StoryResearchService {
     const serialized = this.serialize(doc);
     const response = await db.put(serialized);
     doc._rev = response.rev;
+    this.schedulePush(_id);
 
     await this.enforceLimit(params.storyId);
 
     return this.deserialize(doc as unknown as Record<string, unknown>);
+  }
+
+  private schedulePush(docId: string): void {
+    this.pendingDocIds.add(docId);
+    const now = Date.now();
+    const timeSinceLastPush = now - this.lastPushTime;
+    if (timeSinceLastPush < this.PUSH_THROTTLE_MS) {
+      if (this.pushTimeout) {
+        clearTimeout(this.pushTimeout);
+      }
+      const delay = this.PUSH_THROTTLE_MS - timeSinceLastPush;
+      this.pushTimeout = setTimeout(() => this.executePush(), delay);
+      return;
+    }
+    this.executePush();
+  }
+
+  private executePush(): void {
+    const docIds = [...this.pendingDocIds];
+    this.pushTimeout = null;
+    this.pendingDocIds.clear();
+    this.lastPushTime = Date.now();
+    if (docIds.length === 0) return;
+    this.databaseService.pushDocuments(docIds).then(result => {
+      if (result.docsProcessed > 0) {
+        console.info(`[StoryResearchService] Pushed ${result.docsProcessed} docs`);
+      }
+    }).catch(err => {
+      console.warn('[StoryResearchService] Push failed (live sync will retry):', err);
+    });
   }
 
   private serialize(doc: StoryResearchDoc & Record<string, unknown>): Record<string, unknown> {
@@ -152,6 +190,7 @@ export class StoryResearchService {
       try {
         const raw = await db.get(doc._id);
         await db.remove(raw);
+        this.schedulePush(doc._id);
       } catch {
         void 0;
       }

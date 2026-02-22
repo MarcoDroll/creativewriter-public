@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
@@ -23,7 +23,9 @@ import {
   IonToolbar,
   IonTitle,
   IonButtons,
-  IonRange
+  IonRange,
+  IonAccordion,
+  IonAccordionGroup
 } from '@ionic/angular/standalone';
 import {
   arrowBack,
@@ -32,7 +34,9 @@ import {
   documentTextOutline,
   closeOutline,
   warningOutline,
-  refreshOutline
+  refreshOutline,
+  trashOutline,
+  analyticsOutline
 } from 'ionicons/icons';
 import { StoryService } from '../../services/story.service';
 import { Story, Chapter, Scene } from '../../models/story.interface';
@@ -41,12 +45,17 @@ import { ModelSelectorComponent } from '../../../shared/components/model-selecto
 import { StoryResearchService } from '../../services/story-research.service';
 import { StoryResearchDoc, StoryResearchSceneFinding } from '../../models/story-research.interface';
 import { SettingsService } from '../../../core/services/settings.service';
+import { AIProviderValidationService } from '../../../core/services/ai-provider-validation.service';
+import { ResearchJobService, ResearchSceneInfo } from '../../services/research-job.service';
+import { PendingJobsService } from '../../../core/services/pending-jobs.service';
+import { ServerGenerationService } from '../../../core/services/server-generation.service';
 import { OpenRouterApiService } from '../../../core/services/openrouter-api.service';
 import { GoogleGeminiApiService } from '../../../core/services/google-gemini-api.service';
 import { OllamaApiService } from '../../../core/services/ollama-api.service';
 import { ClaudeApiService } from '../../../core/services/claude-api.service';
-import { AIProviderValidationService } from '../../../core/services/ai-provider-validation.service';
-import { firstValueFrom } from 'rxjs';
+import { OpenAICompatibleApiService } from '../../../core/services/openai-compatible-api.service';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { AlertController } from '@ionic/angular';
 import { TokenCounterService } from '../../../shared/services/token-counter.service';
 
@@ -94,6 +103,8 @@ interface OrderedScene {
     IonTitle,
     IonButtons,
     IonRange,
+    IonAccordion,
+    IonAccordionGroup,
     AppHeaderComponent,
     ModelSelectorComponent
   ],
@@ -101,16 +112,20 @@ interface OrderedScene {
   styleUrls: ['./story-research.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StoryResearchComponent implements OnInit {
+export class StoryResearchComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly storyService = inject(StoryService);
   private readonly researchService = inject(StoryResearchService);
   private readonly settingsService = inject(SettingsService);
+  private readonly researchJobService = inject(ResearchJobService);
+  private readonly pendingJobsService = inject(PendingJobsService);
+  private readonly serverGenerationService = inject(ServerGenerationService);
   private readonly openRouterApi = inject(OpenRouterApiService);
   private readonly geminiApi = inject(GoogleGeminiApiService);
   private readonly ollamaApi = inject(OllamaApiService);
   private readonly claudeApi = inject(ClaudeApiService);
+  private readonly openAICompatibleApi = inject(OpenAICompatibleApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly alertController = inject(AlertController);
   private readonly tokenCounter = inject(TokenCounterService);
@@ -145,6 +160,14 @@ export class StoryResearchComponent implements OnInit {
   estimatedPromptCount = 0;
   estimatedInputTokens = 0;
 
+  // Server-side research tracking
+  activeGroupId: string | null = null;
+  serverModeAvailable = false;
+  hasRecoverableResearch = false;
+  recoverableGroupId: string | null = null;
+  private progressSubscription: Subscription | null = null;
+  private streamingSubscription: Subscription | null = null;
+
   constructor() {
     addIcons({
       arrowBack,
@@ -153,7 +176,9 @@ export class StoryResearchComponent implements OnInit {
       documentTextOutline,
       closeOutline,
       warningOutline,
-      refreshOutline
+      refreshOutline,
+      trashOutline,
+      analyticsOutline
     });
   }
 
@@ -170,7 +195,21 @@ export class StoryResearchComponent implements OnInit {
 
     await this.loadStoryAndHistory(storyId);
     this.setupHeaderActions();
+
+    // Check if server-side generation is available
+    this.serverModeAvailable = await this.serverGenerationService.isServiceAvailable();
+
+    // Check for recoverable research groups (after page refresh)
+    if (this.serverModeAvailable) {
+      await this.checkForRecoverableResearch();
+    }
+
     this.cdr.markForCheck();
+  }
+
+  ngOnDestroy(): void {
+    this.progressSubscription?.unsubscribe();
+    this.streamingSubscription?.unsubscribe();
   }
 
   get activeSceneFindings(): StoryResearchSceneFinding[] {
@@ -211,6 +250,13 @@ export class StoryResearchComponent implements OnInit {
     return Math.min(1, completed / this.totalScenes);
   }
 
+  get showCostWarning(): boolean {
+    if (!this.selectedModel) return true; // Show by default if no model selected
+    const [provider] = this.selectedModel.split(':');
+    // Hide warning for local/free providers
+    return !['ollama', 'openAICompatible'].includes(provider);
+  }
+
   async startResearch(): Promise<void> {
     if (!this.story || this.isRunning) return;
     const trimmedTask = this.task.trim();
@@ -220,6 +266,14 @@ export class StoryResearchComponent implements OnInit {
     }
     if (!this.selectedModel) {
       await this.presentWarningAlert('Model selection required', 'Select an AI model before starting the research.');
+      return;
+    }
+
+    // Validate the provider is configured
+    const [provider] = this.selectedModel.split(':');
+    const settings = this.settingsService.getSettings();
+    if (!this.aiProviderValidation.isProviderAvailable(provider, settings)) {
+      await this.presentWarningAlert('Provider not configured', `AI provider '${provider}' is not configured. Please configure it in settings.`);
       return;
     }
 
@@ -236,6 +290,7 @@ export class StoryResearchComponent implements OnInit {
     this.viewingHistory = null;
     this.currentRunTask = trimmedTask;
     this.currentRunModel = this.selectedModel;
+    this.activeGroupId = null;
 
     const orderedScenes = this.getOrderedScenes();
     if (!orderedScenes.length) {
@@ -244,6 +299,20 @@ export class StoryResearchComponent implements OnInit {
       this.cdr.markForCheck();
       return;
     }
+
+    // Use server-side research if available
+    if (this.serverModeAvailable) {
+      try {
+        await this.startServerSideResearch(trimmedTask, orderedScenes);
+        // Server-side research is async - the subscribeToGroupProgress will handle completion
+        return;
+      } catch (error) {
+        console.warn('[StoryResearch] Server-side research failed, falling back to client-side:', error);
+        // Fall through to client-side research
+      }
+    }
+
+    // Client-side research (fallback when server is not available)
     this.totalScenes = orderedScenes.length;
     this.sceneProgress = orderedScenes.map(item => {
       const plainText = this.extractSceneText(item.scene);
@@ -309,6 +378,8 @@ export class StoryResearchComponent implements OnInit {
             response
           };
           this.updateProgressCounters();
+          // Update sceneFindings for real-time display during execution
+          this.sceneFindings = findingsBuffer.filter((f): f is StoryResearchSceneFinding => !!f);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error during research. Please try again.';
           progress.status = 'error';
@@ -379,6 +450,270 @@ export class StoryResearchComponent implements OnInit {
         this.currentRunModel = '';
       }
     }
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Check for recoverable research groups (after page refresh)
+   */
+  private async checkForRecoverableResearch(): Promise<void> {
+    try {
+      const recoverableGroups = await this.researchJobService.getRecoverableGroups();
+
+      // Filter to groups for this story
+      // Note: We can't filter by storyId here without resuming, so we show all recoverable groups
+      if (recoverableGroups.length > 0) {
+        this.hasRecoverableResearch = true;
+        this.recoverableGroupId = recoverableGroups[0]; // Take the first one for now
+        this.cdr.markForCheck();
+      }
+    } catch (error) {
+      console.error('[StoryResearch] Error checking for recoverable research:', error);
+    }
+  }
+
+  /**
+   * Resume recoverable research from a previous session
+   */
+  async resumeRecoverableResearch(): Promise<void> {
+    if (!this.recoverableGroupId) return;
+
+    try {
+      this.isRunning = true;
+      this.hasRecoverableResearch = false;
+      this.activeGroupId = this.recoverableGroupId;
+      this.progressMessage = 'Resuming research...';
+      this.cdr.markForCheck();
+
+      // Resume the research group
+      const state = await this.researchJobService.resumeResearchGroup(this.recoverableGroupId);
+
+      if (!state) {
+        // Group no longer exists
+        this.isRunning = false;
+        this.activeGroupId = null;
+        this.recoverableGroupId = null;
+        await this.presentWarningAlert('Research not found', 'The previous research session could not be recovered.');
+        this.cdr.markForCheck();
+        return;
+      }
+
+      // Subscribe to progress updates
+      this.subscribeToGroupProgress(this.recoverableGroupId);
+      this.recoverableGroupId = null;
+      this.cdr.markForCheck();
+    } catch (error) {
+      console.error('[StoryResearch] Error resuming research:', error);
+      this.isRunning = false;
+      this.activeGroupId = null;
+      this.hasRecoverableResearch = false;
+      this.errorMessage = error instanceof Error ? error.message : 'Failed to resume research';
+      this.cdr.markForCheck();
+    }
+  }
+
+  /**
+   * Dismiss the recoverable research banner and start fresh
+   */
+  dismissRecoverableResearch(): void {
+    this.hasRecoverableResearch = false;
+    this.recoverableGroupId = null;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Start server-side research using the generation service
+   */
+  private async startServerSideResearch(trimmedTask: string, orderedScenes: OrderedScene[]): Promise<void> {
+    // Build scene info with prompts
+    const sceneInfos: ResearchSceneInfo[] = orderedScenes.map(({ chapter, scene }) => {
+      const plainText = this.extractSceneText(scene);
+      return {
+        chapterId: chapter.id,
+        sceneId: scene.id,
+        chapterTitle: chapter.title,
+        sceneTitle: scene.title,
+        prompt: this.buildScenePrompt(chapter, scene, trimmedTask, plainText)
+      };
+    }).filter(info => {
+      // Filter out scenes with no content
+      const plainText = this.extractSceneText(
+        orderedScenes.find(s => s.scene.id === info.sceneId)?.scene || { content: '' } as Scene
+      );
+      return plainText.trim().length > 0;
+    });
+
+    if (sceneInfos.length === 0) {
+      await this.presentWarningAlert('No scenes available', 'This story does not contain scenes with content yet.');
+      this.isRunning = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // Initialize progress tracking
+    this.totalScenes = sceneInfos.length;
+    this.sceneProgress = sceneInfos.map(info => ({
+      chapterId: info.chapterId,
+      sceneId: info.sceneId,
+      chapterTitle: info.chapterTitle,
+      sceneTitle: info.sceneTitle,
+      status: 'pending' as const,
+      tokenEstimate: 0,
+      plainText: ''
+    }));
+
+    try {
+      // Start the research group on the server
+      const groupId = await this.researchJobService.startResearchGroup(
+        this.storyId,
+        sceneInfos,
+        trimmedTask,
+        this.currentRunModel
+      );
+
+      this.activeGroupId = groupId;
+      this.progressMessage = 'Processing scenes on server...';
+      this.cdr.markForCheck();
+
+      // Subscribe to progress updates
+      this.subscribeToGroupProgress(groupId);
+
+    } catch (error) {
+      console.error('[StoryResearch] Failed to start server-side research:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe to progress updates from a research group
+   */
+  private subscribeToGroupProgress(groupId: string): void {
+    // Clean up any existing subscription
+    this.progressSubscription?.unsubscribe();
+
+    this.progressSubscription = this.researchJobService.getGroupProgress(groupId).subscribe(
+      progress => {
+        if (!progress) return;
+
+        // Update progress counters
+        this.progressIndex = progress.completedScenes;
+        this.totalScenes = progress.totalScenes;
+
+        // Update scene progress states
+        this.sceneProgress.forEach(sp => {
+          const finding = progress.findings.find(f =>
+            f.chapterId === sp.chapterId && f.sceneId === sp.sceneId
+          );
+          if (finding) {
+            sp.status = 'completed';
+            sp.response = finding.response;
+          }
+        });
+
+        // Update findings
+        this.sceneFindings = progress.findings;
+
+        // Check if all scene jobs are done
+        const allScenesDone = progress.completedScenes + progress.failedScenes >= progress.totalScenes;
+
+        if (allScenesDone && !progress.isSummaryPhase && progress.failedScenes === 0) {
+          // All scenes completed, start summary phase
+          this.progressMessage = 'Compiling final summary...';
+          this.startSummaryPhase(groupId);
+        } else if (progress.isSummaryPhase && progress.summaryComplete) {
+          // Research is complete
+          this.finalSummary = progress.summary || '';
+          this.completeServerSideResearch(groupId);
+        } else if (progress.failedScenes > 0 && !progress.isSummaryPhase) {
+          // Some scenes failed
+          this.handleServerSideError(groupId, 'Some scene analyses failed');
+        } else if (!progress.isActive && progress.error) {
+          // Summary phase failed
+          this.handleServerSideError(groupId, progress.error);
+        } else {
+          this.progressMessage = `Analyzing scenes (${progress.completedScenes}/${progress.totalScenes})...`;
+        }
+
+        this.cdr.markForCheck();
+      }
+    );
+
+    // Also subscribe to streaming events for real-time updates
+    this.streamingSubscription?.unsubscribe();
+    this.streamingSubscription = this.pendingJobsService.streamingEvent$.pipe(
+      filter(event => event.groupId === groupId)
+    ).subscribe(() => {
+      // Trigger a refresh when we get streaming events
+      this.cdr.markForCheck();
+    });
+  }
+
+  /**
+   * Start the summary phase after all scenes are analyzed
+   */
+  private async startSummaryPhase(groupId: string): Promise<void> {
+    const findings = this.researchJobService.getGroupFindings(groupId);
+    const summaryPrompt = this.buildSummaryPrompt(this.currentRunTask, findings);
+
+    try {
+      await this.researchJobService.startSummaryJob(groupId, summaryPrompt);
+    } catch (error) {
+      console.error('[StoryResearch] Failed to start summary job:', error);
+      this.handleServerSideError(groupId, 'Failed to start summary generation');
+    }
+  }
+
+  /**
+   * Complete server-side research and save results
+   */
+  private async completeServerSideResearch(_groupId: string): Promise<void> {
+    this.isRunning = false;
+    this.progressMessage = '';
+    this.activeGroupId = null;
+
+    // Clean up subscriptions
+    this.progressSubscription?.unsubscribe();
+    this.streamingSubscription?.unsubscribe();
+
+    // Save to history
+    const saved = await this.researchService.saveResearch({
+      storyId: this.storyId,
+      task: this.currentRunTask,
+      model: this.currentRunModel,
+      sceneFindings: this.sceneFindings,
+      summary: this.finalSummary,
+      status: 'completed'
+    });
+
+    await this.refreshHistory(saved.researchId);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Handle server-side research errors
+   */
+  private async handleServerSideError(_groupId: string, errorMessage: string): Promise<void> {
+    this.isRunning = false;
+    this.progressMessage = '';
+    this.activeGroupId = null;
+    this.errorMessage = errorMessage;
+
+    // Clean up subscriptions
+    this.progressSubscription?.unsubscribe();
+    this.streamingSubscription?.unsubscribe();
+
+    // Save partial results to history
+    const saved = await this.researchService.saveResearch({
+      storyId: this.storyId,
+      task: this.currentRunTask,
+      model: this.currentRunModel,
+      sceneFindings: this.sceneFindings,
+      summary: this.finalSummary,
+      status: 'failed',
+      errorMessage
+    });
+
+    await this.refreshHistory(saved.researchId);
     this.cdr.markForCheck();
   }
 
@@ -528,10 +863,23 @@ export class StoryResearchComponent implements OnInit {
   }
 
   private async confirmHighTokenUsage(): Promise<boolean> {
+    const settings = this.settingsService.getSettings();
+    if (settings.research?.skipConfirmation) {
+      return true;
+    }
+
     const effectiveConcurrency = Math.max(this.MIN_CONCURRENCY, Math.min(this.maxConcurrentScenes, this.MAX_CONCURRENCY));
     const alert = await this.alertController.create({
       header: 'Token usage warning',
       message: `This will trigger ${this.estimatedPromptCount} prompts and send the full text of each scene. Up to ${effectiveConcurrency} prompts run in parallel. Expensive hosted models may incur significant costs. Continue?`,
+      inputs: [
+        {
+          type: 'checkbox',
+          label: 'Don\'t ask again',
+          value: 'skip',
+          checked: false
+        }
+      ],
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         { text: 'Proceed', role: 'confirm' }
@@ -539,6 +887,14 @@ export class StoryResearchComponent implements OnInit {
     });
     await alert.present();
     const result = await alert.onDidDismiss();
+
+    // Save preference if checkbox was checked
+    if (result.role === 'confirm' && result.data?.values?.includes('skip')) {
+      await this.settingsService.updateSettings({
+        research: { skipConfirmation: true }
+      });
+    }
+
     return result.role === 'confirm';
   }
 
@@ -666,6 +1022,19 @@ export class StoryResearchComponent implements OnInit {
         const contentParts = response.content?.map(part => part.text) ?? [];
         const text = contentParts.join('\n').trim();
         return text || '';
+      }
+      case 'openaiCompatible': {
+        const response = await firstValueFrom(
+          this.openAICompatibleApi.generateText(prompt, {
+            model: modelName,
+            maxTokens,
+            temperature,
+            wordCount,
+            stream: false,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        );
+        return response.choices?.[0]?.message?.content?.trim() || '';
       }
       default:
         throw new Error(`The selected provider (${provider || 'unknown'}) is not supported for story research yet.`);

@@ -1,6 +1,8 @@
 import { Component, Input, Output, EventEmitter, TemplateRef, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, IonPopover } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { personCircleOutline } from 'ionicons/icons';
 import { VersionService } from '../../core/services/version.service';
 import { VersionTooltipComponent } from './version-tooltip.component';
 
@@ -80,7 +82,10 @@ export interface BurgerMenuGroup {
         <ion-buttons slot="end">
           <!-- User Info (Desktop Only) -->
           <div class="desktop-only user-info" *ngIf="showUserInfo && userGreeting">
-            <span class="user-greeting">{{ userGreeting }}</span>
+            <div class="header-badge user-badge">
+              <ion-icon name="person-circle-outline"></ion-icon>
+              <span class="badge-text">{{ userGreeting }}</span>
+            </div>
             <ng-content select="[slot=user-status]"></ng-content>
           </div>
 
@@ -105,28 +110,26 @@ export interface BurgerMenuGroup {
           <!-- Status Chips -->
           <ng-container *ngFor="let action of rightActions">
             <app-version-tooltip *ngIf="action.chipContent && action.showVersionTooltip">
-              <ion-chip 
-                [color]="action.chipColor || 'medium'"
+              <ion-chip
                 [class.desktop-only]="!action.showOnMobile"
                 [class.mobile-only]="!action.showOnDesktop"
                 [title]="action.tooltip || action.chipContent"
                 [attr.aria-label]="action.tooltip || action.chipContent || action.label || action.icon"
                 (click)="action.action()"
-                class="clickable-chip">
+                class="header-badge-chip">
                 <ion-icon [name]="action.icon" *ngIf="action.icon"></ion-icon>
                 <ion-label>{{ action.chipContent }}</ion-label>
               </ion-chip>
             </app-version-tooltip>
-            
-            <ion-chip 
+
+            <ion-chip
               *ngIf="action.chipContent && !action.showVersionTooltip"
-              [color]="action.chipColor || 'medium'"
               [class.desktop-only]="!action.showOnMobile"
               [class.mobile-only]="!action.showOnDesktop"
               [title]="action.tooltip || action.chipContent"
               [attr.aria-label]="action.tooltip || action.chipContent || action.label || action.icon"
               (click)="action.action()"
-              class="clickable-chip">
+              class="header-badge-chip">
               <ion-icon [name]="action.icon" *ngIf="action.icon"></ion-icon>
               <ion-label>{{ action.chipContent }}</ion-label>
             </ion-chip>
@@ -226,15 +229,15 @@ export interface BurgerMenuGroup {
   styles: [`
     /* Base Header Styling */
     ion-header {
-      backdrop-filter: blur(15px);
-      background: rgba(45, 45, 45, 0.3);
-      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(var(--cw-blur-lg));
+      background: var(--cw-bg-elevated);
+      box-shadow: var(--cw-shadow-md);
       position: sticky;
       top: 0;
-      z-index: 100;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: var(--cw-z-sticky);
+      border-bottom: 1px solid var(--cw-border-subtle);
     }
-    
+
     /* Mobile header height fix for scroll calculation */
     @media (max-width: 768px) {
       ion-header {
@@ -242,12 +245,12 @@ export interface BurgerMenuGroup {
         min-height: 56px;
       }
     }
-    
+
     ion-toolbar {
       --background: transparent;
-      --color: #f8f9fa;
-      --padding-start: 16px;
-      --padding-end: 16px;
+      --color: var(--cw-text-primary);
+      --padding-start: var(--cw-space-lg);
+      --padding-end: var(--cw-space-lg);
     }
 
     /* Title Styling */
@@ -258,74 +261,124 @@ export interface BurgerMenuGroup {
       flex: 1;
       text-align: center;
     }
-    
+
     .title-content {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--cw-space-md);
       justify-content: center;
       overflow: visible;
       min-width: max-content;
-      padding: 0 16px;
+      padding: 0 var(--cw-space-lg);
     }
-    
+
     .header-logo {
       width: 48px;
       height: 48px;
       object-fit: contain;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      filter: drop-shadow(var(--cw-shadow-sm));
       flex-shrink: 0;
     }
-    
+
     .app-title {
-      background: linear-gradient(135deg, #f8f9fa 0%, #8bb4f8 50%, #4776e6 100%);
+      background: var(--cw-gradient-text-brand);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      font-size: 1.5rem;
-      font-weight: 700;
+      font-size: var(--cw-font-size-2xl);
+      font-weight: var(--cw-font-weight-bold);
       letter-spacing: 0.5px;
-      text-shadow: 0 2px 10px rgba(139, 180, 248, 0.3);
+      text-shadow: var(--cw-shadow-primary-glow);
     }
 
     /* Button Styling */
     ion-button {
-      --color: #f8f9fa;
-      --background: rgba(255, 255, 255, 0.1);
-      --background-hover: rgba(255, 255, 255, 0.2);
-      --border-radius: 8px;
-      margin: 0 4px;
-      transition: all 0.2s ease;
-    }
-    
-    ion-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    
-    ion-icon {
-      font-size: 1.2rem;
+      --color: var(--cw-text-primary);
+      --background: var(--cw-bg-button-ghost);
+      --background-hover: var(--cw-bg-button-ghost-hover);
+      --border-radius: var(--cw-radius-md);
+      margin: 0 var(--cw-space-xs);
+      transition: all var(--cw-transition-normal);
     }
 
-    /* User Info */
-    .user-info {
+    ion-button:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--cw-shadow-md);
+    }
+
+    ion-icon {
+      font-size: var(--cw-font-size-lg);
+    }
+
+    /* User Info - Combined selector ensures flex layout on desktop while allowing mobile hide */
+    .desktop-only.user-info {
+      display: flex;  /* Override .desktop-only { display: block } on desktop only */
+      align-items: center;
+      gap: var(--cw-space-sm);
+      margin-right: var(--cw-space-md);
+    }
+
+    /* Unified Header Badge Base Styles */
+    .header-badge {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      margin-right: 1rem;
+      gap: var(--cw-space-xs);
+      padding: var(--cw-space-xs) var(--cw-space-sm);
+      border-radius: var(--cw-radius-sm);
+      font-size: var(--cw-font-size-xs);
+      font-weight: var(--cw-font-weight-medium);
+      line-height: var(--cw-line-height-tight);
+      transition: background-color var(--cw-transition-normal),
+                  border-color var(--cw-transition-normal);
+      white-space: nowrap;
+      height: 28px;
+      box-sizing: border-box;
     }
-    
-    .user-greeting {
-      color: #f8f9fa;
-      font-size: 0.9rem;
-      font-weight: 500;
+
+    .header-badge ion-icon {
+      font-size: var(--cw-font-size-sm);
+      flex-shrink: 0;
+    }
+
+    .header-badge .badge-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100px;
+    }
+
+    /* User Badge - Info/Primary color */
+    .user-badge {
+      background-color: var(--cw-bg-info-subtle);
+      color: var(--cw-color-primary-light);
+      border: 1px solid var(--cw-border-accent);
+    }
+
+    /* Version Chip - Override ion-chip to match badge style */
+    ion-chip.header-badge-chip {
+      --background: var(--cw-bg-hover);
+      --color: var(--cw-text-secondary);
+      height: 28px;
+      font-size: var(--cw-font-size-xs);
+      font-weight: var(--cw-font-weight-medium);
+      margin: 0;
+      border: 1px solid var(--cw-border-subtle);
+      border-radius: var(--cw-radius-sm);
+    }
+
+    ion-chip.header-badge-chip ion-icon {
+      font-size: var(--cw-font-size-sm);
+      margin-right: var(--cw-space-xs);
+    }
+
+    ion-chip.header-badge-chip ion-label {
+      margin: 0;
     }
 
     /* Responsive Classes */
     .desktop-only {
       display: block;
     }
-    
+
     .mobile-only {
       display: none;
     }
@@ -334,67 +387,71 @@ export interface BurgerMenuGroup {
       .desktop-only {
         display: none;
       }
-      
+
+      .desktop-only.user-info {
+        display: none;  /* Explicit override needed due to combined selector specificity */
+      }
+
       .mobile-only {
         display: block;
       }
-      
+
       .app-title {
-        font-size: 1.2rem;
+        font-size: var(--cw-font-size-lg);
       }
     }
 
     /* Popover Styles */
     ion-popover {
       --backdrop-opacity: 0.6;
-      --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      --box-shadow: var(--cw-shadow-xl);
       --width: 280px;
       --max-width: 90vw;
     }
-    
+
     ion-popover::part(content) {
-      background: linear-gradient(135deg, rgba(15, 15, 25, 0.6) 0%, rgba(10, 10, 20, 0.6) 50%, rgba(20, 20, 35, 0.6) 100%);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(139, 180, 248, 0.2);
-      border-radius: 12px;
+      background: var(--cw-bg-glass);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
+      border: 1px solid var(--cw-border-accent);
+      border-radius: var(--cw-radius-lg);
     }
-    
+
     ion-popover ion-content {
       --background: transparent;
-      --color: #f8f9fa;
+      --color: var(--cw-text-primary);
     }
-    
+
     ion-popover ion-list {
       background: transparent;
-      padding: 0.5rem 0;
+      padding: var(--cw-space-sm) 0;
     }
-    
+
     ion-popover ion-item {
-      --background: rgba(255, 255, 255, 0.02);
-      --background-hover: rgba(139, 180, 248, 0.1);
-      --background-activated: rgba(139, 180, 248, 0.15);
-      --color: rgba(255, 255, 255, 0.95);
-      --ripple-color: rgba(139, 180, 248, 0.3);
-      margin: 0 0.75rem 0.5rem 0.75rem;
-      --border-radius: 8px;
-      border: 1px solid rgba(139, 180, 248, 0.15);
-      transition: background-color 0.2s ease, border-color 0.2s ease;
+      --background: var(--cw-bg-hover);
+      --background-hover: var(--cw-bg-info-subtle);
+      --background-activated: var(--cw-bg-primary-hover);
+      --color: var(--cw-text-primary);
+      --ripple-color: var(--cw-border-accent);
+      margin: 0 var(--cw-space-md) var(--cw-space-sm) var(--cw-space-md);
+      --border-radius: var(--cw-radius-md);
+      border: 1px solid var(--cw-border-accent);
+      transition: background-color var(--cw-transition-normal), border-color var(--cw-transition-normal);
     }
 
     ion-popover ion-item:hover {
-      --background: rgba(139, 180, 248, 0.1);
-      border-color: rgba(139, 180, 248, 0.3);
+      --background: var(--cw-bg-info-subtle);
+      border-color: var(--cw-border-accent);
     }
 
     ion-popover ion-item:focus-visible {
-      outline: 2px solid rgba(139, 180, 248, 0.6);
+      outline: 2px solid var(--cw-color-primary-light);
       outline-offset: 2px;
-      --background: rgba(139, 180, 248, 0.15);
+      --background: var(--cw-bg-primary-hover);
     }
 
     ion-popover ion-item ion-label {
-      font-weight: 500;
+      font-weight: var(--cw-font-weight-medium);
     }
 
     /* Ensure ion-icon colors apply correctly */
@@ -433,34 +490,34 @@ export interface BurgerMenuGroup {
     /* Menu separator between groups */
     .menu-separator {
       height: 1px;
-      background: linear-gradient(90deg, transparent 10%, rgba(139, 180, 248, 0.2) 50%, transparent 90%);
-      margin: 0.5rem 1rem;
+      background: linear-gradient(90deg, transparent 10%, var(--cw-border-accent) 50%, transparent 90%);
+      margin: var(--cw-space-sm) var(--cw-space-lg);
     }
 
     /* Non-collapsible group label */
     .menu-group-label {
-      padding: 0.5rem 1.25rem 0.25rem;
-      font-size: 0.75rem;
-      font-weight: 600;
+      padding: var(--cw-space-sm) var(--cw-space-xl) var(--cw-space-xs);
+      font-size: var(--cw-font-size-xs);
+      font-weight: var(--cw-font-weight-semibold);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: rgba(139, 180, 248, 0.7);
+      color: var(--cw-color-primary-light);
     }
 
     /* Collapsible group header */
     ion-popover ion-item.group-header {
-      --background: rgba(255, 255, 255, 0.03);
-      font-weight: 500;
+      --background: var(--cw-bg-hover);
+      font-weight: var(--cw-font-weight-medium);
     }
 
     ion-popover ion-item.group-header .expand-icon {
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.5);
+      font-size: var(--cw-font-size-sm);
+      color: var(--cw-text-muted);
     }
 
     /* Submenu items - slightly indented */
     ion-popover ion-item.submenu-item {
-      margin-left: 1.5rem;
+      margin-left: var(--cw-space-xl);
       font-size: 0.95em;
     }
 
@@ -470,16 +527,16 @@ export interface BurgerMenuGroup {
       cursor: not-allowed;
       pointer-events: none;
     }
-    
+
     .popover-header {
-      padding: 1rem 1.25rem 0.75rem 1.25rem;
-      border-bottom: 1px solid rgba(139, 180, 248, 0.15);
-      background: linear-gradient(135deg, rgba(15, 15, 25, 0.4) 0%, rgba(10, 10, 20, 0.4) 100%);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
+      padding: var(--cw-space-lg) var(--cw-space-xl) var(--cw-space-md) var(--cw-space-xl);
+      border-bottom: 1px solid var(--cw-border-accent);
+      background: var(--cw-bg-glass);
+      backdrop-filter: blur(var(--cw-blur-xl));
+      -webkit-backdrop-filter: blur(var(--cw-blur-xl));
       position: relative;
     }
-    
+
     .popover-header::before {
       content: '';
       position: absolute;
@@ -487,29 +544,29 @@ export interface BurgerMenuGroup {
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(139, 180, 248, 0.05) 0%, rgba(71, 118, 230, 0.05) 100%);
+      background: var(--cw-gradient-primary-subtle);
       z-index: -1;
     }
-    
+
     .popover-header h3 {
       margin: 0;
-      color: rgba(255, 255, 255, 0.95);
-      font-size: 1rem;
-      font-weight: 600;
+      color: var(--cw-text-primary);
+      font-size: var(--cw-font-size-md);
+      font-weight: var(--cw-font-weight-semibold);
       letter-spacing: 0.3px;
-      background: linear-gradient(135deg, #ffffff 0%, #8bb4f8 50%, #4776e6 100%);
+      background: var(--cw-gradient-text-accent);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    
+
     .popover-footer {
-      border-top: 1px solid rgba(139, 180, 248, 0.15);
-      padding: 0.75rem 1.25rem;
-      background: linear-gradient(135deg, rgba(15, 15, 25, 0.4) 0%, rgba(10, 10, 20, 0.4) 100%);
+      border-top: 1px solid var(--cw-border-accent);
+      padding: var(--cw-space-md) var(--cw-space-xl);
+      background: var(--cw-bg-glass);
       position: relative;
     }
-    
+
     .popover-footer::before {
       content: '';
       position: absolute;
@@ -517,44 +574,44 @@ export interface BurgerMenuGroup {
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(139, 180, 248, 0.05) 0%, rgba(71, 118, 230, 0.05) 100%);
+      background: var(--cw-gradient-primary-subtle);
       z-index: -1;
     }
 
     /* Clickable chips */
     .clickable-chip {
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--cw-transition-normal);
     }
-    
+
     .clickable-chip:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      --background: rgba(255, 255, 255, 0.15);
+      box-shadow: var(--cw-shadow-md);
+      --background: var(--cw-bg-button-ghost-hover);
     }
 
     /* Popover Footer Styles */
     .popover-footer ion-chip {
-      font-size: 0.8rem;
-      margin: 0.25rem 0;
+      font-size: var(--cw-font-size-xs);
+      margin: var(--cw-space-xs) 0;
     }
-    
+
     .popover-footer .status-detail {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--cw-space-sm);
       flex-wrap: wrap;
       align-items: center;
     }
-    
+
     @media (min-width: 768px) {
       ion-header {
-        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--cw-shadow-lg);
       }
-      
+
       ion-toolbar {
         --min-height: 44px;
-        --padding-top: 4px;
-        --padding-bottom: 4px;
+        --padding-top: var(--cw-space-xs);
+        --padding-bottom: var(--cw-space-xs);
       }
     }
   `]
@@ -582,8 +639,12 @@ export class AppHeaderComponent implements OnInit {
   @Input() userGreeting = '';
 
   @Output() burgerMenuToggle = new EventEmitter<boolean>();
-  
+
   public isBurgerMenuOpen = false;
+
+  constructor() {
+    addIcons({ personCircleOutline });
+  }
 
   // Computed property for backward compatibility
   get displayGroups(): BurgerMenuGroup[] {

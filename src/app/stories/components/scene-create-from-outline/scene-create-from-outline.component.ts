@@ -75,8 +75,9 @@ export class SceneCreateFromOutlineComponent {
       // 1) Create placeholder scene first to obtain sceneId/order
       const newScene = await this.storyService.addScene(this.storyId, this.chapterId);
 
-      // 2) Start generation in background (don't await)
-      this.sceneGenService.generateFromOutline({
+      // 2) Start streaming generation (don't await - it runs in background)
+      // Error/success handling is done in story-editor.component.ts which persists during generation
+      this.sceneGenService.generateFromOutlineStreaming({
         storyId: this.storyId,
         chapterId: this.chapterId,
         sceneId: newScene.id,
@@ -87,34 +88,6 @@ export class SceneCreateFromOutlineComponent {
         useFullStoryContext: this.useFullStoryContext,
         includeCodex: this.includeCodex,
         temperature: this.temperature
-      }).then(async () => {
-        // Generation completed successfully
-        const toast = await this.toastCtrl.create({
-          message: 'Scene generated successfully!',
-          duration: 4000,
-          color: 'success',
-          position: 'bottom',
-          buttons: [{ text: 'Dismiss', role: 'cancel' }]
-        });
-        await toast.present();
-      }).catch(async (error) => {
-        // Generation failed
-        const message = error instanceof Error ? error.message : 'Generation failed';
-        const toast = await this.toastCtrl.create({
-          message: `Scene generation failed: ${message}`,
-          duration: 5000,
-          color: 'danger',
-          position: 'bottom',
-          buttons: [{ text: 'Dismiss', role: 'cancel' }]
-        });
-        await toast.present();
-
-        // Delete the placeholder scene on error
-        try {
-          await this.storyService.deleteScene(this.storyId, this.chapterId, newScene.id);
-        } catch (deleteErr) {
-          console.warn('Failed to delete placeholder scene after error:', deleteErr);
-        }
       });
 
       // 3) Close modal immediately

@@ -1,0 +1,115 @@
+/**
+ * CSS Grid mirroring technique for auto-growing textareas.
+ * The ::after pseudo-element mirrors the textarea content and
+ * forces the grid cell to expand, making the textarea grow.
+ */
+
+.grow-wrap {
+  display: grid;
+
+  &::after {
+    // Mirror the textarea content for sizing
+    content: attr(data-replicated-value) " ";
+    white-space: pre-wrap;
+    visibility: hidden;
+  }
+
+  > textarea,
+  &::after {
+    // Stack in same grid cell
+    grid-area: 1 / 1 / 2 / 2;
+    box-sizing: border-box;
+
+    // Match textarea styling exactly
+    font-family: inherit;
+    font-size: var(--cw-font-size-sm);
+    line-height: 1.5;
+
+    // Match existing scrollable-textarea padding
+    padding: var(--cw-space-md);
+
+    // Border and background
+    background: var(--cw-bg-input);
+    border: 1px solid var(--cw-border-subtle);
+    border-radius: var(--cw-radius-sm);
+
+    // Typography
+    color: var(--cw-text-primary);
+
+    // Ensure word wrapping matches
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  > textarea {
+    // Reset default textarea styling
+    resize: none;
+    overflow-y: auto;
+
+    // Mobile touch optimizations
+    -webkit-overflow-scrolling: touch; // Smooth iOS scrolling
+    touch-action: pan-y; // Allow vertical scroll, prevent horizontal
+
+    // Scrollbar styling
+    scrollbar-width: thin;
+    scrollbar-color: var(--cw-scrollbar-thumb) transparent;
+
+    // Explicit transitions for better performance (avoid transition: all)
+    transition: background var(--cw-transition-slow),
+                border-color var(--cw-transition-slow),
+                box-shadow var(--cw-transition-slow);
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--cw-scrollbar-thumb);
+      border-radius: var(--cw-radius-xs);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: var(--cw-scrollbar-thumb-hover);
+    }
+
+    &::placeholder {
+      color: var(--cw-text-disabled);
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--cw-bg-elevated);
+      border-color: var(--cw-border-default);
+    }
+
+    &:focus {
+      outline: none;
+      background: var(--cw-bg-surface);
+      border-color: var(--cw-border-primary);
+      box-shadow: var(--cw-shadow-focus);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: var(--cw-bg-input);
+    }
+
+    &[readonly] {
+      cursor: default;
+    }
+  }
+}
+
+// Mobile responsive adjustments
+@media (max-width: 768px) {
+  .grow-wrap {
+    > textarea,
+    &::after {
+      font-size: 16px; // Prevent iOS zoom on focus
+    }
+  }
+}

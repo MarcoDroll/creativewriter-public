@@ -90,7 +90,8 @@ export class OpenAICompatibleApiService {
         .join('\n\n');
     }
 
-    const url = `${settings.openAICompatible.baseUrl}/v1/chat/completions`;
+    const baseUrl = this.normalizeBaseUrl(settings.openAICompatible.baseUrl);
+    const url = `${baseUrl}/v1/chat/completions`;
 
     // Log the request
     const logId = this.aiLogger.logRequest({
@@ -127,9 +128,7 @@ export class OpenAICompatibleApiService {
     this.requestMetadata.set(requestId, { logId, startTime });
 
     return this.http.post<OpenAICompatibleResponse>(url, request, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: this.buildHeaders(settings)
     }).pipe(
       takeUntil(abortSubject),
       tap({
@@ -236,7 +235,8 @@ export class OpenAICompatibleApiService {
         .join('\n\n');
     }
 
-    const url = `${settings.openAICompatible.baseUrl}/v1/chat/completions`;
+    const baseUrl = this.normalizeBaseUrl(settings.openAICompatible.baseUrl);
+    const url = `${baseUrl}/v1/chat/completions`;
 
     // Log the request
     const logId = this.aiLogger.logRequest({
@@ -291,9 +291,7 @@ export class OpenAICompatibleApiService {
       // Use fetch for streaming
       fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: this.buildHeaders(settings),
         body: JSON.stringify(request),
         signal: abortController.signal
       }).then(async response => {
@@ -396,10 +394,12 @@ export class OpenAICompatibleApiService {
       return throwError(() => new Error('OpenAI-Compatible base URL is not configured'));
     }
 
-    const url = `${settings.openAICompatible.baseUrl}/v1/models`;
+    const baseUrl = this.normalizeBaseUrl(settings.openAICompatible.baseUrl);
+    const url = `${baseUrl}/v1/models`;
 
-    return this.http.get<OpenAICompatibleModelsResponse>(url)
-      .pipe(
+    return this.http.get<OpenAICompatibleModelsResponse>(url, {
+      headers: this.buildHeaders(settings)
+    }).pipe(
         catchError(error => {
           console.error('Failed to load OpenAI-Compatible models:', error);
           return throwError(() => error);
@@ -414,10 +414,12 @@ export class OpenAICompatibleApiService {
       return throwError(() => new Error('OpenAI-Compatible base URL is not configured'));
     }
 
-    const url = `${settings.openAICompatible.baseUrl}/v1/models`;
+    const baseUrl = this.normalizeBaseUrl(settings.openAICompatible.baseUrl);
+    const url = `${baseUrl}/v1/models`;
 
-    return this.http.get(url)
-      .pipe(
+    return this.http.get(url, {
+      headers: this.buildHeaders(settings)
+    }).pipe(
         map(() => true),
         tap(() => console.log('OpenAI-Compatible connection test successful')),
         catchError(error => {
@@ -441,6 +443,24 @@ export class OpenAICompatibleApiService {
         this.requestMetadata.delete(requestId);
       }
     }
+  }
+
+  private normalizeBaseUrl(baseUrl: string): string {
+    // Strip trailing slashes
+    let url = baseUrl.replace(/\/+$/, '');
+    // Remove trailing version path (e.g., /v1, /v2) to prevent double /v1
+    url = url.replace(/\/v\d+$/, '');
+    return url;
+  }
+
+  private buildHeaders(settings: { openAICompatible: { apiKey?: string } }): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (settings.openAICompatible.apiKey) {
+      headers['Authorization'] = `Bearer ${settings.openAICompatible.apiKey}`;
+    }
+    return headers;
   }
 
   private generateRequestId(): string {

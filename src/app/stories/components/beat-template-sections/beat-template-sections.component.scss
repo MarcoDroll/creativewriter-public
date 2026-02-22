@@ -36,6 +36,19 @@ ion-accordion {
       margin-left: 8px;
     }
   }
+
+  // Type-specific section indicator (border left)
+  &.section-specific {
+    border-left: 3px solid var(--ion-color-warning);
+  }
+}
+
+// Type-specific badge in section headers
+.type-specific-badge {
+  font-size: 9px;
+  text-transform: uppercase;
+  --background: rgba(255, 196, 87, 0.2);
+  --color: var(--ion-color-warning);
 }
 
 .section-content {
@@ -211,6 +224,13 @@ ion-accordion {
     ::ng-deep textarea {
       max-height: 430px !important;
     }
+  }
+}
+
+// Hide type-specific badge on very small screens
+@media (max-width: 480px) {
+  .type-specific-badge {
+    display: none;
   }
 }
 

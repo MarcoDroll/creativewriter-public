@@ -15,6 +15,13 @@ export class CodexService {
   private db: PouchDB.Database | null = null;
   private isInitialized = false;
 
+  // Sync push throttling - PouchDB live sync with filters doesn't push local changes
+  // so we need to manually trigger push after saves (same pattern as StoryService)
+  private pushTimeout: ReturnType<typeof setTimeout> | null = null;
+  private lastPushTime = 0;
+  private pendingDocIds = new Set<string>();
+  private readonly PUSH_THROTTLE_MS = 5000;
+
   codex$ = this.codexSubject.asObservable();
 
   constructor() {
@@ -151,6 +158,9 @@ export class CodexService {
           this.codexMap.set(codex.storyId, cleanedCodex);
           this.codexSubject.next(new Map(this.codexMap));
 
+          // Push to remote (fire-and-forget with throttle)
+          this.schedulePush(docId);
+
           break; // Success, exit retry loop
           
         } catch (error: unknown) {
@@ -169,6 +179,40 @@ export class CodexService {
       console.error('Error saving codex to database:', error);
       throw error;
     }
+  }
+
+  /**
+   * Schedule a throttled sync push after codex saves.
+   * Required because PouchDB live sync with filter functions doesn't detect local changes.
+   */
+  private schedulePush(docId: string): void {
+    this.pendingDocIds.add(docId);
+    const now = Date.now();
+    const timeSinceLastPush = now - this.lastPushTime;
+    if (timeSinceLastPush < this.PUSH_THROTTLE_MS) {
+      if (this.pushTimeout) {
+        clearTimeout(this.pushTimeout);
+      }
+      const delay = this.PUSH_THROTTLE_MS - timeSinceLastPush;
+      this.pushTimeout = setTimeout(() => this.executePush(), delay);
+      return;
+    }
+    this.executePush();
+  }
+
+  private executePush(): void {
+    const docIds = [...this.pendingDocIds];
+    this.pushTimeout = null;
+    this.pendingDocIds.clear();
+    this.lastPushTime = Date.now();
+    if (docIds.length === 0) return;
+    this.databaseService.pushDocuments(docIds).then(result => {
+      if (result.docsProcessed > 0) {
+        console.info(`[CodexService] Pushed ${result.docsProcessed} docs`);
+      }
+    }).catch(err => {
+      console.warn('[CodexService] Push failed (live sync will retry):', err);
+    });
   }
 
   private cleanCodexData(codex: Codex): Codex {
@@ -230,10 +274,11 @@ export class CodexService {
   /**
    * Migrate existing portraitBase64 to portrait gallery format
    */
-  private migrateEntryPortraitToGallery(entry: CodexEntry): CodexEntry {
+  private migrateEntryPortraitToGallery(entry: CodexEntry & { portraitBase64?: string }): CodexEntry {
     // Skip if already has a gallery (already migrated)
     if (entry.portraitGallery !== undefined) {
-      return entry;
+      const { portraitBase64: _, ...cleanEntry } = entry;
+      return cleanEntry;
     }
 
     // Check if there's an existing portrait to migrate
@@ -245,16 +290,18 @@ export class CodexService {
         source: 'uploaded' // Assume uploaded since we can't tell the original source
       };
 
+      const { portraitBase64: _, ...cleanEntry } = entry;
       return {
-        ...entry,
+        ...cleanEntry,
         portraitGallery: [migratedItem],
         activePortraitId: migratedItem.id
       };
     }
 
     // No portrait to migrate, initialize empty gallery
+    const { portraitBase64: _, ...cleanEntry } = entry;
     return {
-      ...entry,
+      ...cleanEntry,
       portraitGallery: [],
       activePortraitId: undefined
     };
@@ -265,17 +312,14 @@ export class CodexService {
    */
   getActivePortrait(entry: CodexEntry): string | null {
     if (!entry.portraitGallery || entry.portraitGallery.length === 0) {
-      // Fallback to legacy field
-      return entry.portraitBase64 || null;
+      return null;
     }
 
     const activeId = entry.activePortraitId;
     const activePortrait = entry.portraitGallery.find(p => p.id === activeId);
 
-    // Return active portrait, or first in gallery, or legacy fallback
     return activePortrait?.base64
       || entry.portraitGallery[0]?.base64
-      || entry.portraitBase64
       || null;
   }
 
@@ -424,8 +468,11 @@ export class CodexService {
         title: entry.title || 'New Entry',
         content: entry.content || '',
         tags: entry.tags || [],
-        imageUrl: entry.imageUrl,
+        portraitGallery: entry.portraitGallery,
+        activePortraitId: entry.activePortraitId,
         metadata: entry.metadata || {},
+        storyRole: entry.storyRole,
+        alwaysInclude: entry.alwaysInclude,
         order: category.entries.length,
         createdAt: now,
         updatedAt: now
@@ -464,8 +511,11 @@ export class CodexService {
           title: entry.title || 'New Entry',
           content: entry.content || '',
           tags: entry.tags || [],
-          imageUrl: entry.imageUrl,
+          portraitGallery: entry.portraitGallery,
+          activePortraitId: entry.activePortraitId,
           metadata: entry.metadata || {},
+          storyRole: entry.storyRole,
+          alwaysInclude: entry.alwaysInclude,
           order: category.entries.length,
           createdAt: now,
           updatedAt: now
@@ -635,12 +685,14 @@ export class CodexService {
       try {
         const doc = await this.db!.get(docId);
         await this.db!.remove(doc);
+        // Push tombstone to remote so deletion syncs to other devices
+        this.schedulePush(docId);
       } catch (error: unknown) {
         if ((error as PouchDB.Core.Error).status !== 404) {
           throw error;
         }
       }
-      
+
       this.codexMap.delete(storyId);
       this.codexSubject.next(new Map(this.codexMap));
       

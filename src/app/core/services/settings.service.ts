@@ -67,6 +67,14 @@ export class SettingsService {
             ...DEFAULT_SETTINGS.ollama,
             ...parsed.ollama
           },
+          claude: {
+            ...DEFAULT_SETTINGS.claude,
+            ...parsed.claude
+          },
+          openAICompatible: {
+            ...DEFAULT_SETTINGS.openAICompatible,
+            ...parsed.openAICompatible
+          },
           sceneTitleGeneration: {
             ...DEFAULT_SETTINGS.sceneTitleGeneration,
             ...parsed.sceneTitleGeneration
@@ -74,6 +82,10 @@ export class SettingsService {
           sceneSummaryGeneration: {
             ...DEFAULT_SETTINGS.sceneSummaryGeneration,
             ...parsed.sceneSummaryGeneration
+          },
+          stagingNotesGeneration: {
+            ...DEFAULT_SETTINGS.stagingNotesGeneration,
+            ...parsed.stagingNotesGeneration
           },
           sceneGenerationFromOutline: {
             ...DEFAULT_SETTINGS.sceneGenerationFromOutline,
@@ -102,6 +114,14 @@ export class SettingsService {
           imageGeneration: {
             ...DEFAULT_SETTINGS.imageGeneration,
             ...parsed.imageGeneration
+          },
+          serverGeneration: {
+            ...DEFAULT_SETTINGS.serverGeneration,
+            ...parsed.serverGeneration
+          },
+          research: {
+            ...DEFAULT_SETTINGS.research,
+            ...parsed.research
           },
           favoriteModelLists,
           favoriteModels: [...favoriteModelLists.beatInput],

@@ -6,7 +6,7 @@ import {
   IonIcon, IonItem, IonLabel
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { textOutline, imageOutline, chatbubbleOutline, colorWandOutline, colorPaletteOutline } from 'ionicons/icons';
+import { textOutline, imageOutline, chatbubbleOutline, colorWandOutline, colorPaletteOutline, bulbOutline } from 'ionicons/icons';
 import { Settings } from '../../core/models/settings.interface';
 import { ColorPickerComponent } from '../components/color-picker.component';
 import { BackgroundSelectorComponent } from '../components/background-selector.component';
@@ -31,7 +31,7 @@ export class UiSettingsComponent implements OnInit {
   private customBackgroundService = inject(SyncedCustomBackgroundService);
 
   constructor() {
-    addIcons({ textOutline, imageOutline, chatbubbleOutline, colorWandOutline, colorPaletteOutline });
+    addIcons({ textOutline, imageOutline, chatbubbleOutline, colorWandOutline, colorPaletteOutline, bulbOutline });
   }
 
   @Input() settings!: Settings;
@@ -100,6 +100,67 @@ export class UiSettingsComponent implements OnInit {
     const newR = Math.min(255, Math.round(r * 0.85 + 40)); // Add some red for warmth
     const newG = Math.max(0, Math.round(g * 0.7)); // Reduce green
     const newB = Math.min(255, Math.round(b * 0.85 + 60)); // Add more blue
+
+    // Convert back to hex
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+  }
+
+  // ============================================
+  // THINKING COLOR (internal monologue in asterisks)
+  // ============================================
+
+  onThinkingColorChange(color: string): void {
+    // Update local settings - set to the custom color
+    this.settings.appearance.thinkingColor = color;
+    this.settingsChange.emit();
+  }
+
+  resetThinkingColorToAuto(): void {
+    // Reset to null to derive from text color automatically
+    this.settings.appearance.thinkingColor = null;
+    this.settingsChange.emit();
+  }
+
+  /**
+   * Get the effective thinking color (custom or derived from text color)
+   */
+  getEffectiveThinkingColor(): string {
+    if (this.settings.appearance.thinkingColor) {
+      return this.settings.appearance.thinkingColor;
+    }
+    // Derive from text color with a slight cyan shift
+    return this.deriveThinkingColor(this.settings.appearance.textColor);
+  }
+
+  /**
+   * Check if using automatic (derived) thinking color
+   */
+  isUsingAutomaticThinkingColor(): boolean {
+    return this.settings.appearance.thinkingColor === null;
+  }
+
+  /**
+   * Derive a thinking color from the text color by shifting it toward cyan/teal.
+   * Creates a subtle but noticeable difference for internal monologue highlighting.
+   */
+  private deriveThinkingColor(textColor: string): string {
+    // Validate hex color format
+    if (!textColor || !textColor.match(/^#[0-9a-fA-F]{6}$/)) {
+      return '#06b6d4'; // Return fallback cyan for invalid input
+    }
+
+    // Parse hex color
+    const hex = textColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    // Shift toward cyan: reduce red, increase green and blue
+    // This creates a subtle cyan/teal tint
+    const newR = Math.max(0, Math.round(r * 0.6)); // Reduce red significantly
+    const newG = Math.min(255, Math.round(g * 0.85 + 50)); // Add green
+    const newB = Math.min(255, Math.round(b * 0.85 + 60)); // Add blue
 
     // Convert back to hex
     const toHex = (n: number) => n.toString(16).padStart(2, '0');
