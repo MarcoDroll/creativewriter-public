@@ -1,39 +1,22 @@
 # Release Notes
 
-> **Per-user database security, Stripe portal fixes for self-hosters, and UX improvements**
+> **Fix Stripe portal verification failing after return from billing portal**
 
 ## 📋 Release Information
-- **Commits**: 8 commits since last release
-- **Key Areas**: Database Security, Premium Portal, Beat Navigation, User Authentication
-
-## 🎯 New Features
-
-### Per-User Database Authentication
-- 🔐 **Per-user CouchDB credentials** - Each user now gets their own CouchDB account with isolated database access, replacing the shared admin credentials model
-- 🔄 **Automatic credential provisioning** - User credentials are created on first login and securely stored for subsequent sync sessions
-- 🛡️ **Proxy-mediated auth flow** - The proxy service manages CouchDB user lifecycle, ensuring credentials are validated and rotated properly
-- 📝 **Migration hint for existing users** - Users with pre-password sync setups see a helpful prompt guiding them through the transition
-
-### Signup Error Handling
-- ⚠️ **Duplicate username detection** - Signup now shows a clear error when a username is already taken, instead of a generic failure message
-
-## ✨ Improvements
-
-### Beat Navigation
-- 📱 **Improved touch scrolling** - The beat navigation panel now handles touch gestures natively for smoother scrolling on mobile and tablet devices
-- ⚡ **Simplified scroll architecture** - Moved scroll management directly into the navigation panel component for more reliable behavior
+- **Commits**: 1 commit since last release
+- **Key Areas**: Stripe Premium Portal, Subscription Verification
 
 ## 🔧 Bug Fixes
 
-### Stripe Premium Portal (Self-Hosted)
-- 🔧 **Fixed portal redirect for self-hosters** - Users on custom domains (e.g. `qw05.de`) were being redirected to `localhost:3080` after Stripe email verification. The portal now uses a cookie-based redirect proxy that works with any domain
-- 🌐 **Scales to unlimited origins** - Instead of creating per-domain Stripe portal configurations (limited to 25), the Worker acts as a redirect proxy using first-party cookies, supporting any number of self-hosted deployments
-- 🛡️ **Open redirect protection** - The return URL is validated against the browser's Origin header to prevent redirect-based attacks
+### Stripe Portal Verification
+- 🐛 **Fixed 401 errors after Stripe portal return** - Users returning from the Stripe billing portal (login_page OTP flow) were seeing repeated "Verifying with Stripe..." failures. The verification KV entries are now written synchronously in the portal return handler instead of relying on a webhook that could fire late or not at all
+- ⚡ **Faster verification polling** - Reduced verification polling from 10 attempts over ~30 seconds to 6 attempts over ~11 seconds, since verification is now available immediately on return
+- 🎯 **No more false polling on page refresh** - The app now only polls for claim-verification when genuinely returning from the Stripe portal (detected via `portal_return=1` parameter), preventing unnecessary 401 errors on normal page loads with `?tab=premium`
 
 ## 🏗️ Technical Improvements
-- **Database Security**: Per-user CouchDB authentication replaces shared admin credentials across the entire sync stack (proxy, nginx, database service)
-- **Portal Architecture**: Single Stripe portal configuration with Worker-based redirect proxy (`/api/portal/start` → cookie → `/api/portal/return`) replaces per-origin config approach
-- **Token-Based Handoff**: One-time KV tokens with 1-hour TTL link the portal initiation to the redirect flow securely
+- **Synchronous KV writes**: The `/api/portal/return` handler now writes `portal_verified` entries to KV before redirecting the user, eliminating webhook timing and KV eventual-consistency issues
+- **Cookie payload enriched**: The portal redirect cookie now carries `email` and `customerId` alongside `returnUrl` (JSON format with backward compatibility for old plain-URL cookies)
+- **Webhook retained as backup**: The `billing_portal.session.created` webhook handler is unchanged and serves as a redundant fallback
 
 ---
 *Release prepared with [Claude Code](https://claude.com/claude-code)*

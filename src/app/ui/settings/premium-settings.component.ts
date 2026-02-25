@@ -94,19 +94,21 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
    * Check if user is returning from Stripe portal and attempt to claim verification
    *
    * Flow 1 (Legacy - direct code): URL contains ?verify=<code>
-   * Flow 2 (login_page): URL contains ?tab=premium, email set, no auth token - poll for verification
+   * Flow 2 (login_page): URL contains ?portal_return=1, email set, no auth token - poll for verification
    * Flow 3 (direct session): URL contains ?tab=premium, has auth token - just refresh status
    *
    * The login_page flow works like this:
    * 1. User goes to Stripe login_page, enters email, receives OTP
    * 2. User enters OTP (proves email ownership via Stripe)
-   * 3. billing_portal.session.created webhook fires, backend stores verification
-   * 4. User returns to app, we poll for verification
+   * 3. User exits portal → Stripe redirects to /api/portal/return
+   * 4. Worker stores portal_verified in KV, redirects to app with ?portal_return=1
+   * 5. App polls for verification (should succeed on first attempt)
    */
   private async checkPortalReturn(): Promise<void> {
     const urlParams = new URLSearchParams(window.location.search);
     const verifyCode = urlParams.get('verify');
     const tab = urlParams.get('tab');
+    const portalReturn = urlParams.get('portal_return');
 
     // Flow 1: Legacy verification code in URL
     if (verifyCode) {
@@ -138,32 +140,46 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Flow 2 & 3: Return from portal (either login_page or direct session)
-    if (tab === 'premium') {
+    // Flow 2: Genuine portal return (portal_return=1 set by /api/portal/return)
+    if (portalReturn === '1') {
+      // Clean portal_return param from URL immediately
+      const url = new URL(window.location.href);
+      url.searchParams.delete('portal_return');
+      window.history.replaceState({}, '', url.toString());
+
       if (this.subscriptionService.hasValidAuthToken()) {
-        // Flow 3: Direct session return - just refresh status (changes may have been made in portal)
+        // Already authenticated - just refresh status
         await this.subscriptionService.verifySubscription();
         this.updateStatusFromCache();
         this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
       } else if (this.email) {
-        // Flow 2: Login_page return - need to claim verification
+        // Login_page return - claim verification
         await this.attemptClaimVerification();
       }
+      return;
+    }
+
+    // Flow 3: Direct session return or page load with ?tab=premium
+    if (tab === 'premium' && this.subscriptionService.hasValidAuthToken()) {
+      await this.subscriptionService.verifySubscription();
+      this.updateStatusFromCache();
+      this.hasAuthToken = this.subscriptionService.hasValidAuthToken();
     }
   }
 
   /**
-   * Attempt to claim portal verification with polling
-   * The webhook might not have arrived yet, so we poll with increasing delays
+   * Attempt to claim portal verification with polling.
+   * Verification is stored synchronously by /api/portal/return before the redirect,
+   * so the first attempt should usually succeed. A few retries handle edge cases.
    */
   private async attemptClaimVerification(): Promise<void> {
     if (!this.email) return;
 
     this.verificationPending = true;
 
-    // Poll for 30 seconds total with exponential backoff
-    const maxAttempts = 10;
-    const delays = [1000, 2000, 2000, 3000, 3000, 4000, 4000, 4000, 4000, 3000]; // Total: ~30s
+    // Verification is stored before redirect, so 6 attempts over ~11s is plenty
+    const maxAttempts = 6;
+    const delays = [500, 1500, 2500, 3000, 3500]; // ~11s between attempts
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       this.message = `Verifying with Stripe... (${attempt}/${maxAttempts})`;
@@ -196,9 +212,8 @@ export class PremiumSettingsComponent implements OnInit, OnDestroy {
       }
     }
 
-    // All attempts exhausted - show actionable message
-    // This is normal if the user just loaded the page without returning from portal
-    this.message = 'Verification not found. If you just returned from Stripe, please click "Verify via Stripe Portal" again.';
+    // All attempts exhausted
+    this.message = 'Verification timed out. Please click "Verify via Stripe Portal" to try again.';
     this.messageType = 'error';
     this.verificationPending = false;
   }
