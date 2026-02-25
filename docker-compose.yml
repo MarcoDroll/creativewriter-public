@@ -49,6 +49,10 @@ services:
     restart: unless-stopped
     environment:
       - PORT=3001
+      - COUCHDB_HOST=couchdb
+      - COUCHDB_PORT=5984
+      - COUCHDB_ADMIN_USER=${COUCHDB_USER:-admin}
+      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_PASSWORD:-password}
     networks:
       - creativewriter-network
     labels:

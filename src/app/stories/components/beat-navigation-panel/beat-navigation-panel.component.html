@@ -37,28 +37,46 @@
       </ion-button>
     </div>
 
-    <div class="panel-body">
-      <div class="beat-list">
-        <div
-          *ngFor="let beat of beats; let i = index; trackBy: trackByBeatId"
-          class="beat-item"
-          (click)="selectBeat(beat.beatId); $event.stopPropagation()"
-          (keydown.enter)="selectBeat(beat.beatId); $event.stopPropagation()"
-          (keydown.space)="selectBeat(beat.beatId); $event.stopPropagation()"
-          tabindex="0"
-          role="button"
-          [attr.aria-label]="'Jump to beat ' + (i + 1) + ': ' + getBeatPreview(beat.prompt)">
-          <div class="beat-number">{{ i + 1 }}</div>
-          <div class="beat-info">
-            <div class="beat-prompt">{{ getBeatPreview(beat.prompt) }}</div>
+    <div class="panel-body-container">
+      <div
+        class="scroll-fade scroll-fade-top"
+        *ngIf="canScroll && !atTop"
+        aria-hidden="true">
+      </div>
+
+      <div
+        #panelBody
+        class="panel-body"
+        tabindex="0"
+        (scroll)="onPanelScroll()">
+        <div class="beat-list">
+          <div
+            *ngFor="let beat of beats; let i = index; trackBy: trackByBeatId"
+            class="beat-item"
+            (click)="selectBeat(beat.beatId); $event.stopPropagation()"
+            (keydown.enter)="selectBeat(beat.beatId); $event.stopPropagation()"
+            (keydown.space)="selectBeat(beat.beatId); $event.stopPropagation()"
+            tabindex="0"
+            role="button"
+            [attr.aria-label]="'Jump to beat ' + (i + 1) + ': ' + getBeatPreview(beat.prompt)">
+            <div class="beat-number">{{ i + 1 }}</div>
+            <div class="beat-info">
+              <div class="beat-prompt">{{ getBeatPreview(beat.prompt) }}</div>
+            </div>
+          </div>
+
+          <div *ngIf="beats.length === 0" class="no-beats">
+            <span class="material-symbols-outlined no-beats-icon">read_more</span>
+            <p>No beats in this scene</p>
+            <p class="hint">Use /beat to add AI prompts</p>
           </div>
         </div>
+      </div>
 
-        <div *ngIf="beats.length === 0" class="no-beats">
-          <span class="material-symbols-outlined no-beats-icon">read_more</span>
-          <p>No beats in this scene</p>
-          <p class="hint">Use /beat to add AI prompts</p>
-        </div>
+      <div
+        class="scroll-fade scroll-fade-bottom"
+        *ngIf="canScroll && !atBottom"
+        aria-hidden="true">
       </div>
     </div>
   </div>

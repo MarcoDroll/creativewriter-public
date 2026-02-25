@@ -180,6 +180,7 @@ The Docker Compose setup supports several environment variables that can be conf
 - `TZ`: Timezone setting for the containers (default: `Europe/Berlin`)
 - `DATA_PATH`: Custom path for persistent data storage (default: `./data`)
 - `COUCHDB_USER`: CouchDB admin username (default: `admin`)
+  Used by CouchDB itself and by the internal auth proxy for account/user-db management.
 - `COUCHDB_PASSWORD`: CouchDB admin password (default: `password` - **change in production!**)
 - `COUCHDB_SECRET`: CouchDB secret key (default: `mysecret` - **change in production!**)
 
@@ -235,7 +236,9 @@ If you see "CORS" errors in browser console, ensure `OLLAMA_ORIGINS` is set corr
 #### Database
 The application uses PouchDB for local storage with optional CouchDB sync:
 - Local-only mode works out of the box
-- For sync, configure CouchDB connection in settings
+- For sync, sign in or create an account in the login modal
+- Each sync account gets its own CouchDB database (`creative-writer-stories-<username>`)
+- Sync authentication now uses per-user credentials (no shared admin sync account)
 
 ## 🐳 Docker Deployment
 

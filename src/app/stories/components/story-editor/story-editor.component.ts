@@ -190,6 +190,7 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
   private touchStartY = 0;
   private touchEndX = 0;
   private touchEndY = 0;
+  private touchStartedInBeatPanel = false;
   private minSwipeDistance = 50;
   private maxVerticalDistance = 100;
 
@@ -1154,60 +1155,27 @@ export class StoryEditorComponent implements OnInit, OnDestroy {
     const touch = event.touches[0];
     this.touchStartX = touch.clientX;
     this.touchStartY = touch.clientY;
+    const target = event.target as HTMLElement | null;
+    this.touchStartedInBeatPanel = !!target?.closest('.beat-nav-panel');
   }
 
   private handleTouchEnd(event: TouchEvent): void {
     // Only enable gestures on mobile devices, not tablets
     if (window.innerWidth > 768) return;
 
+    // Ignore swipe gestures that started inside the beat panel.
+    // This allows vertical list scrolling without accidental panel gestures.
+    if (this.touchStartedInBeatPanel) {
+      this.touchStartedInBeatPanel = false;
+      return;
+    }
+
     const touch = event.changedTouches[0];
     this.touchEndX = touch.clientX;
     this.touchEndY = touch.clientY;
 
     this.handleSwipeGesture();
-  }
-
-  private isInteractiveElement(element: HTMLElement): boolean {
-    if (!element) return false;
-
-    // Check if element or any parent is an interactive element
-    let current = element;
-    while (current && current !== document.body) {
-      const tagName = current.tagName.toLowerCase();
-
-      // Check for form elements
-      if (['input', 'textarea', 'select', 'button'].includes(tagName)) {
-        return true;
-      }
-
-      // Check for Ion elements that are interactive
-      if (tagName.startsWith('ion-') && (
-        tagName.includes('input') ||
-        tagName.includes('textarea') ||
-        tagName.includes('button') ||
-        tagName.includes('select') ||
-        tagName.includes('toggle') ||
-        tagName.includes('checkbox') ||
-        tagName.includes('radio')
-      )) {
-        return true;
-      }
-
-      // Check for elements with contenteditable
-      if (current.contentEditable === 'true') {
-        return true;
-      }
-
-      // Check for elements with role="button" or similar
-      const role = current.getAttribute('role');
-      if (role && ['button', 'textbox', 'combobox', 'listbox'].includes(role)) {
-        return true;
-      }
-
-      current = current.parentElement as HTMLElement;
-    }
-
-    return false;
+    this.touchStartedInBeatPanel = false;
   }
 
   private handleSwipeGesture(): void {

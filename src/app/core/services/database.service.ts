@@ -394,6 +394,11 @@ export class DatabaseService {
         this.initializeSync().catch(err => {
           console.warn('[DatabaseService] Sync setup failed:', err);
         });
+      } else if (!this.syncInitialized || !this.remoteDb) {
+        // User may have refreshed credentials without changing the database name.
+        this.initializeSync().catch(err => {
+          console.warn('[DatabaseService] Sync setup failed:', err);
+        });
       }
     } else {
       // User logged out - switch to anonymous database
@@ -753,10 +758,20 @@ export class DatabaseService {
       if (!Pouch) {
         throw new Error('PouchDB not initialized');
       }
+      const syncCredentials = this.authService.getSyncCredentials();
+      if (!syncCredentials) {
+        this.remoteDb = null;
+        this.updateSyncStatus({
+          error: 'Sign in required for cloud sync',
+          isConnecting: false
+        });
+        return;
+      }
+
       this.remoteDb = new Pouch(couchUrl, {
         auth: {
-          username: 'admin',
-          password: 'password' // TODO: Make this configurable
+          username: syncCredentials.username,
+          password: syncCredentials.password
         }
       });
 
@@ -1431,6 +1446,9 @@ export class DatabaseService {
 
       if (normalized.includes('couchdb connection failed') || normalized.includes('failed to fetch') || normalized.includes('network')) {
         return 'Database server unreachable';
+      }
+      if (normalized.includes('sign in required') || normalized.includes('missing credentials')) {
+        return 'Sign in required for cloud sync';
       }
       if (normalized.includes('unauthorized') || normalized.includes('auth')) {
         return 'Database authentication failed';

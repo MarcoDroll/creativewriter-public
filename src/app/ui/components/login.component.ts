@@ -1,8 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+
+type AuthMode = 'signin' | 'signup';
 
 @Component({
   selector: 'app-login',
@@ -12,17 +13,44 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="login-container" *ngIf="!isLoggedIn">
       <div class="login-card">
         <h2>Creative Writer</h2>
-        <p class="login-subtitle">Sign in to sync your stories</p>
-        
-        <form (ngSubmit)="onLogin()" #loginForm="ngForm">
+        <p class="login-subtitle">
+          {{ mode === 'signin' ? 'Sign in to sync your stories securely' : 'Create an account to enable cloud sync' }}
+        </p>
+
+        <div class="mode-toggle" role="tablist" aria-label="Authentication mode">
+          <button
+            type="button"
+            class="mode-btn"
+            [class.active]="mode === 'signin'"
+            (click)="setMode('signin')">
+            Sign in
+          </button>
+          <button
+            type="button"
+            class="mode-btn"
+            [class.active]="mode === 'signup'"
+            (click)="setMode('signup')">
+            Create account
+          </button>
+        </div>
+
+        <div class="migration-hint">
+          <h3>Upgrading from older versions?</h3>
+          <p>
+            If you used sync before passwords were introduced, choose
+            <strong>Create account</strong> and use your previous username.
+          </p>
+        </div>
+
+        <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
           <div class="form-group">
             <label for="username">Username</label>
-            <input 
-              type="text" 
-              id="username" 
+            <input
+              type="text"
+              id="username"
               name="username"
-              [(ngModel)]="username" 
-              required 
+              [(ngModel)]="username"
+              required
               minlength="2"
               maxlength="20"
               pattern="[a-zA-Z0-9_-]+"
@@ -34,55 +62,91 @@ import { AuthService } from '../../core/services/auth.service';
               <small *ngIf="usernameField.errors?.['pattern']">Only letters, numbers, _ and - allowed</small>
             </div>
           </div>
-          
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              [(ngModel)]="password"
+              required
+              minlength="8"
+              maxlength="128"
+              placeholder="At least 8 characters"
+              #passwordField="ngModel">
+            <div class="field-help" *ngIf="passwordField.invalid && passwordField.touched">
+              <small *ngIf="passwordField.errors?.['required']">Password is required</small>
+              <small *ngIf="passwordField.errors?.['minlength']">At least 8 characters</small>
+            </div>
+          </div>
+
+          <div class="form-group" *ngIf="mode === 'signup'">
+            <label for="confirmPassword">Confirm password</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              [(ngModel)]="confirmPassword"
+              required
+              minlength="8"
+              maxlength="128"
+              placeholder="Repeat password"
+              #confirmPasswordField="ngModel">
+            <div class="field-help" *ngIf="confirmPasswordField.invalid && confirmPasswordField.touched">
+              <small *ngIf="confirmPasswordField.errors?.['required']">Please confirm your password</small>
+            </div>
+            <div class="field-help" *ngIf="confirmPasswordField.touched && password !== confirmPassword">
+              <small>Passwords do not match</small>
+            </div>
+          </div>
+
           <div class="form-group">
             <label for="displayName">Display name (optional)</label>
-            <input 
-              type="text" 
-              id="displayName" 
+            <input
+              type="text"
+              id="displayName"
               name="displayName"
-              [(ngModel)]="displayName" 
+              [(ngModel)]="displayName"
               maxlength="50"
               placeholder="Your Name">
           </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             class="login-btn"
-            [disabled]="loginForm.invalid || isLoading">
-            <span *ngIf="!isLoading">Sign in</span>
-            <span *ngIf="isLoading">Signing in...</span>
+            [disabled]="loginForm.invalid || isLoading || (mode === 'signup' && password !== confirmPassword)">
+            <span *ngIf="!isLoading">{{ mode === 'signin' ? 'Sign in' : 'Create account' }}</span>
+            <span *ngIf="isLoading">{{ mode === 'signin' ? 'Signing in...' : 'Creating account...' }}</span>
           </button>
-          
+
           <div class="error-message" *ngIf="errorMessage">
             {{ errorMessage }}
           </div>
         </form>
-        
+
         <div class="login-info">
-          <h3>ℹ️ Sign in benefits:</h3>
+          <h3>Sync mode</h3>
           <ul>
-            <li>No registration required - just enter username</li>
-            <li>Your stories sync automatically across all your devices</li>
-            <li>Access your stories from phone, tablet, and computer</li>
-            <li>The username is used for the database (only a-z, 0-9, _, -)</li>
+            <li>Stories sync automatically across your devices</li>
+            <li>Each username gets an isolated CouchDB database</li>
+            <li>Use only letters, numbers, underscore (_), and hyphen (-) in usernames</li>
           </ul>
         </div>
-        
+
         <div class="divider-with-text">
           <span>OR</span>
         </div>
-        
+
         <div class="local-info">
-          <h3>💾 Work locally instead:</h3>
+          <h3>Local-only mode</h3>
           <ul>
-            <li>Stories saved only on this device</li>
-            <li>No sync between devices</li>
-            <li>Data persists across browser sessions</li>
+            <li>Stories remain on this device only</li>
+            <li>No cloud sync or account required</li>
             <li>You can sign in later to enable sync</li>
           </ul>
         </div>
-        
+
         <button class="skip-btn" (click)="skipLogin()">
           Continue without signing in (local only)
         </button>
@@ -101,6 +165,8 @@ import { AuthService } from '../../core/services/auth.service';
       align-items: center;
       justify-content: center;
       z-index: var(--cw-z-modal);
+      padding: var(--cw-space-lg);
+      box-sizing: border-box;
     }
 
     .login-card {
@@ -110,8 +176,8 @@ import { AuthService } from '../../core/services/auth.service';
       box-shadow: var(--cw-shadow-xl);
       border: 1px solid var(--cw-border-subtle);
       width: 100%;
-      max-width: 500px;
-      max-height: 90vh;
+      max-width: 540px;
+      max-height: 92vh;
       overflow-y: auto;
     }
 
@@ -124,12 +190,60 @@ import { AuthService } from '../../core/services/auth.service';
     .login-subtitle {
       text-align: center;
       color: var(--cw-text-muted);
-      margin-bottom: var(--cw-space-2xl);
+      margin: 0 0 var(--cw-space-xl) 0;
       font-size: var(--cw-font-size-sm);
     }
 
-    .form-group {
+    .mode-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--cw-space-sm);
       margin-bottom: var(--cw-space-xl);
+      padding: var(--cw-space-xs);
+      border: 1px solid var(--cw-border-input);
+      border-radius: var(--cw-radius-xs);
+      background: var(--cw-bg-hover);
+    }
+
+    .mode-btn {
+      border: 0;
+      border-radius: var(--cw-radius-xs);
+      padding: var(--cw-space-sm) var(--cw-space-md);
+      font-size: var(--cw-font-size-sm);
+      background: transparent;
+      color: var(--cw-text-muted);
+      cursor: pointer;
+      transition: all var(--cw-transition-normal);
+    }
+
+    .mode-btn.active {
+      background: var(--cw-color-success);
+      color: var(--cw-text-primary);
+    }
+
+    .form-group {
+      margin-bottom: var(--cw-space-lg);
+    }
+
+    .migration-hint {
+      margin: 0 0 var(--cw-space-lg) 0;
+      padding: var(--cw-space-md);
+      border-radius: var(--cw-radius-xs);
+      border: 1px solid var(--cw-border-warning);
+      background: var(--cw-bg-warning-subtle);
+    }
+
+    .migration-hint h3 {
+      margin: 0 0 var(--cw-space-xs) 0;
+      font-size: var(--cw-font-size-sm);
+      color: var(--cw-text-secondary);
+    }
+
+    .migration-hint p {
+      margin: 0;
+      font-size: var(--cw-font-size-xs);
+      color: var(--cw-text-muted);
+      line-height: 1.4;
     }
 
     label {
@@ -199,7 +313,7 @@ import { AuthService } from '../../core/services/auth.service';
       border: 1px solid var(--cw-border-input);
       border-radius: var(--cw-radius-xs);
       cursor: pointer;
-      margin-top: var(--cw-space-lg);
+      margin-top: var(--cw-space-md);
       font-size: var(--cw-font-size-sm);
       transition: all var(--cw-transition-normal);
     }
@@ -219,47 +333,33 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: var(--cw-font-size-sm);
     }
 
-    .login-info {
-      margin: var(--cw-space-2xl) 0;
+    .login-info,
+    .local-info {
+      margin: var(--cw-space-xl) 0;
       padding: var(--cw-space-lg);
-      background: var(--cw-bg-base);
       border-radius: var(--cw-radius-xs);
+      border: 1px solid var(--cw-border-subtle);
+      background: var(--cw-bg-base);
+    }
+
+    .login-info {
       border-left: 4px solid var(--cw-color-success);
-      border: 1px solid var(--cw-border-success);
-    }
-
-    .login-info h3 {
-      margin: 0 0 var(--cw-space-sm) 0;
-      font-size: var(--cw-font-size-sm);
-      color: var(--cw-text-secondary);
-    }
-
-    .login-info ul {
-      margin: 0;
-      padding-left: 1.2rem;
-      font-size: var(--cw-font-size-xs);
-      color: var(--cw-text-muted);
-    }
-
-    .login-info li {
-      margin-bottom: var(--cw-space-xs);
+      border-color: var(--cw-border-success);
     }
 
     .local-info {
-      margin: var(--cw-space-lg) 0;
-      padding: var(--cw-space-lg);
-      background: var(--cw-bg-base);
-      border-radius: var(--cw-radius-xs);
       border-left: 4px solid var(--cw-color-warning);
-      border: 1px solid var(--cw-border-warning);
+      border-color: var(--cw-border-warning);
     }
 
+    .login-info h3,
     .local-info h3 {
       margin: 0 0 var(--cw-space-sm) 0;
       font-size: var(--cw-font-size-sm);
       color: var(--cw-text-secondary);
     }
 
+    .login-info ul,
     .local-info ul {
       margin: 0;
       padding-left: 1.2rem;
@@ -267,6 +367,7 @@ import { AuthService } from '../../core/services/auth.service';
       color: var(--cw-text-muted);
     }
 
+    .login-info li,
     .local-info li {
       margin-bottom: var(--cw-space-xs);
     }
@@ -274,7 +375,7 @@ import { AuthService } from '../../core/services/auth.service';
     .divider-with-text {
       display: flex;
       align-items: center;
-      margin: var(--cw-space-xl) 0;
+      margin: var(--cw-space-lg) 0;
       color: var(--cw-text-disabled);
       font-size: var(--cw-font-size-sm);
     }
@@ -295,39 +396,56 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
-  private router = inject(Router);
 
+  mode: AuthMode = 'signin';
   username = '';
+  password = '';
+  confirmPassword = '';
   displayName = '';
   isLoading = false;
   errorMessage = '';
   isLoggedIn = false;
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.authService.currentUser$.subscribe(user => {
       this.isLoggedIn = !!user;
     });
   }
 
-  async onLogin() {
+  setMode(mode: AuthMode): void {
+    if (this.isLoading || this.mode === mode) return;
+    this.mode = mode;
+    this.errorMessage = '';
+    this.password = '';
+    this.confirmPassword = '';
+  }
+
+  async onSubmit(): Promise<void> {
     if (this.isLoading) return;
-    
+
+    if (this.mode === 'signup' && this.password !== this.confirmPassword) {
+      this.errorMessage = 'Passwords do not match';
+      return;
+    }
+
     this.isLoading = true;
     this.errorMessage = '';
-    
+
     try {
-      await this.authService.login(this.username, this.displayName || undefined);
-      // Login successful - component will hide automatically
+      if (this.mode === 'signup') {
+        await this.authService.signup(this.username, this.password, this.displayName || undefined);
+      } else {
+        await this.authService.login(this.username, this.password, this.displayName || undefined);
+      }
+      // Success: component hides automatically via currentUser subscription.
     } catch (error: unknown) {
-      this.errorMessage = error instanceof Error ? error.message : 'Sign in failed';
+      this.errorMessage = error instanceof Error ? error.message : 'Authentication failed';
     } finally {
       this.isLoading = false;
     }
   }
 
-  skipLogin() {
-    // Login as local-only user
+  skipLogin(): void {
     this.authService.loginLocalOnly();
-    // Component will hide automatically via subscription
   }
 }

@@ -130,14 +130,21 @@
     }
   }
 
-  .panel-body {
+  .panel-body-container {
     flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  .panel-body {
+    height: 100%;
     min-height: 0; // Critical: allows flex item to shrink and enable scrolling
     overflow-y: auto;
     overflow-x: hidden;
     padding: 8px;
     -webkit-overflow-scrolling: touch; // Smooth momentum scrolling on iOS
     overscroll-behavior-y: contain; // Prevent scroll chaining
+    touch-action: pan-y; // Prioritize vertical scrolling on touch devices
     will-change: scroll-position; // Optimize for scrolling performance
 
     // Custom scrollbar styling
@@ -157,6 +164,33 @@
         background: rgba(255, 255, 255, 0.3);
       }
     }
+  }
+
+  .scroll-fade {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    height: 18px;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .scroll-fade-top {
+    top: 0;
+    background: linear-gradient(
+      to bottom,
+      var(--ion-color-step-50, #1f1f1f),
+      rgba(31, 31, 31, 0)
+    );
+  }
+
+  .scroll-fade-bottom {
+    bottom: 0;
+    background: linear-gradient(
+      to top,
+      var(--ion-background-color, #1a1a1a),
+      rgba(26, 26, 26, 0)
+    );
   }
 
   .beat-list {

@@ -29,6 +29,12 @@
     "changeOrigin": true,
     "logLevel": "debug"
   },
+  "/api/auth": {
+    "target": "http://192.168.178.5:3080",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/_db": {
     "target": "http://192.168.178.5:3080",
     "secure": false,

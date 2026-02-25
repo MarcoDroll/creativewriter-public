@@ -95,21 +95,14 @@ export class SnapshotService {
   }
 
   /**
-   * Get credentials for CouchDB access (same as sync)
-   */
-  private getCredentials() {
-    return {
-      username: 'admin',
-      password: 'password' // TODO: Make configurable from settings
-    };
-  }
-
-  /**
    * Create basic auth header
    */
   private getAuthHeader(): string {
-    const credentials = this.getCredentials();
-    return 'Basic ' + btoa(`${credentials.username}:${credentials.password}`);
+    const authHeader = this.authService.getBasicAuthHeader();
+    if (!authHeader) {
+      throw new Error('Cloud sync credentials missing. Please sign in.');
+    }
+    return authHeader;
   }
 
   /**
