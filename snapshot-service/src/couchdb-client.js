@@ -147,7 +147,8 @@ class DatabaseClient {
           if (doc.type === 'story-snapshot') {
             emit([doc.retentionTier, doc.createdAt], doc.storyId);
           }
-        }.toString()
+        }.toString(),
+        reduce: '_count'
       }
     };
 

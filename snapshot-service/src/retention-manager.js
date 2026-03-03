@@ -128,7 +128,7 @@ async function getSnapshotStats(dbName) {
 
     try {
       const result = await db.view('snapshots', 'by_tier', {
-        group: true
+        group_level: 1
       });
 
       const stats = {
