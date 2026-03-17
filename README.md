@@ -6,7 +6,12 @@
 
 A powerful, AI-enhanced creative writing application that helps authors craft compelling stories with intelligent assistance for plot development, character creation, narrative structure, and rich media integration.
 
-> **This repository is the community hub** for bug reports, feature requests, and discussions. It does not contain application source code.
+CreativeWriter is available in two editions:
+
+- **[Hosted](https://creativewriter.dev)** — Fully managed, just sign up and write
+- **[Self-Hosted](https://github.com/MarcoDroll/creativewriter-selfhosted)** — Deploy with Docker, MIT licensed, full control over your data
+
+> **This repository is the community hub** for bug reports, feature requests, and discussions — covering both editions. It does not contain application source code.
 
 ![Issues](https://img.shields.io/github/issues/MarcoDroll/creativewriter-public?label=Open%20Issues)
 ![Discussions](https://img.shields.io/github/discussions/MarcoDroll/creativewriter-public?label=Discussions)
