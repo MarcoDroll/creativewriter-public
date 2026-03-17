@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & General Discussion
+    url: https://github.com/MarcoDroll/creativewriter-public/discussions
+    about: Ask questions, share ideas, or start a conversation about CreativeWriter
+  - name: Self-Hosted Deployment Help
+    url: https://github.com/MarcoDroll/creativewriter-selfhosted
+    about: For self-hosted setup and deployment questions, check the self-hosted repository

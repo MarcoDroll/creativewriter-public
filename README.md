@@ -1,307 +1,226 @@
 <div align="center">
-  <img src="src/assets/logo.png" alt="CreativeWriter Logo" width="300">
-  
-  # CreativeWriter
+  <img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/src/assets/logo.png" alt="CreativeWriter Logo" width="300">
+
+  # CreativeWriter Community
 </div>
 
-> **⚠️ Early Development Version:** This is a very early version in active development. Expect bugs, missing features, and frequent changes. Use at your own risk and consider it experimental software.
+A powerful, AI-enhanced creative writing application that helps authors craft compelling stories with intelligent assistance for plot development, character creation, narrative structure, and rich media integration.
 
-> **🔗 Self-Hosters: Looking for the public version? Visit [creativewriter-public](https://github.com/MarcoDroll/creativewriter-public) for easy deployment!**
+> **This repository is the community hub** for bug reports, feature requests, and discussions. It does not contain application source code.
 
-A powerful, AI-enhanced creative writing application that helps authors craft compelling stories with intelligent assistance for plot development, character creation, narrative structure, and **rich media integration including images within text**.
+![Issues](https://img.shields.io/github/issues/MarcoDroll/creativewriter-public?label=Open%20Issues)
+![Discussions](https://img.shields.io/github/discussions/MarcoDroll/creativewriter-public?label=Discussions)
+![License](https://img.shields.io/badge/License-Proprietary-lightgrey)
 
-> **🤖 Built with AI:** This entire application was developed using AI-powered pair programming with [Claude Code](https://claude.ai/code), demonstrating the power of human-AI collaboration in modern software development. While AI accelerates development, it still requires significant human expertise, effort, and a paid Claude subscription to guide the AI, make architectural decisions, and ensure quality.
+---
 
-![Angular](https://img.shields.io/badge/Angular-20-red)
-![Ionic](https://img.shields.io/badge/Ionic-8-blue)
-![Docker](https://img.shields.io/badge/Docker-Ready-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+## Why the Redesign
 
-## 📚 Table of Contents
+CreativeWriter was originally built as a **PouchDB (client) + CouchDB (server)** application with offline-first sync. While this architecture worked, it had significant limitations:
 
-- [☕ Support the Project](#-support-the-project)
-- [🎯 What is CreativeWriter?](#-what-is-creativewriter)
-- [📷 Screenshots](#-screenshots)
-- [✨ Features](#-features)
-- [🏗️ Architecture](#️-architecture)
-- [🚀 Getting Started](#-getting-started)
-- [🐳 Docker Deployment](#-docker-deployment)
-- [📦 Docker Images](#-docker-images)
-- [🛠️ Development](#️-development)
-- [📝 Usage Tips](#-usage-tips)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [🙏 Acknowledgments](#-acknowledgments)
-- [📚 Documentation](#-documentation)
+- **Complex conflict resolution** — PouchDB/CouchDB sync required manual handling of document conflicts, especially with concurrent edits across devices
+- **No row-level security** — CouchDB's per-database security model couldn't enforce fine-grained access control
+- **Manual infrastructure** — Self-hosting required Docker containers, nginx reverse proxies, and manual CouchDB administration
+- **No real-time cross-device sync** — Changes only synced on reconnect, not in real time
+- **Fragile media handling** — Binary attachments in CouchDB were cumbersome and bloated replication
 
-## ☕ Support the Project
+The **new architecture** uses **Supabase** (PostgreSQL + Auth + Storage + Realtime), which provides:
 
-If you find CreativeWriter helpful and want to support its development:
+- Proper **row-level security** (RLS) on every table
+- **Managed infrastructure** with zero ops overhead
+- **Real-time sync** across all devices and tabs via Supabase Realtime
+- **Cloudflare edge deployment** for fast global access
+- **Supabase Storage** for reliable media handling
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20development-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/nostramo83)
+This resulted in two editions:
 
-Your support helps maintain and improve CreativeWriter for the community!
+| Edition | Description | Link |
+|---------|-------------|------|
+| **Hosted** | Fully managed at creativewriter.dev — just sign up and write | [creativewriter.dev](https://creativewriter.dev) |
+| **Self-Hosted** | Docker deployment, MIT licensed, full control | [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) |
 
-## 🎯 What is CreativeWriter?
+Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is preserved in the [`archive/pouchdb-couchdb`](https://github.com/MarcoDroll/creativewriter-public/tree/archive/pouchdb-couchdb) branch for reference.
 
-CreativeWriter is a modern web-based writing tool designed for fiction authors who want to leverage AI technology to enhance their creative process. It combines traditional story structuring techniques with cutting-edge AI capabilities to help writers overcome creative blocks, develop rich narratives, and maintain consistency throughout their work.
+---
 
-## 📷 Screenshots
+## Screenshots
 
-### Main Writing Interface
-![Main Interface](docs/screenshots/Screenshot%202025-08-10%20173755.png)
-*The main writing interface with AI-powered beat assistance and rich text editor*
+### Story Structure & Organization
+*Navigate your story with a hierarchical sidebar, visual outline, and rich text editing with embedded images.*
 
-### Story Structure Management
-![Story Structure](docs/screenshots/Screenshot%202025-08-11%20083614.png)
-*Organize your narrative with chapters and scenes in a hierarchical structure*
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/structure-sidebar.png" alt="Story structure sidebar with acts, chapters, and scenes" width="585">
 
-### Dynamic Codex System
-![Codex System](docs/screenshots/Screenshot%202025-08-11%20083221.png)
-*Intelligent character and world-building database with automatic context awareness*
+*Collapsible sidebar showing your full story hierarchy — acts, chapters, scenes, and beats.*
 
-### AI Configuration
-![AI Settings](docs/screenshots/Screenshot%202025-08-11%20083512.png)
-*Configure multiple AI providers including OpenRouter and Google Gemini*
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/outline-overview.png" alt="Visual outline overview of the full story" width="800">
 
-### Custom Backgrounds
-![Background Selection](docs/screenshots/Screenshot%202025-08-11%20083536.png)
-*Choose from various atmospheric backgrounds to enhance your writing environment*
+*Bird's-eye outline view of your entire narrative structure.*
 
-### Story Statistics
-![Story Statistics](docs/screenshots/Screenshot%202025-08-11%20085427.png)
-*Track your progress with detailed writing statistics and analytics*
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/images-in-text.png" alt="Rich text editor with images embedded in the narrative" width="800">
 
-### Beat Generation Templates
-![Beat Templates](docs/screenshots/Screenshot%202025-08-11%20083657.png)
-*Customize AI prompt templates for consistent story development*
+*ProseMirror editor with images embedded directly in your story text.*
 
-## ✨ Features
+---
 
-> **🎉 Update:** All Docker images are now being published automatically!
+### Beat Writing & AI Generation
+*Write at the beat level — provide input, generate with AI, and revise until it's right.*
 
-### 📝 Story Management
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/beat-input.png" alt="Beat input interface for writing prompts" width="800">
+
+*Write a brief beat description to guide AI generation.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/beat-input-agentic-generation.png" alt="Agentic AI generation streaming prose in real time" width="800">
+
+*Agentic generation reads your outline, codex, and prior scenes to write contextually aware prose.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/beat-input-rewrite-feature.png" alt="Rewrite feature for iterating on generated text" width="800">
+
+*Rewrite with different instructions or restore previous versions from beat history.*
+
+---
+
+### AI Chat & Research
+*Chat with your scenes, talk to your characters, and run deep research — all AI-powered.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/scene-chat.png" alt="AI chat about the current scene" width="800">
+
+*Ask questions about your scene — the AI uses your full story context to answer.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/character-chat.png" alt="Chat with a codex character using their profile as context" width="800">
+
+*Talk to your characters directly. The AI uses codex entries to stay in character.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-research.png" alt="Deep research mode with sourced answers" width="540">
+
+*Deep research mode for historical, scientific, or cultural details relevant to your story.*
+
+---
+
+### Codex & World-Building
+*Build a knowledge base for your story's universe — characters, locations, factions, and more.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/codex-list.png" alt="Codex list showing characters, locations, and world-building entries" width="800">
+
+*All your world-building entries at a glance — searchable and organized by type.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/codex-portrait-generation.png" alt="AI-generated character portrait from codex description" width="800">
+
+*Generate character portraits directly from codex descriptions.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-analyzer-character-consistency.png" alt="Character consistency analysis across the manuscript" width="800">
+
+*Story analyzer checks character consistency across your entire manuscript.*
+
+---
+
+### Media & Story Analysis
+*Generate illustrations, manage media, and analyze your manuscript for quality.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/image-generation.png" alt="AI image generation for scene illustrations" width="800">
+
+*Generate scene illustrations using AI image providers.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/media-gallery.png" alt="Media gallery for managing story images" width="800">
+
+*Media gallery for organizing all images associated with your story.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-analyzer-cliche.png" alt="Cliché detection analysis of the manuscript" width="800">
+
+*Cliché detector identifies overused patterns and suggests alternatives.*
+
+---
+
+### Responsive Design
+*Full-featured experience on mobile and tablet devices.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-list-responsive.png" alt="Story list on mobile device" width="400">
+
+*Story list adapts cleanly to smaller screens.*
+
+<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-editor-responsive.png" alt="Story editor on mobile device" width="400">
+
+*The full editor experience works on mobile — write anywhere.*
+
+---
+
+## What This Repo Is For
+
+This repository serves as the **community hub** for CreativeWriter. Here you can:
+
+- **Report bugs** you encounter in the hosted or self-hosted edition
+- **Request features** you'd like to see added
+- **Join discussions** about creative writing workflows, AI integration, and the app's future
+
+The application source code lives in separate repositories (hosted is private; self-hosted is MIT).
+
+---
+
+## Report a Bug / Request a Feature
+
+Use the **Issues** tab to file structured reports:
+
+- [**Report a Bug**](https://github.com/MarcoDroll/creativewriter-public/issues/new?template=bug_report.yml) — Something isn't working as expected
+- [**Request a Feature**](https://github.com/MarcoDroll/creativewriter-public/issues/new?template=feature_request.yml) — Suggest an improvement or new capability
+
+## Join the Discussion
+
+Have a question, idea, or just want to chat? Head to the [**Discussions**](https://github.com/MarcoDroll/creativewriter-public/discussions) tab.
+
+---
+
+## Links
+
+| | Link |
+|---|------|
+| **Hosted App** | [creativewriter.dev](https://creativewriter.dev) |
+| **Self-Hosted Edition** | [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) |
+| **Self-Hosted Docker Deployment** | [Deployment Guide](https://github.com/MarcoDroll/creativewriter-selfhosted#deployment) |
+
+---
+
+## Features
+
+### Story Management
 - **Multi-Story Support**: Manage multiple writing projects simultaneously
-- **Rich Text Editor**: Full-featured ProseMirror-based editor with formatting tools and **inline image support**
+- **Rich Text Editor**: Full-featured ProseMirror-based editor with formatting tools and inline image support
 - **Story Structure**: Organize your narrative with acts, chapters, scenes, and beats
-- **Auto-Save**: Never lose your work with automatic saving to local database
-- **📸 Images Within Text**: Seamlessly embed images directly within your story text for enhanced storytelling
+- **Auto-Save**: Automatic saving with cross-device sync
+- **Images Within Text**: Embed images directly within your story text for visual storytelling
 
-### 🤖 AI Integration
-- **Multiple AI Providers**: Support for OpenRouter, Google Gemini, and **Ollama (Local LLMs)**
-- **Local AI Support**: Connect to self-hosted models via Ollama for complete privacy
+### AI Integration
+- **Multiple AI Providers**: OpenRouter, Google Gemini, Claude, OpenAI-compatible, and Ollama (local LLMs)
+- **Image Generation**: Integration with Replicate and fal.ai
 - **Real-time Streaming**: Live text generation with streaming responses
-- **Beat AI Assistant**: Get intelligent suggestions for plot development
-- **Beat Version History**: Automatically save and restore previous beat generations (up to 10 versions per beat)
+- **Beat AI Assistant**: Intelligent suggestions for plot development with version history
 - **Scene Enhancement**: AI-powered scene expansion and refinement
-- **Character Consistency**: Maintain character voice and traits with AI assistance
 - **Custom Prompts**: Fine-tune AI behavior with customizable prompt templates
 
-#### How CreativeWriter Feeds Context to AI
-CreativeWriter uses a sophisticated context-building system when generating AI suggestions for beats. The system includes a standard prompt that defines the AI's role as a "creative writing assistant". Then it incorporates scene summaries (to reduce context size) from all previous scenes you've already written. You can either write the scene summary on your own, or let the AI create one for you. Additionally, you can choose to include the full text of specific scenes instead of the summary if you want; for example when you write a retrospective on a specific scene.
-
-After the "story context", it includes the "codex" - all of your characters, items, and lore. The final part is the particular task for the next beat with additional instructions.
-
-AI tends to "understand" XML-tags better than simple text as context structuring, so the system creates a pseudo-XML structure with this information in the prompt.
-
-### 📚 Codex System
-- **Dynamic Knowledge Base**: Automatically track characters, locations, and plot elements
+### Codex System
+- **Dynamic Knowledge Base**: Track characters, locations, and plot elements
 - **Smart Context Awareness**: AI understands your story's universe
 - **Relevance Scoring**: Intelligent filtering of relevant codex entries for each scene
-- **Tag Management**: Organize codex entries with custom tags
 
-### 🎨 Customization
+### Data Management
+- **Import/Export**: Support for various formats, compatible with NovelCrafter exports
+- **PDF Export**: Generate formatted PDFs of your stories
+- **Real-time Sync**: Cross-device synchronization (hosted edition)
+
+### Customization
 - **Theme Support**: Dark and light modes
-- **Custom Backgrounds**: Upload and manage custom backgrounds for your writing environment
+- **Custom Backgrounds**: Upload and manage custom writing backgrounds
 - **Flexible Layouts**: Adjustable editor and panel configurations
 - **Font Options**: Multiple font choices for comfortable reading and writing
 
-### 🔄 Data Management
-- **Local Database**: PouchDB/CouchDB for offline-first functionality
-- **Import/Export**: Support for various formats including NovelCrafter projects
-- **PDF Export**: Generate formatted PDFs of your stories
-- **Beat Version History**: Automatically track and restore previous AI generations for each beat
-- **Database Maintenance**: Clean up version history to free storage space
+---
 
-### 🖼️ Rich Media Support
-- **📸 Images Within Text**: **Embed images directly within your story text** - perfect for visual storytelling, character references, or scene inspiration
-- **Image Generation**: Integration with Replicate for AI image generation
-- **Image Management**: Upload and manage story-related images with full editor integration
-- **Video Support**: Embed and manage video content
-- **Visual Storytelling**: Enhance your narrative with inline media that flows naturally with your text
+## License
 
-## 🏗️ Architecture
+This project is proprietary software — see the [LICENSE](LICENSE) file for details. For the open-source community edition, see [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) (MIT License).
 
-CreativeWriter is built with modern web technologies:
+## Acknowledgments
 
-- **Frontend**: Angular 20 with Ionic 8 for responsive UI
-- **Editor**: ProseMirror for rich text editing
-- **Database**: PouchDB with CouchDB sync capability
-- **AI Services**: Modular integration with multiple AI providers
-- **Deployment**: Docker containers with nginx reverse proxy
-
-## 🚀 Getting Started
-
-### ⚠️ CRITICAL: Persistent Storage Required!
-
-> **WARNING: Without persistent volume mounting, you WILL lose ALL your stories when the Docker container restarts!**
-> 
-> The database MUST be mounted to a persistent directory on your host system. The default configuration uses `./data` for storage.
-> 
-> **Never run CreativeWriter without ensuring the data directory exists and is properly mounted!**
-
-### Quick Start with Docker
-
-```bash
-# Create directory AND persistent storage
-mkdir creativewriter && cd creativewriter
-
-# CRITICAL: Create data directory for database persistence
-mkdir -p data
-chmod 755 data
-
-# Download docker-compose configuration
-curl -O https://raw.githubusercontent.com/MarcoDroll/creativewriter-public/main/docker-compose.yml
-
-# Start with persistent storage
-docker compose up -d
-
-# Verify data persistence is working
-ls -la ./data/couchdb-data/  # Should contain database files after first run
-
-# Access at http://localhost:3080
-```
-
-### Environment Variables
-
-The Docker Compose setup supports several environment variables that can be configured via a `.env` file in the project root:
-
-- `PORT`: The port on which the application will be accessible (default: `3080`)
-- `TZ`: Timezone setting for the containers (default: `Europe/Berlin`)
-- `DATA_PATH`: Custom path for persistent data storage (default: `./data`)
-- `COUCHDB_USER`: CouchDB admin username (default: `admin`)
-  Used by CouchDB itself and by the internal auth proxy for account/user-db management.
-- `COUCHDB_PASSWORD`: CouchDB admin password (default: `password` - **change in production!**)
-- `COUCHDB_SECRET`: CouchDB secret key (default: `mysecret` - **change in production!**)
-
-Create a `.env` file to customize these values:
-```bash
-PORT=3080
-TZ=America/New_York
-DATA_PATH=/custom/path/to/data
-COUCHDB_USER=admin
-COUCHDB_PASSWORD=your_secure_password
-COUCHDB_SECRET=your_secure_secret
-```
-
-### Configuration
-
-#### AI Providers
-Configure your AI providers in the application settings:
-- **OpenRouter**: Add your API key for access to multiple models
-- **Google Gemini**: Direct integration with Gemini models
-- **Ollama (New!)**: Connect to local LLMs for complete privacy and offline usage
-- **Custom Endpoints**: Support for self-hosted models
-
-##### Ollama Setup (Local AI)
-1. **Install Ollama**: https://ollama.com/
-2. **Configure CORS** (required for web access):
-   ```bash
-   # Set environment variable to allow web access
-   export OLLAMA_ORIGINS="*"
-   # Or for more security, specify your CreativeWriter URL:
-   # export OLLAMA_ORIGINS="http://localhost:3080"
-   ```
-   
-   **Alternative methods:**
-   - **Linux/macOS**: Add to `~/.bashrc` or `~/.zshrc`
-   - **Windows**: Set via System Properties → Environment Variables
-   - **Docker**: Add `-e OLLAMA_ORIGINS="*"` to your Ollama container
-   - **Systemd**: Edit `/etc/systemd/system/ollama.service` and add `Environment="OLLAMA_ORIGINS=*"`
-
-3. **Start Ollama** and run a model:
-   ```bash
-   ollama serve  # Start the server (if not auto-started)
-   ollama run llama3.2  # Download and run a model
-   ```
-
-4. **Configure in CreativeWriter**:
-   - Go to Settings → AI Providers → Ollama
-   - Set URL (default: `http://localhost:11434`)
-   - Test connection and select your model
-
-**⚠️ CORS Troubleshooting:**
-If you see "CORS" errors in browser console, ensure `OLLAMA_ORIGINS` is set correctly and restart Ollama.
-
-#### Database
-The application uses PouchDB for local storage with optional CouchDB sync:
-- Local-only mode works out of the box
-- For sync, sign in or create an account in the login modal
-- Each sync account gets its own CouchDB database (`creative-writer-stories-<username>`)
-- Sync authentication now uses per-user credentials (no shared admin sync account)
-
-## 🐳 Docker Deployment
-
-> **⚠️ IMPORTANT - Data Persistence:** The database requires a persistent volume mount to preserve your stories across container restarts. **Without proper volume mounting, you WILL lose all your data when the container stops!** The default docker-compose.yml already includes this configuration, but make sure the `./data` directory exists and has proper permissions.
-
-### Prerequisites
-- Docker and Docker Compose installed
-- Git (for cloning the repository)
-- ~500MB-1GB RAM per instance
-- Port 3080 available (or configure a different port)
-- **Persistent storage location for database** (default: `./data` directory)
-
-### 📁 Data Persistence & Backup
-
-**Critical: Your stories are stored in CouchDB within the Docker container.** The docker-compose.yml file maps the following volumes:
-
-```yaml
-volumes:
-  - ./data/couchdb-data:/opt/couchdb/data     # Database files
-  - ./data/log/couchdb_log:/opt/couchdb/var/log  # Log files
-```
-
-#### To ensure data safety:
-
-1. **Never run without volumes:** Always use the provided docker-compose.yml
-2. **Backup regularly:** Copy the `./data` directory to a safe location
-3. **Custom data location:** Set a different path via environment variable:
-   ```bash
-   echo "DATA_PATH=/path/to/your/storage" >> .env
-   docker compose up -d
-   ```
-4. **Verify persistence:** Check that `./data/couchdb-data` contains files after first run
-5. **Use the built-in backup feature:** Go to Settings → Backup & Restore to create downloadable backups
-
-## 📝 Usage Tips
-
-1. **Start with Story Structure**: Define your acts and chapters before diving into scenes
-2. **Build Your Codex**: Add characters and locations early for better AI context
-3. **Use Beat AI**: Let AI help with writer's block on individual beats
-4. **📸 Leverage Visual Storytelling**: Embed images directly within your text to enhance scenes, character descriptions, or provide visual inspiration
-5. **Experiment with Beat Versions**: Try different AI generations and restore previous versions using the version history feature
-6. **Customize Prompts**: Tailor AI responses to your writing style
-7. **Regular Exports**: Backup your work regularly using export features
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Built with Angular and Ionic frameworks
-- AI integrations powered by OpenRouter, Google Gemini, and Ollama
-- ProseMirror for the editing experience
-- Developed using AI-powered pair programming with [Claude Code](https://claude.ai/code) (paid subscription)
-- Significant human expertise and effort guiding the AI development
-- Community contributors and testers
-
-## 🔗 Links
-
-- [GitHub Repository](https://github.com/MarcoDroll/creativewriter-public)
-- [Issue Tracker](https://github.com/MarcoDroll/creativewriter-public/issues)
-- [Docker Images](https://github.com/MarcoDroll/creativewriter-public/pkgs/container/creativewriter-public)
+- Built with [Angular](https://angular.dev/) and [Ionic](https://ionicframework.com/)
+- Rich text editing powered by [ProseMirror](https://prosemirror.net/)
+- Backend infrastructure by [Supabase](https://supabase.com/) and [Cloudflare](https://www.cloudflare.com/)
+- AI integrations via OpenRouter, Google Gemini, Claude, and more
+- Developed using AI-powered pair programming with [Claude Code](https://claude.ai/code)

@@ -1,9 +1,0 @@
-
-> creativewriter2@2.0.0 lint
-> ng lint
-
-
-Linting "creativewriter2"...
-
-All files pass linting.
-
