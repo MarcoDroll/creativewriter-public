@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/src/assets/logo.png" alt="CreativeWriter Logo" width="300">
+  <img src="assets/logo.png" alt="CreativeWriter Logo" width="300">
 
   # CreativeWriter Community
 </div>
@@ -48,15 +48,15 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 ### Story Structure & Organization
 *Navigate your story with a hierarchical sidebar, visual outline, and rich text editing with embedded images.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/structure-sidebar.png" alt="Story structure sidebar with acts, chapters, and scenes" width="585">
+<img src="outreach/screenshots/structure-sidebar.png" alt="Story structure sidebar with acts, chapters, and scenes" width="585">
 
 *Collapsible sidebar showing your full story hierarchy — acts, chapters, scenes, and beats.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/outline-overview.png" alt="Visual outline overview of the full story" width="800">
+<img src="outreach/screenshots/outline-overview.png" alt="Visual outline overview of the full story" width="800">
 
 *Bird's-eye outline view of your entire narrative structure.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/images-in-text.png" alt="Rich text editor with images embedded in the narrative" width="800">
+<img src="outreach/screenshots/images-in-text.png" alt="Rich text editor with images embedded in the narrative" width="800">
 
 *ProseMirror editor with images embedded directly in your story text.*
 
@@ -65,15 +65,15 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 ### Beat Writing & AI Generation
 *Write at the beat level — provide input, generate with AI, and revise until it's right.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/beat-input.png" alt="Beat input interface for writing prompts" width="800">
+<img src="outreach/screenshots/beat-input.png" alt="Beat input interface for writing prompts" width="800">
 
 *Write a brief beat description to guide AI generation.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/beat-input-agentic-generation.png" alt="Agentic AI generation streaming prose in real time" width="800">
+<img src="outreach/screenshots/beat-input-agentic-generation.png" alt="Agentic AI generation streaming prose in real time" width="800">
 
 *Agentic generation reads your outline, codex, and prior scenes to write contextually aware prose.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/beat-input-rewrite-feature.png" alt="Rewrite feature for iterating on generated text" width="800">
+<img src="outreach/screenshots/beat-input-rewrite-feature.png" alt="Rewrite feature for iterating on generated text" width="800">
 
 *Rewrite with different instructions or restore previous versions from beat history.*
 
@@ -82,15 +82,15 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 ### AI Chat & Research
 *Chat with your scenes, talk to your characters, and run deep research — all AI-powered.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/scene-chat.png" alt="AI chat about the current scene" width="800">
+<img src="outreach/screenshots/scene-chat.png" alt="AI chat about the current scene" width="800">
 
 *Ask questions about your scene — the AI uses your full story context to answer.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/character-chat.png" alt="Chat with a codex character using their profile as context" width="800">
+<img src="outreach/screenshots/character-chat.png" alt="Chat with a codex character using their profile as context" width="800">
 
 *Talk to your characters directly. The AI uses codex entries to stay in character.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-research.png" alt="Deep research mode with sourced answers" width="540">
+<img src="outreach/screenshots/story-research.png" alt="Deep research mode with sourced answers" width="540">
 
 *Deep research mode for historical, scientific, or cultural details relevant to your story.*
 
@@ -99,15 +99,15 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 ### Codex & World-Building
 *Build a knowledge base for your story's universe — characters, locations, factions, and more.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/codex-list.png" alt="Codex list showing characters, locations, and world-building entries" width="800">
+<img src="outreach/screenshots/codex-list.png" alt="Codex list showing characters, locations, and world-building entries" width="800">
 
 *All your world-building entries at a glance — searchable and organized by type.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/codex-portrait-generation.png" alt="AI-generated character portrait from codex description" width="800">
+<img src="outreach/screenshots/codex-portrait-generation.png" alt="AI-generated character portrait from codex description" width="800">
 
 *Generate character portraits directly from codex descriptions.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-analyzer-character-consistency.png" alt="Character consistency analysis across the manuscript" width="800">
+<img src="outreach/screenshots/story-analyzer-character-consistency.png" alt="Character consistency analysis across the manuscript" width="800">
 
 *Story analyzer checks character consistency across your entire manuscript.*
 
@@ -116,15 +116,15 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 ### Media & Story Analysis
 *Generate illustrations, manage media, and analyze your manuscript for quality.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/image-generation.png" alt="AI image generation for scene illustrations" width="800">
+<img src="outreach/screenshots/image-generation.png" alt="AI image generation for scene illustrations" width="800">
 
 *Generate scene illustrations using AI image providers.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/media-gallery.png" alt="Media gallery for managing story images" width="800">
+<img src="outreach/screenshots/media-gallery.png" alt="Media gallery for managing story images" width="800">
 
 *Media gallery for organizing all images associated with your story.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-analyzer-cliche.png" alt="Cliché detection analysis of the manuscript" width="800">
+<img src="outreach/screenshots/story-analyzer-cliche.png" alt="Cliché detection analysis of the manuscript" width="800">
 
 *Cliché detector identifies overused patterns and suggests alternatives.*
 
@@ -133,11 +133,11 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 ### Responsive Design
 *Full-featured experience on mobile and tablet devices.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-list-responsive.png" alt="Story list on mobile device" width="400">
+<img src="outreach/screenshots/story-list-responsive.png" alt="Story list on mobile device" width="400">
 
 *Story list adapts cleanly to smaller screens.*
 
-<img src="https://raw.githubusercontent.com/MarcoDroll/creativewriter-selfhosted/main/outreach/screenshots/story-editor-responsive.png" alt="Story editor on mobile device" width="400">
+<img src="outreach/screenshots/story-editor-responsive.png" alt="Story editor on mobile device" width="400">
 
 *The full editor experience works on mobile — write anywhere.*
 
