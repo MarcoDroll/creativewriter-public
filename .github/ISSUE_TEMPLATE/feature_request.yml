@@ -30,6 +30,7 @@ body:
     attributes:
       label: Alternatives Considered
       description: Have you considered any alternative solutions or workarounds?
+      placeholder: I tried ... but it doesn't fully solve the problem because ...
 
   - type: dropdown
     id: area
