@@ -8,6 +8,9 @@ Most AI writing tools just take your prompt and run with it. You end up copy-pas
 
 **CreativeWriter does it differently.** You build your story's world once — characters, locations, factions, plot notes — and the AI uses all of it automatically. Every time.
 
+![CreativeWriter story list](https://raw.githubusercontent.com/MarcoDroll/creativewriter-public/main/outreach/screenshots/storylist-desktop.png)
+*Your stories at a glance — create new stories, import existing projects, or generate cover images.*
+
 ---
 
 ## 🤖 Agentic AI — The Core Feature
