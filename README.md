@@ -9,7 +9,7 @@ A powerful, AI-enhanced creative writing application that helps authors craft co
 CreativeWriter is available in two editions:
 
 - **[Hosted](https://creativewriter.dev)** — Fully managed, just sign up and write
-- **[Self-Hosted](https://github.com/MarcoDroll/creativewriter-selfhosted)** — Deploy with Docker, MIT licensed, full control over your data
+- **[Self-Hosted](https://github.com/MarcoDroll/creativewriter-selfhosted)** — Deploy with Docker, source-available for personal use, full control over your data
 
 > **This repository is the community hub** for bug reports, feature requests, and discussions — covering both editions. It does not contain application source code.
 
@@ -42,7 +42,7 @@ This resulted in two editions:
 | Edition | Description | Link |
 |---------|-------------|------|
 | **Hosted** | Fully managed at creativewriter.dev — just sign up and write | [creativewriter.dev](https://creativewriter.dev) |
-| **Self-Hosted** | Docker deployment, MIT licensed, full control | [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) |
+| **Self-Hosted** | Docker deployment, source-available for personal use, full control | [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) |
 
 Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is preserved in the [`archive/pouchdb-couchdb`](https://github.com/MarcoDroll/creativewriter-public/tree/archive/pouchdb-couchdb) branch for reference.
 
@@ -156,7 +156,7 @@ This repository serves as the **community hub** for CreativeWriter. Here you can
 - **Request features** you'd like to see added
 - **Join discussions** about creative writing workflows, AI integration, and the app's future
 
-The application source code lives in separate repositories (hosted is private; self-hosted is MIT).
+The application source code lives in separate repositories (hosted is private; self-hosted is source-available for personal use).
 
 ---
 
@@ -220,7 +220,7 @@ Have a question, idea, or just want to chat? Head to the [**Discussions**](https
 
 ## License
 
-This project is proprietary software — see the [LICENSE](LICENSE) file for details. For the open-source community edition, see [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) (MIT License).
+This project is proprietary software — see the [LICENSE](LICENSE) file for details. For self-hosted deployment, see [creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted) (source-available, personal use only).
 
 ## Acknowledgments
 
