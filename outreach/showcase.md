@@ -146,7 +146,7 @@ Not locked into one provider. Use OpenRouter (200+ models), Claude, Gemini, Olla
 ## 🔗 Links
 
 - **Live app**: [creativewriter.dev](https://creativewriter.dev)
-- **Self-hosted (Docker, MIT)**: [MarcoDroll/creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted)
+- **Self-hosted (Docker, source-available — personal use)**: [MarcoDroll/creativewriter-selfhosted](https://github.com/MarcoDroll/creativewriter-selfhosted)
 - **Community & issues**: [MarcoDroll/creativewriter-public](https://github.com/MarcoDroll/creativewriter-public)
 
 ---
