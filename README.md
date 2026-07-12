@@ -48,6 +48,16 @@ Both editions run on the new Supabase stack. The old PouchDB/CouchDB code is pre
 
 ---
 
+## Pricing & Self-Hosting
+
+CreativeWriter is funded by subscriptions — you pay for the tool, not marked-up AI tokens. There are two tiers, **Basic** and **Premium**, each with a 7-day free trial. Live prices are shown at [creativewriter.dev](https://creativewriter.dev).
+
+**Self-hosting? You don't need the Premium tier.** The premium features — AI Rewrite, Character Chat, and Portrait Generation — run entirely on your own API keys and infrastructure, so the cheaper **Basic** plan is enough to unlock them on your own instance. Any paid subscription generates a **license key** (Settings → Premium → Generate License Key) that grants full premium on a self-hosted deployment for a year. The Premium tier only adds *Included AI* (a managed DeepSeek + image budget) and managed hosting — both hosted-only, and neither needed when you bring your own keys.
+
+Your hosted account is only for billing and generating the key; your stories live on your own instance and don't transfer to or from the hosted app. See the [self-hosted edition](https://github.com/MarcoDroll/creativewriter-selfhosted) for setup.
+
+---
+
 ## Screenshots
 
 ### Story Structure & Organization
