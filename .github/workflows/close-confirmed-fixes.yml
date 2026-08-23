@@ -1,0 +1,41 @@
+name: Close confirmed-fix issues after inactivity
+
+# Deterministic auto-close: an issue commented as fixed is labeled
+# `fixed-pending-confirmation` instead of being closed immediately (reporters who
+# aren't the closer often can't reopen a closed issue on GitHub). This workflow
+# closes it automatically once it has gone 14 days with no activity — any comment,
+# label change, or edit on the issue resets the clock by updating `updatedAt`.
+#
+# Deliberately a plain date comparison against `updatedAt`, not the generic
+# actions/stale action's two-phase stale-then-close heuristic — easier to reason
+# about and to change the threshold for.
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # daily, 06:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+
+jobs:
+  close-stale-fixed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close fixed-pending-confirmation issues idle for 14+ days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          gh issue list --repo "$REPO" \
+            --label fixed-pending-confirmation --state open \
+            --json number,updatedAt \
+            --jq ".[] | select(.updatedAt < \"$cutoff\") | .number" \
+          | while read -r num; do
+              echo "Closing #$num (idle since before $cutoff)"
+              gh issue comment "$num" --repo "$REPO" \
+                --body "Closing automatically — no activity for 14 days since this was marked fixed and pending confirmation. Reopen (or comment) if this is still happening."
+              gh issue close "$num" --repo "$REPO"
+            done
